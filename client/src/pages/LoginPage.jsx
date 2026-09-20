@@ -32,7 +32,7 @@ export default function LoginPage() {
     setError('')
     setBusy(true)
     try {
-      await verifyOtp(phone, otp)
+      await verifyOtp(phone.trim(), otp.trim())
       navigate('/update')
     } catch (err) {
       setError(err.message)

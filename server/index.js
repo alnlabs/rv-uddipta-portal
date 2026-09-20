@@ -115,7 +115,7 @@ app.post('/api/auth/request-otp', (req, res) => {
 
 app.post('/api/auth/verify', (req, res) => {
   const phone = normalizePhone(req.body?.phone);
-  const otp = String(req.body?.otp || '').trim();
+  const otp = String(req.body?.otp || '').replace(/\s+/g, '').trim();
 
   if (!phone) {
     return res.status(400).json({ error: 'Enter a valid 10-digit phone number' });
