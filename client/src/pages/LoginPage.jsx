@@ -85,7 +85,7 @@ export default function LoginPage() {
                 autoComplete="one-time-code"
                 placeholder="1234"
                 value={otp}
-                onChange={(e) => setOtp(e.target.value)}
+                onChange={(e) => setOtp(e.target.value.replace(/\s+/g, ''))}
                 required
               />
             </label>
