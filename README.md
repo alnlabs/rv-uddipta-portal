@@ -1,44 +1,63 @@
 # R V UDDIIPTA Owners Portal
 
-Floor-wise owners portal for **R V UDDIIPTA** (Karmanghat): view registration, interior, ceremony, and moving status across 58 seeded flats. Owners sign in with their phone number to add or update their flat’s status.
+Floor-wise owners portal for **R V UDDIIPTA** (Karmanghat). Next.js talks to Supabase directly. Sign-in is **Google only**.
 
-## Stack
+Schema lives in `supabase/migrations/` and is synced with `npm run db:push`.
 
-- **Client:** Vite + React
-- **Server:** Express + SQLite (`better-sqlite3`)
-
-## Quick start
+## Setup
 
 ```bash
 npm install
-npm install --prefix server
-npm install --prefix client
+npx supabase login
+npm run db:link
+npm run db:push
+```
+
+Add to `.env.local`:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://obhqikckxbfhsekanymv.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_publishable_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+ADMIN_EMAILS=you@gmail.com
+```
+
+`ADMIN_EMAILS` is the Google account that can open **Approvals**.
+
+## Enable Google login (required)
+
+1. [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials → Create OAuth client (Web).
+2. Authorized redirect URI:
+
+   `https://obhqikckxbfhsekanymv.supabase.co/auth/v1/callback`
+
+3. Supabase → Authentication → Providers → Google → turn on, paste Client ID and Client Secret.
+4. Authentication → URL Configuration:
+   - Site URL: `http://localhost:4800`
+   - Redirect URLs: `http://localhost:4800/auth/callback`
+
+Then:
+
+```bash
+npm run seed
 npm run dev
 ```
 
-- Portal: http://localhost:5173  
-- API: http://localhost:3001  
+The app listens on **http://localhost:4800**.
 
-## Seed data
+`npm run seed` loads the 238 brochure flats (wings A/B, floors 1–10) as vacant units. Owners are linked only after admin approval.
 
-On first launch the API seeds **58 flats**:
+## How access works
 
-- Floors **1–14**: 4 flats each (`101`–`104` … `1401`–`1404`)
-- Floor **15**: 2 flats (`1501`, `1502`)
+1. Owner taps **Continue with Google**.
+2. If they have no approved flat, they submit name, phone, and a brochure flat such as `A101` or `B1004`.
+3. An admin listed in `ADMIN_EMAILS` opens **Approvals** and approves.
+4. Only then can they see owner names, phones, and possession progress.
 
-Each flat has an owner name and phone from the owners list.
+Brochure facts (address, RERA, amenities, flat types and sizes) are **public** on the home page before login.
 
-## Phone login (demo)
+Signed-in owners can open **3D** for an interactive Three.js schematic of the 238 flats. It is a massing model from the masterplan, not a photoreal tour.
 
-1. Open **Phone login**
-2. Use a seeded number, e.g. `9000000042` (flat `101`)
-3. Enter OTP `1234`
-4. Update registration / interior / ceremony / moving
+## Deploy to Vercel
 
-## Scripts
-
-| Command | Description |
-| --- | --- |
-| `npm run dev` | API + Vite together |
-| `npm run seed` | Wipe DB and reseed 58 flats |
-| `npm run build` | Build the React client |
+Set the same env vars, plus `SUPABASE_SERVICE_ROLE_KEY` and `ADMIN_EMAILS`. Add `https://your-app.vercel.app/auth/callback` to Supabase redirect URLs and set Site URL to the Vercel domain.

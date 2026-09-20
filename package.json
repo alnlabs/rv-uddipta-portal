@@ -1,22 +1,38 @@
 {
   "name": "rv-uddipta-portal",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "private": true,
-  "description": "R V UDDIIPTA owners portal — floor-wise flats, possession status, phone login",
   "scripts": {
-    "dev": "concurrently -n server,client -c green,cyan \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
-    "dev:server": "npm run dev --prefix server",
-    "dev:client": "npm run dev --prefix client",
-    "start": "npm run start --prefix server",
-    "build": "npm run build --prefix client",
-    "seed": "npm run seed --prefix server"
+    "dev": "next dev -p 4800",
+    "build": "next build",
+    "start": "next start -p 4800",
+    "lint": "eslint",
+    "seed": "node scripts/seed-supabase.mjs",
+    "db:link": "supabase link --project-ref obhqikckxbfhsekanymv",
+    "db:push": "supabase db push",
+    "db:pull": "supabase db pull"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/alnlabs/rv-uddipta-portal.git"
+  "dependencies": {
+    "@react-three/drei": "^10.7.8",
+    "@react-three/fiber": "^9.7.0",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.116.0",
+    "next": "16.3.5",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1",
+    "three": "0.182.0",
+    "ws": "^8.21.3"
   },
-  "license": "ISC",
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/ws": "^8.18.1",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.5",
+    "tailwindcss": "^4",
+    "typescript": "^5"
   }
 }
