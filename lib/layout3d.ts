@@ -576,9 +576,15 @@ export const SITE_AREA_LABEL_TEXT: Record<string, string> = {
   cricket: "Cricket",
   drive: "Drive",
   park: "Park 3′",
+  parkNe: "Park 3′",
+  parkLedge: "Park 3′",
   track: "Track 3′",
+  trackNe: "Track 3′",
   kids: "Kids Play",
   sit: "Sit Wall",
+  wallL16: "L16",
+  wallL162: "L162",
+  wallL184: "L184",
 };
 
 /** Amenity + ground-feature labels — toggled separately from lawn-grid site areas. */
@@ -586,7 +592,10 @@ export const AMENITY_LABEL_IDS = new Set([
   "plot",
   "plotE",
   "park",
+  "parkNe",
+  "parkLedge",
   "track",
+  "trackNe",
   "drive",
   "courtAB",
   "courtB",
@@ -873,7 +882,7 @@ const NORTH_YARD_EXTRA = 2.4;
 const EAST_GATE_EXTRA = 1.5;
 /** Additional yard at CWeEndS (slanted wall, south end). */
 const EAST_SOUTH_EXTRA = 4.6;
-/** Lawn debug cell size — NE wall is a direct L15→L164 slant. */
+/** Lawn debug cell size — NE wall is L16→L162 slant + ledge to L184. */
 const LAWN_CELL = 1.25;
 
 export const SITE = {
@@ -896,11 +905,11 @@ export const SITE = {
     const south = cz + hz;
     const gateS = south - 0.15;
     const gateN = gateS - gate;
-    // Direct NE wall: L15 (east edge on north wall) → L164 (west / south), then to east wall.
-    const jogX0 = westWide + 16 * LAWN_CELL; // L15 east edge
+    // NE wall: L16 (on north) → L162 → L184 (east wall), then south.
+    const jogX0 = westWide + 16 * LAWN_CELL; // L16 west edge
     const jogZ0 = north;
-    const jogX1 = westWide + 26 * LAWN_CELL; // L164 west edge
-    const jogZ1 = north + 5 * LAWN_CELL; // L164 south edge
+    const jogX1 = westWide + 24 * LAWN_CELL; // L162 west edge
+    const jogZ1 = north + 5 * LAWN_CELL; // L162 south / L184 north
     // Slanted east wall: wide at south end → tapers to gate.
     const slantDx = westGate - westWide;
     const slantDz = gateN - north;
@@ -909,13 +918,16 @@ export const SITE = {
     const slantMidX = (westWide + westGate) / 2;
     const slantMidZ = (north + gateN) / 2;
     const southSpan = east - westGate;
-    // L15→L164 diagonal.
+    // L16→L162 diagonal (then horizontal ledge to L184 / east).
     const neDx = jogX1 - jogX0;
     const neDz = jogZ1 - jogZ0;
     const neLen = Math.hypot(neDx, neDz);
     const neY = Math.atan2(neDx, neDz);
-    const neMidX = (jogX0 + jogX1) / 2;
-    const neMidZ = (jogZ0 + jogZ1) / 2;
+    // Inward unit normal so wall thickness sits inside (no exterior bulge).
+    const neInX = neLen > 0 ? -neDz / neLen : 0;
+    const neInZ = neLen > 0 ? neDx / neLen : 1;
+    const neMidX = (jogX0 + jogX1) / 2 + neInX * (t / 2);
+    const neMidZ = (jogZ0 + jogZ1) / 2 + neInZ * (t / 2);
     const wallSeg = (
       x0: number,
       z0: number,
@@ -928,11 +940,13 @@ export const SITE = {
       const dx = x1 - x0;
       const dz = z1 - z0;
       if (Math.abs(dx) >= Math.abs(dz)) {
+        // Horizontal run: nudge south (+Z) so exterior face is on the boundary.
         return {
-          position: [(x0 + x1) / 2, y, z0],
+          position: [(x0 + x1) / 2, y, z0 + t / 2],
           size: [Math.abs(dx) + t, h, t],
         };
       }
+      // Vertical run: nudge west (−X) on east wall / east (+X) handled by caller.
       return {
         position: [x0, y, (z0 + z1) / 2],
         size: [t, h, Math.abs(dz) + t],
@@ -952,10 +966,10 @@ export const SITE = {
         gateE: westGate,
         gateN,
         gateS,
-        /** Direct L15→L164 slant, then ledge to east wall at z1. */
+        /** L16→L162 slant, then ledge to L184 / east wall at z1. */
         jog: { x0: jogX0, z0: jogZ0, x1: jogX1, z1: jogZ1 },
       },
-      // Ground fill stays inside the walls (no triangle outside the slant).
+      // Ground fill stays inside the walls (no layout outside L16–L162–L184).
       lawnRing: [
         [westWide, north],
         [jogX0, north],
@@ -966,17 +980,24 @@ export const SITE = {
         [westGate, gateN],
       ] as [number, number][],
       walls: [
-        // West/B wall from L164 ledge down to south.
-        wallSeg(east, jogZ1, east, south),
-        // North wall only to L15.
+        // West/B wall from L184 ledge down to south (inset so exterior flush).
+        {
+          position: [east - t / 2, y, (jogZ1 + south) / 2] as [
+            number,
+            number,
+            number,
+          ],
+          size: [t, h, south - jogZ1 + t] as [number, number, number],
+        },
+        // North wall only to L16.
         wallSeg(westWide, north, jogX0, north),
-        // Direct L15 → L164 (no intermediate cuts).
+        // Direct L16 → L162 (inset along inward normal).
         {
           position: [neMidX, y, neMidZ] as [number, number, number],
           size: [t, h, neLen] as [number, number, number],
           rotation: [0, neY, 0] as [number, number, number],
         },
-        // L164 → east wall
+        // L162 → L184 (east wall)
         wallSeg(jogX1, jogZ1, east, jogZ1),
         // South wall
         {
@@ -1264,6 +1285,8 @@ export const LAWN_PARTS = (() => {
     ring: [number, number][];
     color: string;
     position: [number, number, number];
+    /** When false, Html label only — no lawn mesh (used on checkered plot). */
+    mesh?: boolean;
   }[] = [];
   let index = 0;
   for (let z = north; z < south - 0.05; z += cell) {
@@ -1281,25 +1304,153 @@ export const LAWN_PARTS = (() => {
       // Drop cells whose west edge sits outside the slant.
       const xLeft = Math.max(x, eAt(mz));
       if (xLeft >= x1 - 0.08) continue;
-      const ring: [number, number][] = [
-        [xLeft, z],
-        [x1, z],
-        [x1, z1],
-        [xLeft, z1],
+      // Clip ring south of the NE wall so no lawn/label sticks outside.
+      const clip = (px: number, pz: number): [number, number] => [
+        px,
+        Math.max(pz, compoundNorthFace(px) + 0.04),
       ];
+      const ring: [number, number][] = [
+        clip(xLeft, z),
+        clip(x1, z),
+        clip(x1, z1),
+        clip(xLeft, z1),
+      ];
+      const zs = ring.map((p) => p[1]);
+      if (Math.max(...zs) - Math.min(...zs) < 0.05) {
+        index += 1;
+        continue;
+      }
       const id = `L${index}`;
+      const cx = (ring[0][0] + ring[1][0]) / 2;
+      const cz = (ring[0][1] + ring[2][1]) / 2;
+      // Keep label clearly inside the wall face.
+      const labelZ = Math.max(cz, compoundNorthFace(cx) + 0.35);
       parts.push({
         id,
         label: id,
         color: colors[index % colors.length],
         ring,
-        position: [(xLeft + x1) / 2, y, mz],
+        position: [cx, y, labelZ],
       });
       index += 1;
     }
   }
+
+  // Open checkered paving between compound wall and apartments (plot / drive).
+  // Labels only — do not paint lawn mesh over checkers.
+  // Use real unit footprints (not the full AABB) so the open yard on the
+  // wall side of B / courtyards still gets L# labels.
+  {
+    const half = UNIT / 2;
+    const footprints = Object.values(UNIT_FOOTPRINT);
+    const underApt = (x: number, z: number) => {
+      const pad = 0.2;
+      return footprints.some(([ux, uz]) => {
+        return (
+          x >= ux - half - pad &&
+          x <= ux + half + pad &&
+          z >= uz - half - pad &&
+          z <= uz + half + pad
+        );
+      });
+    };
+
+    for (let z = north; z < south - 0.05; z += cell) {
+      for (let x = westWide; x < east - 0.05; x += cell) {
+        const mx = x + Math.min(cell, east - x) / 2;
+        const mz = z + Math.min(cell, south - z) / 2;
+        if (!inCompound(mx, mz) || underApt(mx, mz)) continue;
+        // Keep clear of park + walking track (labels there flash over the bands).
+        const parkTrack = 6 * 0.3048;
+        if (mz < compoundNorthFace(mx) + parkTrack + 0.12) continue;
+        const near = parts.some(
+          (part) =>
+            Math.hypot(part.position[0] - mx, part.position[2] - mz) < cell * 0.5,
+        );
+        if (near) continue;
+        const id = `L${index}`;
+        parts.push({
+          id,
+          label: id,
+          color: colors[index % colors.length],
+          ring: [
+            [mx - 0.4, mz - 0.4],
+            [mx + 0.4, mz - 0.4],
+            [mx + 0.4, mz + 0.4],
+            [mx - 0.4, mz + 0.4],
+          ],
+          position: [mx, y, mz],
+          mesh: false,
+        });
+        index += 1;
+      }
+    }
+  }
+
   return parts;
 })();
+
+/** Toggleable L# label regions — keeps Html count down when only one side is on. */
+export type LawnLabelGroup = "n" | "e" | "w" | "s" | "yard";
+
+export const LAWN_LABEL_GROUP_OPTIONS: {
+  key: LawnLabelGroup;
+  label: string;
+}[] = [
+  { key: "n", label: "L# north" },
+  { key: "e", label: "L# east" },
+  { key: "w", label: "L# west" },
+  { key: "s", label: "L# south" },
+  { key: "yard", label: "L# yard" },
+];
+
+export const LAWN_PARTS_BY_GROUP = (() => {
+  const { westWide, east, north, south } = SITE.compound.bounds;
+  const midX = (westWide + east) / 2;
+  const midZ = (north + south) / 2;
+  const halfW = (east - westWide) / 2;
+  const halfD = (south - north) / 2;
+  const groups: Record<
+    LawnLabelGroup,
+    {
+      id: string;
+      label: string;
+      ring: [number, number][];
+      color: string;
+      position: [number, number, number];
+      mesh?: boolean;
+    }[]
+  > = { n: [], e: [], w: [], s: [], yard: [] };
+
+  for (const part of LAWN_PARTS) {
+    const dx = part.position[0] - midX;
+    const dz = part.position[2] - midZ;
+    // Open paving next to a wall counts with that edge so one toggle
+    // covers wall → apartment (no gap between L# north and L# yard).
+    if (part.mesh === false) {
+      const nx = Math.abs(dx) / halfW;
+      const nz = Math.abs(dz) / halfD;
+      if (nx < 0.35 && nz < 0.35) {
+        groups.yard.push(part);
+      } else if (nz >= nx) {
+        groups[dz < 0 ? "n" : "s"].push(part);
+      } else {
+        groups[dx < 0 ? "e" : "w"].push(part);
+      }
+      continue;
+    }
+    if (Math.abs(dz) >= Math.abs(dx)) {
+      groups[dz < 0 ? "n" : "s"].push(part);
+    } else {
+      // Screen-left / gate is −X (east of site).
+      groups[dx < 0 ? "e" : "w"].push(part);
+    }
+  }
+  return groups;
+})();
+
+/** Non-amenity named site marks (wall corners, etc.). */
+export const SITE_MARK_LABEL_IDS = new Set(["wallL16", "wallL162", "wallL184"]);
 
 /** 3 ft park strip + 3 ft walking track inside the compound wall (model units ≈ m). */
 export const FT = 0.3048;
@@ -1313,7 +1464,7 @@ function compoundEastX(z: number) {
   return westWide + (west - westWide) * ((z - north) / (gateN - north));
 }
 
-/** North face of compound wall at X (accounts for L15→L164 slant + east ledge). */
+/** North face of compound wall at X (L16→L162 slant + L184 ledge). */
 export function compoundNorthFace(x: number) {
   const { north, jog } = SITE.compound.bounds;
   if (x <= jog.x0) return north;
@@ -1331,17 +1482,32 @@ export function compoundInsetRing(dist: number): [number, number][] {
   const wS = west + dist;
   const g = Math.min(gateN, s);
   const wN = compoundEastX(n) + dist;
-  // Inward normal of L15→L164 slant (toward compound interior: south-west of the wall).
+  // Inward normal of L16→L162 slant (toward compound interior).
   const dx = jog.x1 - jog.x0;
   const dz = jog.z1 - jog.z0;
   const len = Math.hypot(dx, dz) || 1;
-  const ix = (-dz / len) * dist;
-  const iz = (dx / len) * dist;
+  const nx = (-dz / len) * dist;
+  const nz = (dx / len) * dist;
+  const slant0: [number, number] = [jog.x0 + nx, jog.z0 + nz];
+  const slant1: [number, number] = [jog.x1 + nx, jog.z1 + nz];
+  // Miter: intersect north inset (z=n) with slant-inset line.
+  const sdx = slant1[0] - slant0[0];
+  const sdz = slant1[1] - slant0[1];
+  const tNorth = Math.abs(sdz) > 1e-6 ? (n - slant0[1]) / sdz : 0;
+  const cornerL16: [number, number] = [slant0[0] + sdx * tNorth, n];
+  // Miter: intersect ledge inset (z=jog.z1+dist) with slant-inset line.
+  const tLedge =
+    Math.abs(sdz) > 1e-6 ? (jog.z1 + dist - slant0[1]) / sdz : 1;
+  const cornerL162: [number, number] = [
+    slant0[0] + sdx * tLedge,
+    jog.z1 + dist,
+  ];
+  // [wN,n] → L16 miter → L162 miter → east ledge → south → gate.
+  // (No duplicate L16 point — that collapsed parkN16/trackN16 to zero area.)
   return [
     [wN, n],
-    [jog.x0 - dist, n],
-    [jog.x0 + ix, jog.z0 + iz],
-    [jog.x1 + ix, jog.z1 + iz],
+    cornerL16,
+    cornerL162,
     [e, jog.z1 + dist],
     [e, s],
     [wS, s],
@@ -1368,16 +1534,18 @@ export const PERIMETER_BANDS = (() => {
     ...iswEnds.flatMap((part) => part.ring.map((p) => p[1])),
   );
 
-  // Inset: [wN,n], [x0,n], slant0, slant1, [e,z1+d], [e,s], [wS,s], [wS,g]
+  // Inset: [wN,n], L16, L162, [e,z1+d], [e,s], [wS,s], [wS,g]
   const pN = parkInner[0][1];
-  const pE = parkInner[4][0];
-  const pS = parkInner[5][1];
+  const pE = parkInner[3][0];
+  const pS = parkInner[4][1];
   const tN = trackInner[0][1];
-  const tE = trackInner[4][0];
-  const tS = trackInner[5][1];
+  const tE = trackInner[3][0];
+  const tS = trackInner[4][1];
   const eastTrackOuter = iswInner;
   const eastTrackInner = eastTrackOuter + TRACK_WIDTH;
-  const eastZ0 = Math.max(pN, jog.z1 + PARK_WIDTH);
+  // Run east track from the north park/track corner through L40→L143
+  // down to the ISW/kids segment (not only from the NE ledge).
+  const eastZ0 = pN;
   const eastZ1 = Math.min(
     Math.max(iswZ1, LAWN_PARTS.find((part) => part.id === "L174")?.ring[2][1] ?? iswZ1),
     pS,
@@ -1386,53 +1554,67 @@ export const PERIMETER_BANDS = (() => {
 
   const parkXN = parkInner[0][0];
   const parkXS = west + PARK_WIDTH;
-  const [plotW] = SITE.plot.size;
-  const [plotX] = SITE.plot.position;
-  const plotE = plotX + plotW / 2;
   const ledgeZ = jog.z1;
   const ledgeParkZ1 = ledgeZ + PARK_WIDTH;
-  const ledgeParkX0 = Math.max(jog.x1 - PARK_WIDTH, plotE);
+  // Keep park/track strictly inside the wall face (no bleed into outside beige).
+  const wallPad = 0.06;
+  const nWall = north + wallPad;
+  const ledgeWall = ledgeZ + wallPad;
+  const dx = jog.x1 - jog.x0;
+  const dz = jog.z1 - jog.z0;
+  const len = Math.hypot(dx, dz) || 1;
+  const inX = (-dz / len) * wallPad;
+  const inZ = (dx / len) * wallPad;
+  const slantA: [number, number] = [jog.x0 + inX, jog.z0 + inZ];
+  const slantB: [number, number] = [jog.x1 + inX, jog.z1 + inZ];
+  const parkL16 = parkInner[1];
+  const parkL162 = parkInner[2];
+  const trackL16 = trackInner[1];
+  const trackL162 = trackInner[2];
 
   const parkParts: { id: string; ring: [number, number][] }[] = [
     {
-      // North stub to L15
+      // North stub through L16 corner (L-shaped end, no diagonal gap at L15/L16)
       id: "parkN0",
       ring: [
-        [parkXN, north],
-        [jog.x0, north],
-        [jog.x0, pN],
+        [parkXN, nWall],
+        [jog.x0, nWall],
+        slantA,
+        parkL16,
         [parkXN, pN],
       ],
     },
     {
-      // Band along L15→L164 slant
+      // Band along L16→L162 slant
       id: "parkNe",
+      ring: [slantA, slantB, parkL162, parkL16],
+    },
+    {
+      // L162 corner fill (slant → ledge toward L184)
+      id: "parkN162",
       ring: [
-        [jog.x0, jog.z0],
-        [jog.x1, jog.z1],
-        [parkInner[3][0], parkInner[3][1]],
-        [parkInner[2][0], parkInner[2][1]],
+        slantB,
+        [jog.x1, ledgeWall],
+        [jog.x1, ledgeParkZ1],
+        parkL162,
       ],
     },
-    ...(ledgeParkX0 < east - 0.1
-      ? [
-          {
-            id: "parkNledge",
-            ring: [
-              [ledgeParkX0, ledgeZ],
-              [east, ledgeZ],
-              [east, ledgeParkZ1],
-              [ledgeParkX0, ledgeParkZ1],
-            ] as [number, number][],
-          },
-        ]
-      : []),
+    {
+      // Ledge park L162 → L184 / east wall
+      id: "parkNledge",
+      ring: [
+        [jog.x1, ledgeWall],
+        [east - wallPad, ledgeWall],
+        [east - wallPad, ledgeParkZ1],
+        [jog.x1, ledgeParkZ1],
+      ],
+    },
     {
       id: "parkW",
       ring: [
-        [pE, Math.max(ledgeParkZ1, ledgeZ)],
-        [east, Math.max(ledgeParkZ1, ledgeZ)],
-        [east, pS],
+        [pE, ledgeParkZ1],
+        [east - wallPad, ledgeParkZ1],
+        [east - wallPad, pS],
         [pE, pS],
       ],
     },
@@ -1440,52 +1622,43 @@ export const PERIMETER_BANDS = (() => {
       id: "parkS",
       ring: [
         [parkXS, pS],
-        [east, pS],
-        [east, south],
-        [parkXS, south],
+        [east - wallPad, pS],
+        [east - wallPad, south - wallPad],
+        [parkXS, south - wallPad],
       ],
     },
   ];
 
   const ledgeTrackZ1 = ledgeZ + PARK_WIDTH + TRACK_WIDTH;
-  const ledgeTrackX0 = Math.max(jog.x1 - PARK_WIDTH - TRACK_WIDTH, plotE);
   const trackParts: { id: string; ring: [number, number][] }[] = [
     {
+      // North track stub through L16 corner
       id: "trackS",
       ring: [
         [xStart, pN],
-        [jog.x0 - PARK_WIDTH, pN],
-        [jog.x0 - PARK_WIDTH, tN],
+        parkL16,
+        trackL16,
         [xStart, tN],
       ],
     },
     {
       id: "trackNe",
+      ring: [parkL16, parkL162, trackL162, trackL16],
+    },
+    {
+      id: "trackNledge",
       ring: [
-        [parkInner[2][0], parkInner[2][1]],
-        [parkInner[3][0], parkInner[3][1]],
-        [trackInner[3][0], trackInner[3][1]],
-        [trackInner[2][0], trackInner[2][1]],
+        [trackL162[0], ledgeParkZ1],
+        [pE, ledgeParkZ1],
+        [pE, ledgeTrackZ1],
+        trackL162,
       ],
     },
-    ...(ledgeTrackX0 < pE - 0.1
-      ? [
-          {
-            id: "trackNledge",
-            ring: [
-              [ledgeTrackX0, ledgeParkZ1],
-              [pE, ledgeParkZ1],
-              [pE, ledgeTrackZ1],
-              [ledgeTrackX0, ledgeTrackZ1],
-            ] as [number, number][],
-          },
-        ]
-      : []),
     {
       id: "trackW",
       ring: [
-        [tE, Math.max(ledgeTrackZ1, ledgeZ)],
-        [pE, Math.max(ledgeTrackZ1, ledgeZ)],
+        [tE, ledgeTrackZ1],
+        [pE, ledgeTrackZ1],
         [pE, tS],
         [tE, tS],
       ],
@@ -1564,14 +1737,27 @@ export const DRIVE_PATH = (() => {
   const oN = byId.trackS ? ringMaxZ(byId.trackS) : iN - 3.05;
   const oS = byId.trackN ? ringMinZ(byId.trackN) : iS + 3.05;
 
-  // Follow track-inner ring (includes L15→L164 slant inset); pin gate face to trackE.
+  // Follow track-inner ring (includes L16→L162 slant inset); pin gate face to trackE.
   const outer: [number, number][] = trackInner.map(
     ([x, z]) => [Math.max(x, oW), z] as [number, number],
   );
 
+  // Track-inner Z on the wall side at X (park+track inset from compound face).
+  const trackNorthAt = (x: number) =>
+    compoundNorthFace(x) + PARK_WIDTH + TRACK_WIDTH;
+
+  // Keep a clear gap south of the walking track so drive/plot never collapse
+  // onto the track (degenerate ring → broken track display on the L162 ledge).
+  const driveClear = 0.2;
+  const northSamples = 32;
+  const northEdge: [number, number][] = [];
+  for (let i = 0; i <= northSamples; i += 1) {
+    const x = iW + ((iE - iW) * i) / northSamples;
+    northEdge.push([x, Math.max(iN, trackNorthAt(x) + driveClear)]);
+  }
+
   const inner: [number, number][] = [
-    [iW, iN],
-    [iE, iN],
+    ...northEdge,
     [iE, iS],
     [iW, iS],
   ];
@@ -1588,78 +1774,68 @@ export const DRIVE_PATH = (() => {
   };
 })();
 
-/** Trees along compound-wall lawn strips: L2–L34, L34–L369, L369–L339.
- *  Clear of ISW south, east walk track, and the apartment drive loop. */
+/** Trees along compound-wall park strips (north stub, L16→L162 slant, L184 ledge, west/B). */
 export const WALL_TREES = (() => {
-  const byId = new Map(LAWN_PARTS.map((part) => [part.id, part]));
-  const { east, north, south, jog } = SITE.compound.bounds;
-  const ids = new Set<string>();
-  // North wall trees only along the remaining stub (west of L16 cut).
-  for (let i = 2; i <= 16; i += 1) ids.add(`L${i}`);
-  for (let i = 407; i <= 437; i += 1) ids.add(`L${i}`);
-  for (const id of [
-    "L37",
-    "L38",
-    "L39",
-    "L72",
-    "L74",
-    "L106",
-    "L107",
-    "L108",
-    "L174",
-  ]) {
-    ids.delete(id);
-  }
-  // West/B wall trees from the L164 ledge south.
-  const eastX = east - 0.55;
-  const zStart = jog.z1;
-  const zEnd = byId.get("L437")?.position[2] ?? south;
-  for (const part of LAWN_PARTS) {
-    if (Math.abs(part.position[0] - eastX) > 0.55) continue;
-    if (part.position[2] < zStart - 0.2 || part.position[2] > zEnd + 0.2) continue;
-    ids.add(part.id);
-  }
+  const { east, north, south, west, jog } = SITE.compound.bounds;
   const inset = PERIMETER_BANDS.treeInset;
+  const spacing = 1.85;
+  const trees: { id: string; position: [number, number, number] }[] = [];
+
+  const along = (
+    idPrefix: string,
+    x0: number,
+    z0: number,
+    x1: number,
+    z1: number,
+    inwardX: number,
+    inwardZ: number,
+  ) => {
+    const dx = x1 - x0;
+    const dz = z1 - z0;
+    const len = Math.hypot(dx, dz);
+    if (len < 0.4) return;
+    const count = Math.max(1, Math.round(len / spacing));
+    for (let i = 0; i <= count; i += 1) {
+      const t = i / count;
+      const x = x0 + dx * t + inwardX * inset;
+      const z = z0 + dz * t + inwardZ * inset;
+      trees.push({ id: `${idPrefix}-${i}`, position: [x, 0.02, z] });
+    }
+  };
+
+  // North stub → L16 (inward = +Z)
+  along("n", west + 1.2, north, jog.x0, north, 0, 1);
+  // L16 → L162 slant (inward = slant normal)
+  {
+    const dx = jog.x1 - jog.x0;
+    const dz = jog.z1 - jog.z0;
+    const len = Math.hypot(dx, dz) || 1;
+    along("ne", jog.x0, jog.z0, jog.x1, jog.z1, -dz / len, dx / len);
+  }
+  // L162 ledge → L184 / east wall (inward = +Z)
+  along("ledge", jog.x1, jog.z1, east, jog.z1, 0, 1);
+  // West/B wall (inward = -X)
+  along("w", east, jog.z1 + 0.8, east, south - 0.8, -1, 0);
+  // South wall (inward = -Z)
+  along("s", east - 0.8, south, west + 1.2, south, 0, -1);
+
   const trackE = PERIMETER_BANDS.track.parts.find((part) => part.id === "trackE");
-  const tx0 = trackE
-    ? Math.min(...trackE.ring.map((p) => p[0]))
-    : -6.78;
-  const tx1 = trackE
-    ? Math.max(...trackE.ring.map((p) => p[0]))
-    : -5.87;
-  const tz0 = trackE
-    ? Math.min(...trackE.ring.map((p) => p[1]))
-    : north;
-  const tz1 = trackE
-    ? Math.max(...trackE.ring.map((p) => p[1]))
-    : south;
+  const tx0 = trackE ? Math.min(...trackE.ring.map((p) => p[0])) : -6.78;
+  const tx1 = trackE ? Math.max(...trackE.ring.map((p) => p[0])) : -5.87;
+  const tz0 = trackE ? Math.min(...trackE.ring.map((p) => p[1])) : north;
   const gap = 1.75;
   const iswX = (tx0 + tx1) / 2 - TRACK_WIDTH / 2 - 0.07;
-  const { oW, oE, oN, oS, iW, iE, iN, iS } = DRIVE_PATH.bounds;
-  const treeClear = 0.55;
-
-  const inDriveRing = (x: number, z: number) => {
-    const inOuter =
-      x >= oW - treeClear &&
-      x <= oE + treeClear &&
-      z >= oN - treeClear &&
-      z <= oS + treeClear;
-    const inInner =
-      x >= iW + treeClear &&
-      x <= iE - treeClear &&
-      z >= iN + treeClear &&
-      z <= iS - treeClear;
-    return inOuter && !inInner;
-  };
+  const { iW, iE, iN, iS } = DRIVE_PATH.bounds;
 
   const blocksTree = (x: number, z: number) => {
     const nearIswSouth =
       z <= tz0 + gap && x >= iswX - 2.8 && x <= tx1 + gap;
-    // Never place trees on any walking-track band.
+    // Only block on axis-aligned track bands (AABB of slant track covers the park).
     const onWalkTrack = PERIMETER_BANDS.track.parts.some((part) => {
+      if (part.id === "trackNe" || part.id === "trackN16") return false;
       const xs = part.ring.map((p) => p[0]);
       const zs = part.ring.map((p) => p[1]);
-      const pad = 0.15;
+      const pad = 0.12;
       return (
         x >= Math.min(...xs) - pad &&
         x <= Math.max(...xs) + pad &&
@@ -1667,35 +1843,15 @@ export const WALL_TREES = (() => {
         z <= Math.max(...zs) + pad
       );
     });
-    // Park/tree layer only: within PARK_WIDTH of a compound wall face.
-    const northFace = compoundNorthFace(x);
-    const dN = Math.abs(z - northFace);
-    const dS = Math.abs(z - south);
-    const dE = Math.abs(x - east);
-    const inParkLayer =
-      dN <= PARK_WIDTH - 0.2 ||
-      dS <= PARK_WIDTH - 0.2 ||
-      dE <= PARK_WIDTH - 0.2;
-    return nearIswSouth || onWalkTrack || inDriveRing(x, z) || !inParkLayer;
+    // Must stay inside compound (south of wall face).
+    if (z < compoundNorthFace(x) + 0.08) return true;
+    if (x > east - 0.08 || z > south - 0.08) return true;
+    // Block trees that sit under apartment footprints (not the north park ledge).
+    const underApt = x >= iW && x <= iE && z >= iN && z <= iS;
+    return nearIswSouth || onWalkTrack || underApt;
   };
 
-  return [...ids]
-    .map((id) => byId.get(id))
-    .filter((part): part is (typeof LAWN_PARTS)[number] => Boolean(part))
-    .map((part) => {
-      let [x, , z] = part.position;
-      const dN = Math.abs(z - north);
-      const dS = Math.abs(z - south);
-      const dE = Math.abs(x - east);
-      if (dE <= dN && dE <= dS) x = east - inset;
-      else if (dN <= dS) z = north + inset;
-      else z = south - inset;
-      return {
-        id: part.id,
-        position: [x, 0.02, z] as [number, number, number],
-      };
-    })
-    .filter((tree) => !blocksTree(tree.position[0], tree.position[2]));
+  return trees.filter((tree) => !blocksTree(tree.position[0], tree.position[2]));
 })();
 
 /** Indoor cricket nets along east compound wall — L105→L197, clear of kids play. */
@@ -1968,8 +2124,73 @@ export const SITE_AREA_LABELS = (() => {
       position: PERIMETER_BANDS.park.label,
     },
     {
+      id: "parkNe",
+      position: (() => {
+        const { jog } = SITE.compound.bounds;
+        const x = (jog.x0 + jog.x1) / 2;
+        const z = (jog.z0 + jog.z1) / 2;
+        const dx = jog.x1 - jog.x0;
+        const dz = jog.z1 - jog.z0;
+        const len = Math.hypot(dx, dz) || 1;
+        return [
+          x + (-dz / len) * (PARK_WIDTH * 0.45),
+          y,
+          z + (dx / len) * (PARK_WIDTH * 0.45),
+        ] as [number, number, number];
+      })(),
+    },
+    {
+      id: "parkLedge",
+      position: (() => {
+        const { jog, east } = SITE.compound.bounds;
+        return [
+          (jog.x1 + east) / 2,
+          y,
+          jog.z1 + PARK_WIDTH * 0.45,
+        ] as [number, number, number];
+      })(),
+    },
+    {
       id: "track",
       position: PERIMETER_BANDS.track.label,
+    },
+    {
+      id: "trackNe",
+      position: (() => {
+        const { jog } = SITE.compound.bounds;
+        const x = (jog.x0 + jog.x1) / 2;
+        const z = (jog.z0 + jog.z1) / 2;
+        const dx = jog.x1 - jog.x0;
+        const dz = jog.z1 - jog.z0;
+        const len = Math.hypot(dx, dz) || 1;
+        const d = PARK_WIDTH + TRACK_WIDTH * 0.45;
+        return [
+          x + (-dz / len) * d,
+          y,
+          z + (dx / len) * d,
+        ] as [number, number, number];
+      })(),
+    },
+    {
+      id: "wallL16",
+      position: (() => {
+        const { jog } = SITE.compound.bounds;
+        return [jog.x0, y, jog.z0 + 0.7] as [number, number, number];
+      })(),
+    },
+    {
+      id: "wallL162",
+      position: (() => {
+        const { jog } = SITE.compound.bounds;
+        return [jog.x1, y, jog.z1 + 0.7] as [number, number, number];
+      })(),
+    },
+    {
+      id: "wallL184",
+      position: (() => {
+        const { jog, east } = SITE.compound.bounds;
+        return [east - 0.9, y, jog.z1 + 0.7] as [number, number, number];
+      })(),
     },
     {
       id: "kids",

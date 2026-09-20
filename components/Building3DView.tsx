@@ -43,6 +43,13 @@ import {
   SITE_AREA_LABEL_TEXT,
   AMENITY_LABEL_IDS,
   LAWN_PARTS,
+  LAWN_PARTS_BY_GROUP,
+  LAWN_LABEL_GROUP_OPTIONS,
+  type LawnLabelGroup,
+  SITE_MARK_LABEL_IDS,
+  PARK_WIDTH,
+  TRACK_WIDTH,
+  compoundNorthFace,
   CRICKET_NETS,
   DRIVE_PATH,
   INNER_SHORT_WALL,
@@ -73,7 +80,12 @@ type LabelKey =
   | "units"
   | "corridors"
   | "compound"
-  | "site"
+  | "siteMarks"
+  | "lawnN"
+  | "lawnE"
+  | "lawnW"
+  | "lawnS"
+  | "lawnYard"
   | "amenities"
   | "clubhouse"
   | "gate"
@@ -81,11 +93,23 @@ type LabelKey =
 
 type LabelVisibility = Record<LabelKey, boolean>;
 
+const LAWN_GROUP_KEY: Record<LawnLabelGroup, LabelKey> = {
+  n: "lawnN",
+  e: "lawnE",
+  w: "lawnW",
+  s: "lawnS",
+  yard: "lawnYard",
+};
+
 const LABEL_OPTIONS: { key: LabelKey; label: string }[] = [
   { key: "units", label: "Units" },
   { key: "corridors", label: "Corridors" },
   { key: "compound", label: "Compound" },
-  { key: "site", label: "Site areas" },
+  { key: "siteMarks", label: "Site marks" },
+  ...LAWN_LABEL_GROUP_OPTIONS.map((option) => ({
+    key: LAWN_GROUP_KEY[option.key],
+    label: option.label,
+  })),
   { key: "amenities", label: "Amenities" },
   { key: "clubhouse", label: "Clubhouse" },
   { key: "gate", label: "Gate" },
@@ -96,7 +120,13 @@ const DEFAULT_LABELS: LabelVisibility = {
   units: true,
   corridors: true,
   compound: true,
-  site: true,
+  siteMarks: true,
+  // L# grids off by default — each side is a few hundred Html nodes.
+  lawnN: false,
+  lawnE: false,
+  lawnW: false,
+  lawnS: false,
+  lawnYard: false,
   amenities: true,
   clubhouse: true,
   gate: true,
@@ -112,7 +142,17 @@ const HEAVY_LABEL_GROUND =
 const DEBUG_LAWN_LABEL =
   "block rounded bg-[#0d1a14]/88 px-1 py-0.5 text-[8px] leading-none font-bold text-[#e8d5a3] shadow-[0_1px_2px_rgba(0,0,0,0.35)] ring-1 ring-[rgba(232,213,163,0.25)]";
 
-const GROUND_HEAVY_IDS = new Set(["plot", "plotE", "park", "track", "kids", "sit"]);
+const GROUND_HEAVY_IDS = new Set([
+  "plot",
+  "plotE",
+  "park",
+  "parkNe",
+  "parkLedge",
+  "track",
+  "trackNe",
+  "kids",
+  "sit",
+]);
 
 export type ModelFlat = {
   flatNumber: string
@@ -396,20 +436,37 @@ function PerimeterBands() {
         <mesh
           key={part.id}
           rotation={[-Math.PI / 2, 0, 0]}
-          position={[0, 0.018, 0]}
+          position={[0, 0.02, 0]}
           geometry={part.geometry}
+          renderOrder={1}
         >
-          <meshStandardMaterial color="#4a7a58" roughness={0.9} side={DoubleSide} />
+          <meshStandardMaterial
+            color="#4a7a58"
+            roughness={0.9}
+            side={DoubleSide}
+            polygonOffset
+            polygonOffsetFactor={-1}
+            polygonOffsetUnits={-1}
+          />
         </mesh>
       ))}
       {trackGeoms.map((part) => (
         <mesh
           key={part.id}
           rotation={[-Math.PI / 2, 0, 0]}
-          position={[0, 0.022, 0]}
+          position={[0, 0.028, 0]}
           geometry={part.geometry}
+          renderOrder={2}
         >
-          <meshStandardMaterial color="#c4b8a4" roughness={0.82} side={DoubleSide} />
+          <meshStandardMaterial
+            color="#c4b8a4"
+            roughness={0.82}
+            side={DoubleSide}
+            polygonOffset
+            polygonOffsetFactor={-2}
+            polygonOffsetUnits={-2}
+            depthWrite
+          />
         </mesh>
       ))}
     </>
@@ -419,7 +476,24 @@ function PerimeterBands() {
 function CompoundLawn() {
   const geometries = useMemo(
     () =>
-      LAWN_PARTS.map((part) => {
+      LAWN_PARTS.filter((part) => {
+        if (part.mesh === false) return false;
+        const [x, , z] = part.position;
+        // Don't paint grey lawn under park / walking track (covers the bands).
+        const face = compoundNorthFace(x);
+        if (z < face + PARK_WIDTH + TRACK_WIDTH + 0.06) return false;
+        const inTrack = PERIMETER_BANDS.track.parts.some((band) => {
+          const xs = band.ring.map((p) => p[0]);
+          const zs = band.ring.map((p) => p[1]);
+          return (
+            x >= Math.min(...xs) - 0.05 &&
+            x <= Math.max(...xs) + 0.05 &&
+            z >= Math.min(...zs) - 0.05 &&
+            z <= Math.max(...zs) + 0.05
+          );
+        });
+        return !inTrack;
+      }).map((part) => {
         const shape = new Shape();
         const [x0, z0] = part.ring[0];
         shape.moveTo(x0, -z0);
@@ -796,14 +870,17 @@ function CricketNets() {
 
 function Site() {
   const map = useCheckeredPaving();
-  // Courtyard slab = drive inner only (full SITE.plot overlaps park/track on the NE).
+  // Courtyard slab follows drive inner (clamped inside NE track so it never
+  // bleeds outside the L16→L162→L184 wall).
   const plotGeom = useMemo(() => {
-    const { iW, iE, iN, iS } = DRIVE_PATH.bounds;
+    const { inner } = DRIVE_PATH;
     const shape = new Shape();
-    shape.moveTo(iW, -iN);
-    shape.lineTo(iE, -iN);
-    shape.lineTo(iE, -iS);
-    shape.lineTo(iW, -iS);
+    const [x0, z0] = inner[0];
+    shape.moveTo(x0, -z0);
+    for (let i = 1; i < inner.length; i += 1) {
+      const [x, z] = inner[i];
+      shape.lineTo(x, -z);
+    }
     shape.closePath();
     const geom = new ShapeGeometry(shape);
     applyWorldPavingUVs(geom, PAVING_TILE);
@@ -1153,19 +1230,23 @@ function GroundLabels({
         </Html>
       ) : null}
 
-      {labels.site ? (
-        <>
-          {LAWN_PARTS.map((part) => (
-            <Html
-              key={`gf-lawn-${part.id}`}
-              position={part.position}
-              center
-              style={{ pointerEvents: "none", transform: "translate(-50%, -50%)" }}
-            >
-              <span className={DEBUG_LAWN_LABEL}>{part.label}</span>
-            </Html>
-          ))}
-          {SITE_AREA_LABELS.filter((area) => !AMENITY_LABEL_IDS.has(area.id)).map(
+      {LAWN_LABEL_GROUP_OPTIONS.map((group) =>
+        labels[LAWN_GROUP_KEY[group.key]]
+          ? LAWN_PARTS_BY_GROUP[group.key].map((part) => (
+              <Html
+                key={`gf-lawn-${part.id}`}
+                position={part.position}
+                center
+                style={{ pointerEvents: "none", transform: "translate(-50%, -50%)" }}
+              >
+                <span className={DEBUG_LAWN_LABEL}>{part.label}</span>
+              </Html>
+            ))
+          : null,
+      )}
+
+      {labels.siteMarks
+        ? SITE_AREA_LABELS.filter((area) => SITE_MARK_LABEL_IDS.has(area.id)).map(
             (area) => (
               <Html
                 key={`gf-site-${area.id}`}
@@ -1173,18 +1254,13 @@ function GroundLabels({
                 center
                 style={{ pointerEvents: "none", transform: "translate(-50%, -50%)" }}
               >
-                <span
-                  className={
-                    GROUND_HEAVY_IDS.has(area.id) ? HEAVY_LABEL_GROUND : HEAVY_LABEL
-                  }
-                >
+                <span className={HEAVY_LABEL}>
                   {SITE_AREA_LABEL_TEXT[area.id] ?? area.id}
                 </span>
               </Html>
             ),
-          )}
-        </>
-      ) : null}
+          )
+        : null}
 
       {labels.amenities
         ? SITE_AREA_LABELS.filter((area) => AMENITY_LABEL_IDS.has(area.id)).map(
@@ -1528,7 +1604,7 @@ function LabelPicker({
         <div
           role="menu"
           aria-label="Ground-floor labels"
-          className="absolute top-[calc(100%+0.4rem)] right-0 z-20 w-[14.5rem] rounded-2xl bg-[#14241c] p-2 shadow-lg ring-1 ring-[rgba(232,213,163,0.22)]"
+          className="absolute top-[calc(100%+0.4rem)] right-0 z-20 w-[15.5rem] max-h-[min(28rem,70vh)] overflow-y-auto rounded-2xl bg-[#14241c] p-2 shadow-lg ring-1 ring-[rgba(232,213,163,0.22)]"
         >
           <div className="mb-1 flex gap-1 px-1">
             <button
