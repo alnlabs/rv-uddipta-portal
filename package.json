@@ -1,0 +1,22 @@
+{
+  "name": "rv-uddipta-portal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "R V UDDIIPTA owners portal — floor-wise flats, possession status, phone login",
+  "scripts": {
+    "dev": "concurrently -n server,client -c green,cyan \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "start": "npm run start --prefix server",
+    "build": "npm run build --prefix client",
+    "seed": "npm run seed --prefix server"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alnlabs/rv-uddipta-portal.git"
+  },
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
