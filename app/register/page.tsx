@@ -29,7 +29,7 @@ export default async function RegisterPage() {
   if (pending) {
     return (
       <section className="mx-auto w-[calc(100%-1.25rem)] py-8 md:w-[min(720px,calc(100%-2rem))]">
-        <p className="text-xs font-semibold tracking-[0.16em] text-[#c9a45c] uppercase">
+        <p className="text-xs font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">
           Pending
         </p>
         <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[#14241c]">

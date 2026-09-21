@@ -31,7 +31,9 @@ export function BottomNav({
     >
       <div className="flex gap-1">
         {item("/#floors", "Floors", pathname === "/")}
-        {signedIn ? item("/model", "3D", pathname === "/model") : null}
+        {signedIn
+          ? item("/community?view=3d", "3D", pathname.startsWith("/community"))
+          : null}
         {signedIn
           ? item("/update", "My flat", pathname === "/update")
           : item("/login", "Login", pathname === "/login" || pathname === "/register")}

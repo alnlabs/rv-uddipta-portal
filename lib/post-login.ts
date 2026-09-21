@@ -7,7 +7,7 @@ export async function postLoginPath(
   user: User | null,
 ) {
   if (!user) return "/login";
-  if (isAdminUser(user)) return "/admin";
+  if (isAdminUser(user)) return "/";
 
   const { data: flat } = await supabase
     .from("flats")
@@ -16,5 +16,5 @@ export async function postLoginPath(
     .maybeSingle();
   if (flat) return "/";
 
-  return "/register";
+  return "/";
 }

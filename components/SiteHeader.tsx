@@ -1,33 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { createClient } from "@/utils/supabase/client";
 
-export function SiteHeader({
-  signedIn,
-  isAdmin = false,
-}: {
-  signedIn: boolean
-  isAdmin?: boolean
-}) {
-  const pathname = usePathname();
-  const router = useRouter();
-
-  async function logout() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.refresh();
-    router.push("/");
-  }
-
-  const linkClass = (href: string) =>
-    `inline-flex min-h-10 items-center rounded-full px-3 text-sm font-semibold ${
-      pathname === href
-        ? "bg-[rgba(27,58,47,0.1)] text-[#1b3a2f]"
-        : "text-[#3d5247]"
-    }`;
-
+/** Public (signed-out) top bar only. Signed-in owners use OwnersShell. */
+export function SiteHeader({ signedIn = false }: { signedIn?: boolean; isAdmin?: boolean }) {
   return (
     <header
       className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-[rgba(27,58,47,0.08)] bg-[#efe8d8]/80 px-3 py-2 backdrop-blur-md md:px-8 md:py-3"
@@ -46,44 +22,13 @@ export function SiteHeader({
           </em>
         </span>
       </Link>
-      <nav className="hidden items-center gap-1 md:flex">
-        {signedIn ? (
-          <>
-            <Link href="/#floors" className={linkClass("/")}>
-              Floors
-            </Link>
-            <Link href="/model" className={linkClass("/model")}>
-              3D
-            </Link>
-            {isAdmin ? (
-              <Link href="/admin" className={linkClass("/admin")}>
-                Approvals
-              </Link>
-            ) : null}
-            <Link href="/update" className={linkClass("/update")}>
-              My flat
-            </Link>
-            <button type="button" onClick={logout} className={linkClass("/logout")}>
-              Sign out
-            </button>
-          </>
-        ) : (
-          <Link
-            href="/login"
-            className="inline-flex min-h-10 items-center rounded-full bg-[#1b3a2f] px-4 text-sm font-semibold text-[#e8d5a3]"
-          >
-            Sign in
-          </Link>
-        )}
-      </nav>
-      {signedIn ? (
-        <button
-          type="button"
-          onClick={logout}
-          className="inline-flex min-h-10 items-center rounded-full px-3 text-sm font-semibold text-[#3d5247] md:hidden"
+      {!signedIn ? (
+        <Link
+          href="/login"
+          className="inline-flex min-h-10 items-center rounded-full bg-[#1b3a2f] px-4 text-sm font-semibold text-[#e8d5a3]"
         >
-          Sign out
-        </button>
+          Sign in
+        </Link>
       ) : null}
     </header>
   );

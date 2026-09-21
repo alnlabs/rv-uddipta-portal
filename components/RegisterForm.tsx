@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { registerOwner, type RegisterState } from "@/app/actions/register";
+import { facingLabel, typeLabel } from "@/lib/flatDisplay";
 import { INVENTORY } from "@/lib/inventory";
 
 const initial: RegisterState = { ok: false, message: "" };
@@ -14,23 +15,31 @@ export default function RegisterForm({
   email: string
 }) {
   const [state, action, pending] = useActionState(registerOwner, initial);
+  const [flatNumber, setFlatNumber] = useState("");
+
+  const selected = useMemo(() => {
+    const key = flatNumber.trim().toUpperCase();
+    if (!key) return null;
+    return INVENTORY.find((flat) => flat.flatNumber === key) ?? null;
+  }, [flatNumber]);
 
   return (
     <section className="mx-auto grid w-[calc(100%-1.25rem)] place-items-start py-6 md:min-h-[70vh] md:w-[min(1100px,calc(100%-2rem))] md:place-items-center md:py-12">
-      <div className="w-full max-w-lg rounded-2xl border border-[rgba(27,58,47,0.14)] bg-[#fffcf5] p-4 shadow-xl md:p-6">
-        <p className="text-xs font-semibold tracking-[0.16em] text-[#c9a45c] uppercase">
-          New owner
-        </p>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[#14241c]">
-          Request access
-        </h1>
-        <p className="mt-3 text-[#3d5247]">
-          Signed in as {email}. Pick your brochure flat (A101–B1015). An admin
-          must approve you before you can see owner information.
-        </p>
+      <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-[rgba(27,58,47,0.12)] bg-[#fffcf5]/95 shadow-xl">
+        <div className="bg-[#14241c] px-5 py-5 text-[#f7f2e6] md:px-6">
+          <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">
+            New owner
+          </p>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight">
+            Request access
+          </h1>
+          <p className="mt-2 text-sm text-[#d8c898]">
+            Signed in as {email}. An admin must approve before you see the board.
+          </p>
+        </div>
 
-        <form action={action} className="mt-6 flex flex-col gap-4">
-          <label className="flex flex-col gap-2 text-sm font-semibold">
+        <form action={action} className="flex flex-col gap-4 p-5 md:p-6">
+          <label className="flex flex-col gap-2 text-sm font-semibold text-[#14241c]">
             Mobile number
             <input
               name="phone"
@@ -38,10 +47,11 @@ export default function RegisterForm({
               inputMode="numeric"
               autoComplete="tel"
               required
-              className="min-h-12 rounded-xl border border-[rgba(27,58,47,0.14)] bg-[#fffdf8] px-4 py-3 text-base font-normal"
+              placeholder="10-digit mobile"
+              className="min-h-12 rounded-2xl border border-[rgba(27,58,47,0.12)] bg-white/80 px-4 py-3 text-base font-normal outline-none focus:border-[#1b3a2f] focus:ring-2 focus:ring-[rgba(27,58,47,0.12)]"
             />
           </label>
-          <label className="flex flex-col gap-2 text-sm font-semibold">
+          <label className="flex flex-col gap-2 text-sm font-semibold text-[#14241c]">
             Owner name
             <input
               name="ownerName"
@@ -49,10 +59,11 @@ export default function RegisterForm({
               defaultValue={defaultName}
               required
               minLength={2}
-              className="min-h-12 rounded-xl border border-[rgba(27,58,47,0.14)] bg-[#fffdf8] px-4 py-3 text-base font-normal"
+              autoComplete="name"
+              className="min-h-12 rounded-2xl border border-[rgba(27,58,47,0.12)] bg-white/80 px-4 py-3 text-base font-normal outline-none focus:border-[#1b3a2f] focus:ring-2 focus:ring-[rgba(27,58,47,0.12)]"
             />
           </label>
-          <label className="flex flex-col gap-2 text-sm font-semibold">
+          <label className="flex flex-col gap-2 text-sm font-semibold text-[#14241c]">
             Flat number
             <input
               name="flatNumber"
@@ -61,7 +72,9 @@ export default function RegisterForm({
               autoCapitalize="characters"
               placeholder="A101 or B1004"
               required
-              className="min-h-12 rounded-xl border border-[rgba(27,58,47,0.14)] bg-[#fffdf8] px-4 py-3 text-base font-normal uppercase"
+              value={flatNumber}
+              onChange={(e) => setFlatNumber(e.target.value.toUpperCase())}
+              className="min-h-12 rounded-2xl border border-[rgba(27,58,47,0.12)] bg-white/80 px-4 py-3 text-base font-normal uppercase outline-none focus:border-[#1b3a2f] focus:ring-2 focus:ring-[rgba(27,58,47,0.12)]"
             />
             <datalist id="brochure-flats">
               {INVENTORY.map((flat) => (
@@ -74,8 +87,30 @@ export default function RegisterForm({
             </datalist>
           </label>
 
+          {selected ? (
+            <div className="rounded-2xl bg-[rgba(27,58,47,0.05)] px-4 py-3 text-sm text-[#3d5247]">
+              <p className="font-semibold text-[#14241c]">{selected.flatNumber}</p>
+              <p className="mt-0.5">
+                Floor {selected.floor} · Wing {selected.wing} ·{" "}
+                {typeLabel(selected.type)} · {facingLabel(selected.facing)} ·{" "}
+                {selected.areaSqft.toLocaleString()} sft
+              </p>
+            </div>
+          ) : flatNumber.trim() ? (
+            <p className="text-sm text-[#9a5b3c]">
+              No brochure flat matches that number yet.
+            </p>
+          ) : null}
+
           {state.message ? (
-            <p className={state.ok ? "font-semibold text-[#2f5a48]" : "text-[#8a2f2f]"}>
+            <p
+              role={state.ok ? "status" : "alert"}
+              className={`rounded-xl px-3 py-2 text-sm ${
+                state.ok
+                  ? "bg-[rgba(47,90,72,0.1)] font-semibold text-[#2f5a48]"
+                  : "bg-[rgba(138,47,47,0.08)] text-[#8a2f2f]"
+              }`}
+            >
               {state.message}
             </p>
           ) : null}

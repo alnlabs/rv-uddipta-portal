@@ -15,7 +15,7 @@ export function PublicGate() {
           <h1 className="text-[2.35rem] leading-[0.95] font-semibold tracking-tight md:text-7xl">
             RV UDDIIPTA
           </h1>
-          <p className="mx-auto mt-3 w-full text-[0.95rem] text-[#f7f2e6]/85 md:mx-0 md:mt-4 md:text-base">
+          <p className="mx-auto mt-3 w-full text-[0.95rem] text-[#ebe4d4] md:mx-0 md:mt-4 md:text-base">
             {BUILDING.tagline} on {BUILDING.acres} acres. Brochure details are
             public. Owner information stays behind Google sign-in and admin
             approval.

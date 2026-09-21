@@ -11,7 +11,7 @@
  *   1  A4 A3 B3 B4 B12 B13
  *   2  A6 A5 B5        B14
  *   3  A8 A7 B6 B7 B8 B9 B15
- *   4  A9 A10                 (no B on this row; pool sits east of A10)
+ *   4  A9 A10                 (no B on this row)
  *
  * Dark roof strips are corridor / lift cores between towers.
  * North = −Z, west = −X.
@@ -572,7 +572,6 @@ export const SITE_AREA_LABEL_TEXT: Record<string, string> = {
   courtAB: "Court A–B",
   courtB: "Court B",
   bball: "Basketball",
-  pool: "Pool",
   cricket: "Cricket",
   drive: "Drive",
   park: "Park 3′",
@@ -600,11 +599,28 @@ export const AMENITY_LABEL_IDS = new Set([
   "courtAB",
   "courtB",
   "bball",
-  "pool",
   "cricket",
   "kids",
   "sit",
 ]);
+
+/** Numbered amenity map — same number for duplicate markers of one feature. */
+export const AMENITY_LEGEND = [
+  { n: 1, label: "Plot", ids: ["plot", "plotE"] },
+  { n: 2, label: "Court A–B", ids: ["courtAB"] },
+  { n: 3, label: "Court B", ids: ["courtB"] },
+  { n: 4, label: "Basketball", ids: ["bball"] },
+  { n: 5, label: "Cricket", ids: ["cricket"] },
+  { n: 6, label: "Drive", ids: ["drive"] },
+  { n: 7, label: "Park 3′", ids: ["park", "parkNe", "parkLedge"] },
+  { n: 8, label: "Track 3′", ids: ["track", "trackNe"] },
+  { n: 9, label: "Kids Play", ids: ["kids"] },
+  { n: 10, label: "Sit Wall", ids: ["sit"] },
+] as const;
+
+export const AMENITY_NUMBER_BY_ID: Record<string, number> = Object.fromEntries(
+  AMENITY_LEGEND.flatMap((entry) => entry.ids.map((id) => [id, entry.n])),
+);
 
 /** N = −Z, E = +X, S = +Z, W = −X */
 export const FACE_MARKS = [
@@ -1094,10 +1110,6 @@ export const SITE = {
     position: [X_B8, 0.05, (Z[0] + Z[2]) / 2] as [number, number, number],
     size: [GAP_COURT * 0.92, 7.4] as [number, number],
   },
-  pool: {
-    position: [X.A_E + 1.45, 0.06, Z[4]] as [number, number, number],
-    size: [1.7, 2.3] as [number, number],
-  },
   clubhouse: (() => {
     const chY = 1.55 + STILT_HEIGHT;
     return {
@@ -1180,13 +1192,56 @@ export function compoundMarkPosition(dx: number, dz: number) {
 }
 
 export function compoundGatePosition() {
-  const { west, gateN, gateS, h } = SITE.compound.bounds;
+  const { west } = SITE.compound.bounds;
+  const gate = COMPOUND_GATE;
   return [
-    west + 1.0,
-    h + 0.55,
-    (gateN + gateS) / 2,
+    west + 1.15,
+    gate.springY + gate.archRise + gate.titleH + 0.35,
+    gate.position[2],
   ] as [number, number, number];
 }
+
+/** Arch-type compound entry on the east / gate wall opening. */
+export const COMPOUND_GATE = (() => {
+  const { west, gateN, gateS, h } = SITE.compound.bounds;
+  const t = 0.18;
+  const opening = gateS - gateN;
+  const midZ = (gateN + gateS) / 2;
+  const pillarW = 0.42;
+  const pillarD = 0.5;
+  const pillarH = 1.85;
+  const capH = 0.1;
+  const archDepth = 0.36;
+  const archThick = 0.2;
+  const clearSpan = opening - pillarW * 0.15;
+  /** Low segmental arch so the title board above stays prominent. */
+  const archR = clearSpan * 0.52;
+  const archRise = archR * 0.48;
+  const springY = pillarH - 0.08;
+  const titleH = 1.05;
+  const titleW = clearSpan * 1.45;
+  const x = west - t * 0.15;
+  return {
+    position: [x, 0, midZ] as [number, number, number],
+    opening,
+    clearSpan,
+    archR,
+    archRise,
+    springY,
+    archDepth,
+    archThick,
+    pillarH,
+    capH,
+    pillarW,
+    pillarD,
+    titleH,
+    titleW,
+    /** Local ±Z offsets from mid to pillar centers. */
+    pillarOffset: clearSpan / 2 + pillarW * 0.28,
+    grilleH: springY - 0.12,
+    wallH: h,
+  };
+})();
 
 /**
  * Extra marks in screen directions.
@@ -1519,7 +1574,7 @@ export const PERIMETER_BANDS = (() => {
   const parkInner = compoundInsetRing(PARK_WIDTH);
   const trackInner = compoundInsetRing(PARK_WIDTH + TRACK_WIDTH);
   const y = groundLabelY();
-  const { west, east, north, south, jog } = SITE.compound.bounds;
+  const { west, westWide, east, north, south, gateN, jog } = SITE.compound.bounds;
 
   // Inner short wall column (after kids play → gate): track flush to ISW / kids east face.
   const iswEnds = ["L188", "L295"]
@@ -1544,12 +1599,9 @@ export const PERIMETER_BANDS = (() => {
   const eastTrackOuter = iswInner;
   const eastTrackInner = eastTrackOuter + TRACK_WIDTH;
   // Run east track from the north park/track corner through L40→L143
-  // down to the ISW/kids segment (not only from the NE ledge).
+  // up to the arch gate (keep the entry throat clear of park/track fill).
   const eastZ0 = pN;
-  const eastZ1 = Math.min(
-    Math.max(iswZ1, LAWN_PARTS.find((part) => part.id === "L174")?.ring[2][1] ?? iswZ1),
-    pS,
-  );
+  const eastZ1 = Math.min(pS, gateN - 0.12);
   const xStart = eastTrackInner;
 
   const parkXN = parkInner[0][0];
@@ -1619,12 +1671,40 @@ export const PERIMETER_BANDS = (() => {
       ],
     },
     {
+      // Gate/east slant wall — stop before the arch gate opening (no green in gate).
+      id: "parkE",
+      ring: (() => {
+        const z0 = north + wallPad;
+        const z1 = Math.min(south - wallPad, gateN - 0.12);
+        const steps = 28;
+        // Axis +X inset keeps the band inside the slant (no outward Z drift).
+        const d0 = wallPad;
+        const d1 = wallPad + PARK_WIDTH;
+        const outer: [number, number][] = [];
+        const inner: [number, number][] = [];
+        for (let i = 0; i <= steps; i += 1) {
+          const t = i / steps;
+          const z = z0 + (z1 - z0) * t;
+          const wx = compoundEastX(z);
+          outer.push([wx + d0, z]);
+          // Close the park→track gap (white/grey L# cells between grass and trackE).
+          const base = wx + d1;
+          const gap = eastTrackOuter - base;
+          const xInner =
+            gap > 0.05 && gap < LAWN_CELL * 1.6 ? eastTrackOuter : base;
+          inner.push([xInner, z]);
+        }
+        return [...outer, ...inner.reverse()];
+      })(),
+    },
+    {
+      // South park stops short of the gate opening (clear entry throat).
       id: "parkS",
       ring: [
-        [parkXS, pS],
+        [Math.max(parkXS, west + PARK_WIDTH + 0.35), pS],
         [east - wallPad, pS],
         [east - wallPad, south - wallPad],
-        [parkXS, south - wallPad],
+        [Math.max(parkXS, west + PARK_WIDTH + 0.35), south - wallPad],
       ],
     },
   ];
@@ -1707,14 +1787,6 @@ export const PERIMETER_BANDS = (() => {
 
 /** Drive path loop around apartments — flush to walking track and apartment faces (no gaps). */
 export const DRIVE_PATH = (() => {
-  const xs = Object.values(UNIT_FOOTPRINT).map((p) => p[0]);
-  const zs = Object.values(UNIT_FOOTPRINT).map((p) => p[1]);
-  const half = UNIT / 2;
-  const aptW = Math.min(...xs) - half;
-  const aptE = Math.max(...xs) + half;
-  const aptN = Math.min(...zs) - half;
-  const aptS = Math.max(...zs) + half;
-
   const byId = Object.fromEntries(
     PERIMETER_BANDS.track.parts.map((part) => [part.id, part.ring]),
   );
@@ -1723,12 +1795,38 @@ export const DRIVE_PATH = (() => {
   const ringMinZ = (ring: [number, number][]) => Math.min(...ring.map((p) => p[1]));
   const ringMaxZ = (ring: [number, number][]) => Math.max(...ring.map((p) => p[1]));
 
-  // Inner face tucked under the apartment slabs (hides N/S edge seams).
-  const tuck = 0.5;
-  const iW = aptW;
-  const iE = aptE;
-  const iN = aptN + tuck;
-  const iS = aptS - tuck;
+  // Courtyard / drive hole follows L341→L216→L491→L454→L448→L152→L146→L319
+  // (inward corners; south edge to L319/L341 outer faces) so that covered
+  // inner area can be walking-track colored.
+  const lawnCorner = (
+    id: string,
+    xSide: "min" | "max",
+    zSide: "min" | "max",
+    fallback: [number, number],
+  ): [number, number] => {
+    const part = LAWN_PARTS.find((p) => p.id === id);
+    if (!part) return fallback;
+    const xs = part.ring.map((p) => p[0]);
+    const zs = part.ring.map((p) => p[1]);
+    return [
+      xSide === "min" ? Math.min(...xs) : Math.max(...xs),
+      zSide === "min" ? Math.min(...zs) : Math.max(...zs),
+    ];
+  };
+  const inner: [number, number][] = [
+    lawnCorner("L341", "min", "max", [26.275, 1.825]),
+    lawnCorner("L216", "min", "max", [26.275, -10.675]),
+    lawnCorner("L491", "min", "max", [12.75, -10.9]),
+    lawnCorner("L454", "min", "max", [12.75, -13.4]),
+    lawnCorner("L448", "min", "max", [5.25, -13.4]),
+    lawnCorner("L152", "min", "max", [5.025, -15.675]),
+    lawnCorner("L146", "max", "max", [-1.225, -15.675]),
+    lawnCorner("L319", "min", "max", [-1.225, 1.825]),
+  ];
+  const iW = Math.min(...inner.map((p) => p[0]));
+  const iE = Math.max(...inner.map((p) => p[0]));
+  const iN = Math.min(...inner.map((p) => p[1]));
+  const iS = Math.max(...inner.map((p) => p[1]));
 
   // Outer face = walking-track inner edge (never overlaps park / trees / track).
   const trackInner = compoundInsetRing(PARK_WIDTH + TRACK_WIDTH);
@@ -1742,30 +1840,19 @@ export const DRIVE_PATH = (() => {
     ([x, z]) => [Math.max(x, oW), z] as [number, number],
   );
 
-  // Track-inner Z on the wall side at X (park+track inset from compound face).
+  // Keep inner south of the walking track on the wall side.
   const trackNorthAt = (x: number) =>
     compoundNorthFace(x) + PARK_WIDTH + TRACK_WIDTH;
-
-  // Keep a clear gap south of the walking track so drive/plot never collapse
-  // onto the track (degenerate ring → broken track display on the L162 ledge).
   const driveClear = 0.2;
-  const northSamples = 32;
-  const northEdge: [number, number][] = [];
-  for (let i = 0; i <= northSamples; i += 1) {
-    const x = iW + ((iE - iW) * i) / northSamples;
-    northEdge.push([x, Math.max(iN, trackNorthAt(x) + driveClear)]);
-  }
+  const clampedInner: [number, number][] = inner.map(
+    ([x, z]) => [x, Math.max(z, trackNorthAt(x) + driveClear)] as [number, number],
+  );
 
-  const inner: [number, number][] = [
-    ...northEdge,
-    [iE, iS],
-    [iW, iS],
-  ];
   const x = (oW + iW) / 2;
   const z = (oN + oS) / 2;
   return {
     outer,
-    inner,
+    inner: clampedInner,
     width: Math.min(iW - oW, oE - iE, iN - oN, oS - iS),
     bounds: { oW, oE, oN, oS, iW, iE, iN, iS },
     position: [x, 0.04, z] as [number, number, number],
@@ -1775,8 +1862,8 @@ export const DRIVE_PATH = (() => {
 })();
 
 /** Trees along compound-wall park strips (north stub, L16→L162 slant, L184 ledge, west/B). */
-export const WALL_TREES = (() => {
-  const { east, north, south, west, jog } = SITE.compound.bounds;
+const _WALL_TREES_RAW = (() => {
+  const { east, north, south, west, westWide, gateN, jog } = SITE.compound.bounds;
   const inset = PERIMETER_BANDS.treeInset;
   const spacing = 1.85;
   const trees: { id: string; position: [number, number, number] }[] = [];
@@ -1803,8 +1890,8 @@ export const WALL_TREES = (() => {
     }
   };
 
-  // North stub → L16 (inward = +Z)
-  along("n", west + 1.2, north, jog.x0, north, 0, 1);
+  // North stub → L16 (inward = +Z) — wide east end uses westWide
+  along("n", westWide + 1.2, north, jog.x0, north, 0, 1);
   // L16 → L162 slant (inward = slant normal)
   {
     const dx = jog.x1 - jog.x0;
@@ -1816,6 +1903,8 @@ export const WALL_TREES = (() => {
   along("ledge", jog.x1, jog.z1, east, jog.z1, 0, 1);
   // West/B wall (inward = -X)
   along("w", east, jog.z1 + 0.8, east, south - 0.8, -1, 0);
+  // Gate/east slant (inward = +X)
+  along("e", westWide, north + 0.8, west, gateN, 1, 0);
   // South wall (inward = -Z)
   along("s", east - 0.8, south, west + 1.2, south, 0, -1);
 
@@ -1843,8 +1932,9 @@ export const WALL_TREES = (() => {
         z <= Math.max(...zs) + pad
       );
     });
-    // Must stay inside compound (south of wall face).
+    // Must stay inside compound (south of wall face / east of slant).
     if (z < compoundNorthFace(x) + 0.08) return true;
+    if (x < compoundEastX(z) + 0.08) return true;
     if (x > east - 0.08 || z > south - 0.08) return true;
     // Block trees that sit under apartment footprints (not the north park ledge).
     const underApt = x >= iW && x <= iE && z >= iN && z <= iS;
@@ -1853,6 +1943,33 @@ export const WALL_TREES = (() => {
 
   return trees.filter((tree) => !blocksTree(tree.position[0], tree.position[2]));
 })();
+
+function pointInRing2(
+  x: number,
+  z: number,
+  ring: readonly [number, number][],
+  pad = 0.35,
+) {
+  // Expand ring slightly so trunks clear net posts / cage edges.
+  const cx = ring.reduce((s, p) => s + p[0], 0) / ring.length;
+  const cz = ring.reduce((s, p) => s + p[1], 0) / ring.length;
+  const expanded = ring.map(([px, pz]) => {
+    const dx = px - cx;
+    const dz = pz - cz;
+    const len = Math.hypot(dx, dz) || 1;
+    return [px + (dx / len) * pad, pz + (dz / len) * pad] as [number, number];
+  });
+  let inside = false;
+  for (let i = 0, j = expanded.length - 1; i < expanded.length; j = i++) {
+    const [xi, zi] = expanded[i];
+    const [xj, zj] = expanded[j];
+    const hit =
+      zi > z !== zj > z &&
+      x < ((xj - xi) * (z - zi)) / (zj - zi + 1e-12) + xi;
+    if (hit) inside = !inside;
+  }
+  return inside;
+}
 
 /** Indoor cricket nets along east compound wall — L105→L197, clear of kids play. */
 export const CRICKET_NETS = (() => {
@@ -1913,6 +2030,22 @@ export const CRICKET_NETS = (() => {
     label: [x, groundLabelY(), z] as [number, number, number],
   };
 })();
+
+/** Wall trees with cricket / basketball cages and gate throat cleared. */
+export const WALL_TREES = _WALL_TREES_RAW.filter((tree) => {
+  const [x, , z] = tree.position;
+  if (pointInRing2(x, z, SITE.basketball.ring, 0.55)) return false;
+  if (pointInRing2(x, z, CRICKET_NETS.ring, 0.45)) return false;
+  const { west, gateN, gateS } = SITE.compound.bounds;
+  if (
+    x <= west + PARK_WIDTH + TRACK_WIDTH + 0.6 &&
+    z >= gateN - 0.4 &&
+    z <= gateS + 0.5
+  ) {
+    return false;
+  }
+  return true;
+});
 
 /** Short inner wall along east lawn column — starts after kids play (L188→L295).
  *  Inner (+x) face sits on the column’s east edge so the walk track is flush. */
@@ -2199,14 +2332,6 @@ export const SITE_AREA_LABELS = (() => {
     {
       id: "sit",
       position: KIDS_PLAY_AREA.wallLabel,
-    },
-    {
-      id: "pool",
-      position: [
-        SITE.pool.position[0],
-        y,
-        SITE.pool.position[2],
-      ] as [number, number, number],
     },
   ] as const;
 })();

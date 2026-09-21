@@ -8,6 +8,7 @@
     "start": "next start -p 4800",
     "lint": "eslint",
     "seed": "node scripts/seed-supabase.mjs",
+    "import:owners": "node scripts/import-owners.mjs",
     "db:link": "supabase link --project-ref obhqikckxbfhsekanymv",
     "db:push": "supabase db push",
     "db:pull": "supabase db pull"

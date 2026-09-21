@@ -1,0 +1,261 @@
+[
+  {
+    "flatNumber": "A101",
+    "owners": [{ "name": "Ravindranath Reddy", "phones": ["9440371674"] }]
+  },
+  {
+    "flatNumber": "A209",
+    "owners": [{ "name": "Nagesh Gupta", "phones": ["9246362615"] }]
+  },
+  {
+    "flatNumber": "B307",
+    "owners": [{ "name": "Akhil", "phones": ["9959680858"] }]
+  },
+  {
+    "flatNumber": "B308",
+    "owners": [{ "name": "Mohanraj S", "phones": ["9789778161"] }]
+  },
+  {
+    "flatNumber": "B310",
+    "owners": [{ "name": "Harikishna", "phones": ["9553929443"] }]
+  },
+  {
+    "flatNumber": "B311",
+    "owners": [
+      { "name": "Nageswara Rao Kandula", "phones": ["7780685166"] },
+      { "name": "Lakshmi Kandula", "phones": ["9963137306"] }
+    ]
+  },
+  {
+    "flatNumber": "A404",
+    "owners": [{ "name": "Murthy U L N", "phones": ["9247564428"] }]
+  },
+  {
+    "flatNumber": "A406",
+    "owners": [
+      { "name": "Gowthami Addagada", "phones": ["7981852235"] },
+      { "name": "Mallikarjuna", "phones": ["9030655607"] }
+    ]
+  },
+  {
+    "flatNumber": "B404",
+    "owners": [{ "name": "Srikanth Patri", "phones": ["8143280508"] }]
+  },
+  {
+    "flatNumber": "B503",
+    "owners": [{ "name": "Sandeep", "phones": ["8884199263"] }]
+  },
+  {
+    "flatNumber": "B504",
+    "owners": [{ "name": "Murali Krishna K", "phones": ["9985768334"] }]
+  },
+  {
+    "flatNumber": "B510",
+    "owners": [{ "name": "Jagan Mohan", "phones": ["9347090463"] }]
+  },
+  {
+    "flatNumber": "B511",
+    "owners": [{ "name": "Vaishnavi Riya", "phones": ["6309417429"] }]
+  },
+  {
+    "flatNumber": "B512",
+    "owners": [{ "name": "AVSSR Murthy", "phones": ["9441561985"] }]
+  },
+  {
+    "flatNumber": "B513",
+    "owners": [{ "name": "Rakesh", "phones": ["8008905725"] }]
+  },
+  {
+    "flatNumber": "B514",
+    "owners": [{ "name": "Nageswar Reddy Pandem", "phones": ["8884488870"] }]
+  },
+  {
+    "flatNumber": "B515",
+    "owners": [{ "name": "Goutham Raja", "phones": ["9490166842"] }]
+  },
+  {
+    "flatNumber": "A609",
+    "owners": [{ "name": "Kiran Kumar S", "phones": ["9182220295"] }]
+  },
+  {
+    "flatNumber": "B601",
+    "owners": [{ "name": "Sekhar Reddy", "phones": ["9666121344"] }]
+  },
+  {
+    "flatNumber": "B610",
+    "owners": [{ "name": "Gopikrishna", "phones": ["9849784843"] }]
+  },
+  {
+    "flatNumber": "B613",
+    "owners": [{ "name": "Kiran", "phones": ["9441261549"] }]
+  },
+  {
+    "flatNumber": "B614",
+    "owners": [{ "name": "Ramanathan J", "phones": ["9491956611"] }]
+  },
+  {
+    "flatNumber": "B615",
+    "owners": [
+      { "name": "Usha Gurram", "phones": ["8520880123"] },
+      { "name": "Narender Gurram", "phones": ["9985754754"] }
+    ]
+  },
+  {
+    "flatNumber": "A701",
+    "owners": [{ "name": "Manasa M", "phones": ["9703436702"] }]
+  },
+  {
+    "flatNumber": "A702",
+    "owners": [{ "name": "Anitha Reddy S", "phones": ["9885071245"] }]
+  },
+  {
+    "flatNumber": "B702",
+    "owners": [
+      { "name": "Madhukaran Reddy Tekula", "phones": ["9966664824"] },
+      { "name": "Deepika Danda", "phones": ["9392488604"] }
+    ]
+  },
+  {
+    "flatNumber": "A707",
+    "owners": [{ "name": "Meghanand", "phones": ["9347242328"] }]
+  },
+  {
+    "flatNumber": "A708",
+    "owners": [
+      { "name": "Nikhil", "phones": ["19722144695"] },
+      { "name": "Ravinder Y P", "phones": ["9848286106"] }
+    ]
+  },
+  {
+    "flatNumber": "A709",
+    "owners": [{ "name": "Vipin Varijakshan", "phones": ["9908903808"] }]
+  },
+  {
+    "flatNumber": "B708",
+    "owners": [{ "name": "Sai Krishna", "phones": ["9704251787"] }]
+  },
+  {
+    "flatNumber": "B710",
+    "owners": [{ "name": "Mamatha Sadashiva Reddy G", "phones": ["9494308438"] }]
+  },
+  {
+    "flatNumber": "B711",
+    "owners": [{ "name": "Phanendra", "phones": ["8056005277"] }]
+  },
+  {
+    "flatNumber": "B714",
+    "owners": [{ "name": "Sashidhar", "phones": ["9281213595"] }]
+  },
+  {
+    "flatNumber": "A801",
+    "owners": [{ "name": "Rajasekhara Somyajulu", "phones": ["9963615777"] }]
+  },
+  {
+    "flatNumber": "A804",
+    "owners": [{ "name": "Shiva", "phones": ["9985202054"] }]
+  },
+  {
+    "flatNumber": "A806",
+    "owners": [{ "name": "Harsha Vardhan Reddy A", "phones": ["7702779076"] }]
+  },
+  {
+    "flatNumber": "A807",
+    "owners": [{ "name": "Rambabu Govada", "phones": ["9848694233"] }]
+  },
+  {
+    "flatNumber": "B807",
+    "owners": [{ "name": "Madhu Gomedhukam", "phones": ["9703900676"] }]
+  },
+  {
+    "flatNumber": "A808",
+    "owners": [{ "name": "Rakesh", "phones": ["6303505808"] }]
+  },
+  {
+    "flatNumber": "B808",
+    "owners": [{ "name": "Sarma P R M", "phones": ["9848254881"] }]
+  },
+  {
+    "flatNumber": "B809",
+    "owners": [{ "name": "Naga Lakshmi", "phones": ["7981297699"] }]
+  },
+  {
+    "flatNumber": "B813",
+    "owners": [{ "name": "Santosh Kumar", "phones": ["8667596726"] }]
+  },
+  {
+    "flatNumber": "B814",
+    "owners": [
+      { "name": "Hemanth B", "phones": ["9985843226"] },
+      { "name": "Srinivasulu B", "phones": ["9848951348"] }
+    ]
+  },
+  {
+    "flatNumber": "B815",
+    "owners": [{ "name": "Murari Dharmaraja", "phones": ["7780633302"] }]
+  },
+  {
+    "flatNumber": "A904",
+    "owners": [{ "name": "Hemanth Kumar", "phones": ["9618724093"] }]
+  },
+  {
+    "flatNumber": "A907",
+    "owners": [
+      { "name": "Raghu Reddy S", "phones": ["18054040106"] },
+      { "name": "Venkat Reddy S", "phones": ["9441089076"] }
+    ]
+  },
+  {
+    "flatNumber": "A908",
+    "owners": [
+      { "name": "Krishna Murthy M", "phones": ["9490850538"] },
+      { "name": "Sai Ram", "phones": ["9676896895"] }
+    ]
+  },
+  {
+    "flatNumber": "A910",
+    "owners": [{ "name": "Vishal Kotagiri", "phones": ["7702700861"] }]
+  },
+  {
+    "flatNumber": "B908",
+    "owners": [{ "name": "Santosh Reddy", "phones": ["8121474910"] }]
+  },
+  {
+    "flatNumber": "B910",
+    "owners": [{ "name": "Bansidhar Tiwari", "phones": ["9052600576"] }]
+  },
+  {
+    "flatNumber": "B912",
+    "owners": [{ "name": "Saibaba Konduru", "phones": ["7032907562"] }]
+  },
+  {
+    "flatNumber": "B914",
+    "owners": [{ "name": "Abhiram Prasad Reddy", "phones": ["9948084561"] }]
+  },
+  {
+    "flatNumber": "B915",
+    "owners": [{ "name": "Chandra Reddy", "phones": ["9848996345"] }]
+  },
+  {
+    "flatNumber": "A1006",
+    "owners": [{ "name": "Vamsidhar Reddy", "phones": ["9985095695"] }]
+  },
+  {
+    "flatNumber": "A1008",
+    "owners": [{ "name": "Swetha Reddy", "phones": ["18134517188"] }]
+  },
+  {
+    "flatNumber": "A1009",
+    "owners": [{ "name": "Dr. Gokul Raghu Ram Vaka", "phones": ["9110761670"] }]
+  },
+  {
+    "flatNumber": "B1009",
+    "owners": [{ "name": "Harish Nagalla", "phones": ["8884651488"] }]
+  },
+  {
+    "flatNumber": "A1010",
+    "owners": [
+      { "name": "Yathi Fire Safety", "phones": ["9849760004"] },
+      { "name": "Harshita", "phones": ["9676240008"] }
+    ]
+  }
+]

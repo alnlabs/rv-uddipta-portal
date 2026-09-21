@@ -2,6 +2,8 @@ export const STATUS_FIELDS = [
   {
     key: "registration",
     label: "Registration",
+    dateKey: "registrationDate",
+    dateColumn: "registration_date",
     options: [
       { value: "pending", label: "Pending" },
       { value: "completed", label: "Completed" },
@@ -10,6 +12,10 @@ export const STATUS_FIELDS = [
   {
     key: "interior",
     label: "Interior",
+    dateKey: "interiorDate",
+    dateColumn: "interior_date",
+    startDateKey: "interiorStartDate",
+    startDateColumn: "interior_start_date",
     options: [
       { value: "not_started", label: "Not started" },
       { value: "in_progress", label: "In progress" },
@@ -18,7 +24,9 @@ export const STATUS_FIELDS = [
   },
   {
     key: "ceremony",
-    label: "Ceremony",
+    label: "Home ceremony",
+    dateKey: "ceremonyDate",
+    dateColumn: "ceremony_date",
     options: [
       { value: "pending", label: "Pending" },
       { value: "completed", label: "Completed" },
@@ -26,7 +34,9 @@ export const STATUS_FIELDS = [
   },
   {
     key: "moving",
-    label: "Moving",
+    label: "Move-in",
+    dateKey: "movingDate",
+    dateColumn: "moving_date",
     options: [
       { value: "pending", label: "Pending" },
       { value: "moved_in", label: "Moved in" },
@@ -54,4 +64,18 @@ export const STATUS_LABELS = {
   },
 } as const;
 
+export const MEMBER_RELATIONS = [
+  { value: "spouse", label: "Spouse" },
+  { value: "child", label: "Child" },
+  { value: "parent", label: "Parent" },
+  { value: "sibling", label: "Sibling" },
+  { value: "other", label: "Other" },
+] as const;
+
 export type StatusKey = (typeof STATUS_FIELDS)[number]["key"];
+export type StatusDateKey = (typeof STATUS_FIELDS)[number]["dateKey"];
+export type MemberRelation = (typeof MEMBER_RELATIONS)[number]["value"];
+
+export function relationLabel(relation: string) {
+  return MEMBER_RELATIONS.find((item) => item.value === relation)?.label ?? relation;
+}

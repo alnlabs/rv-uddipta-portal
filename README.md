@@ -45,7 +45,9 @@ npm run dev
 
 The app listens on **http://localhost:4800**.
 
-`npm run seed` loads the 238 brochure flats (wings A/B, floors 1–10) as vacant units. Owners are linked only after admin approval.
+`npm run seed` loads the 238 brochure flats (wings A/B, floors 1–10) as vacant units.
+`npm run import:owners` applies the floor-wise owners PDF (`data/owners-floor-wise.json`) — names, phones, and co-owners as household members. Linked Google accounts are preserved.
+Owners who are not on that list claim a vacant flat after admin approval.
 
 ## How access works
 
@@ -53,6 +55,7 @@ The app listens on **http://localhost:4800**.
 2. If they have no approved flat, they submit name, phone, and a brochure flat such as `A101` or `B1004`.
 3. An admin listed in `ADMIN_EMAILS` opens **Approvals** and approves.
 4. Only then can they see owner names, phones, and possession progress.
+5. On **My flat**, owners set registration / interior / ceremony / moving status **and dates**, and can add household members.
 
 Brochure facts (address, RERA, amenities, flat types and sizes) are **public** on the home page before login.
 

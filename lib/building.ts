@@ -19,7 +19,6 @@ export const BUILDING = {
   ],
   amenities: [
     "16,000 sft clubhouse",
-    "Indoor swimming pool",
     "Gymnasium",
     "Multipurpose hall",
     "Guest rooms",

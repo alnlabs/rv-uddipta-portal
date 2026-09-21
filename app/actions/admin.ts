@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
-import { isAdminUser } from "@/lib/admin";
+import { publishActivity } from "@/lib/activity";
+import { canManageAdmin, ensureProfile } from "@/lib/roles";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 
@@ -12,9 +13,9 @@ async function requireAdmin() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user || !isAdminUser(user)) {
-    throw new Error("Not allowed");
-  }
+  if (!user) throw new Error("Not allowed");
+  const profile = await ensureProfile(user, supabase);
+  if (!canManageAdmin(profile.role, user)) throw new Error("Not allowed");
   return user;
 }
 
@@ -32,7 +33,7 @@ export async function approveRegistration(requestId: number) {
 
   const { data: inventory, error: inventoryError } = await admin
     .from("flats")
-    .select("flat_number, user_id")
+    .select("id, flat_number, user_id")
     .eq("flat_number", request.flat_number)
     .maybeSingle();
   if (inventoryError) throw new Error(inventoryError.message);
@@ -47,6 +48,12 @@ export async function approveRegistration(requestId: number) {
       user_id: request.user_id,
       owner_name: request.owner_name,
       phone: request.phone,
+      sale_status: "sold",
+      occupancy: "owner_stay",
+      tenant_name: null,
+      tenant_phone: null,
+      open_for_rent: false,
+      open_for_resale: false,
     })
     .eq("flat_number", request.flat_number);
   if (upsertError) throw new Error(upsertError.message);
@@ -70,12 +77,28 @@ export async function approveRegistration(requestId: number) {
         registrationStatus: "approved",
       },
     });
+    await admin.from("profiles").upsert({
+      user_id: request.user_id,
+      role: "owner",
+      flat_id: inventory.id,
+      display_name: request.owner_name,
+    });
+    await publishActivity({
+      actorUserId: adminUser.id,
+      flatId: inventory.id,
+      kind: "owner_joined",
+      title: `${request.owner_name} linked to ${request.flat_number}`,
+      visibility: "community",
+      href: "/community",
+      notify: "community",
+    });
   }
 
   revalidatePath("/");
   revalidatePath("/admin");
   revalidatePath("/register");
   revalidatePath("/update");
+  revalidatePath("/feed");
 }
 
 export async function rejectRegistration(requestId: number, reason: string) {

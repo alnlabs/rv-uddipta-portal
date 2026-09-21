@@ -1,20 +1,20 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { approveRegistration, rejectRegistration } from "@/app/actions/admin";
-import { isAdminUser } from "@/lib/admin";
+import { canManageAdmin, ensureProfile } from "@/lib/roles";
 import { maskPhone } from "@/lib/phone";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 
-export default async function AdminPage() {
+export default async function AdminApprovalsPage() {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
   if (!user) redirect("/login");
-  if (!isAdminUser(user)) redirect("/");
+  const profile = await ensureProfile(user, supabase);
+  if (!canManageAdmin(profile.role, user)) redirect("/admin/builder");
 
   const admin = createAdminClient();
   const { data: requests, error } = await admin
@@ -26,21 +26,15 @@ export default async function AdminPage() {
   const others = (requests ?? []).filter((row) => row.status !== "pending");
 
   return (
-    <section className="mx-auto w-[calc(100%-1.25rem)] py-6 md:w-[min(1100px,calc(100%-2rem))] md:py-12">
-      <p className="text-xs font-semibold tracking-[0.16em] text-[#c9a45c] uppercase">
-        Admin
-      </p>
-      <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[#14241c] md:text-4xl">
-        Owner registrations
-      </h1>
-      <p className="mt-2 text-[#3d5247]">
-        Approve a request to link that Google account to a brochure flat. The
-        owner can see the board only after approval.
+    <section>
+      <h2 className="text-2xl font-semibold text-[#14241c]">Owner registrations</h2>
+      <p className="mt-1 text-sm text-[#3d5247]">
+        Approve a request to link that Google account to a brochure flat.
       </p>
 
       {error ? <p className="mt-4 text-[#8a2f2f]">{error.message}</p> : null}
 
-      <h2 className="mt-8 text-2xl font-semibold">Pending</h2>
+      <h3 className="mt-8 text-lg font-semibold">Pending</h3>
       {pending.length === 0 ? (
         <p className="mt-3 text-[#3d5247]">No pending requests.</p>
       ) : (
@@ -98,7 +92,7 @@ export default async function AdminPage() {
 
       {others.length > 0 ? (
         <>
-          <h2 className="mt-10 text-2xl font-semibold">Reviewed</h2>
+          <h3 className="mt-10 text-lg font-semibold">Reviewed</h3>
           <ul className="mt-4 divide-y divide-[rgba(27,58,47,0.14)]">
             {others.map((row) => (
               <li key={row.id} className="py-3">
