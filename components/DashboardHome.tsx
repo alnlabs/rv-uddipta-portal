@@ -72,6 +72,11 @@ function ListingList({
               {includeOwners && flat.ownerName ? (
                 <p className="text-sm font-medium text-[#2f5a48]">
                   {flat.ownerName}
+                  {flat.ownerEmail ? (
+                    <span className="mt-0.5 block truncate text-xs font-normal text-[#3d5247]">
+                      {flat.ownerEmail}
+                    </span>
+                  ) : null}
                   {flat.phoneMasked ? (
                     <span className="mt-0.5 block text-xs tabular-nums text-[#3d5247]">
                       {flat.phoneMasked}
@@ -194,6 +199,9 @@ export function DashboardHome({
                 </span>
               ) : null}
             </p>
+            {myFlat.ownerEmail ? (
+              <p className="mt-1 truncate text-sm text-[#d0c090]">{myFlat.ownerEmail}</p>
+            ) : null}
             <p className="mt-1 text-sm text-[#d0c090]">
               {typeLabel(myFlat.type)}
               {myFlat.wing ? ` · Wing ${myFlat.wing}` : ""}

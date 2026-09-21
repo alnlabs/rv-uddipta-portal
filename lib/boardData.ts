@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient, User } from "@supabase/supabase-js";
-import { isAdminUser } from "@/lib/admin";
+import { isSuperAdmin } from "@/lib/admin";
 import { groupByFloor, mapPublicFlat } from "@/lib/flats";
 import { maskPhone } from "@/lib/phone";
 import { isCommunityRole, type AppRole } from "@/lib/roles";
@@ -36,6 +36,7 @@ function stripOwnerPii(flat: PublicFlat): PublicFlat {
     occupancy: null,
     ownerName: "",
     ownerPhotoUrl: null,
+    ownerEmail: "",
     phoneMasked: "",
     tenantName: "",
     tenantPhoneMasked: "",
@@ -57,9 +58,9 @@ export async function loadBoardPayload(
   userClient: SupabaseClient,
   role: AppRole | null = null,
 ): Promise<BoardPayload> {
-  const includeOwners = isCommunityRole(role) || isAdminUser(user);
+  const includeOwners = isCommunityRole(role) || isSuperAdmin(user);
   const db =
-    includeOwners && (isAdminUser(user) || role === "admin" || role === "builder")
+    includeOwners && (isSuperAdmin(user) || role === "admin" || role === "builder")
       ? createAdminClient()
       : userClient;
 

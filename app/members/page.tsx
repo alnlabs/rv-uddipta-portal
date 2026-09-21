@@ -67,6 +67,7 @@ export default async function MembersPage({
       areaSqft: flat.areaSqft,
       ownerName: flat.ownerName,
       ownerPhotoUrl: flat.ownerPhotoUrl,
+      ownerEmail: flat.ownerEmail,
       phoneMasked: flat.phoneMasked,
       tenantName: flat.tenantName,
       tenantPhoneMasked: flat.tenantPhoneMasked,
@@ -87,6 +88,7 @@ export default async function MembersPage({
       const hay = [
         flat.flatNumber,
         flat.ownerName,
+        flat.ownerEmail,
         flat.tenantName,
         ...flat.members.map((member) => member.name),
         ...flat.renters.map((renter) => renter.name),

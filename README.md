@@ -22,7 +22,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ADMIN_EMAILS=you@gmail.com
 ```
 
-`ADMIN_EMAILS` is the Google account that can open **Approvals**.
+`ADMIN_EMAILS` are **super admins**. They manage the portal from their account (Approvals, Owners, Builder, Roles). Deletes are type-to-confirm (unlink login, release a unit to unsold, or wipe household rows) and never remove brochure inventory.
 
 ## Enable Google login (required)
 
@@ -53,7 +53,7 @@ Owners who are not on that list claim a vacant flat after admin approval.
 
 1. Owner taps **Continue with Google**.
 2. If they have no approved flat, they submit name, phone, and a brochure flat such as `A101` or `B1004`.
-3. An admin listed in `ADMIN_EMAILS` opens **Approvals** and approves.
+3. A super admin listed in `ADMIN_EMAILS` opens **Approvals** on their account and approves.
 4. Only then can they see owner names, phones, and possession progress.
 5. On **My flat**, owners set registration / interior / ceremony / moving status **and dates**, and can add household members.
 
@@ -63,4 +63,4 @@ Signed-in owners can open **3D** for an interactive Three.js schematic of the 23
 
 ## Deploy to Vercel
 
-Set the same env vars, plus `SUPABASE_SERVICE_ROLE_KEY` and `ADMIN_EMAILS`. Add `https://your-app.vercel.app/auth/callback` to Supabase redirect URLs and set Site URL to the Vercel domain.
+Set the same env vars, plus `SUPABASE_SERVICE_ROLE_KEY` and `ADMIN_EMAILS` (super admins). Add `https://your-app.vercel.app/auth/callback` to Supabase redirect URLs and set Site URL to the Vercel domain.

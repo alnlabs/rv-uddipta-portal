@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { publishActivity } from "@/lib/activity";
+import { isSuperAdmin, isSuperAdminContact, SUPER_ADMIN_NO_FLAT } from "@/lib/admin";
 import { requireAdminUser } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
 
@@ -26,6 +27,15 @@ export async function approveRegistration(requestId: number): Promise<ActionResu
       .single();
     if (loadError || !request) throw new Error("Request not found");
     if (request.status !== "pending") throw new Error("This request is no longer pending");
+    if (isSuperAdminContact(request.email, request.phone)) {
+      throw new Error(SUPER_ADMIN_NO_FLAT);
+    }
+    if (request.user_id) {
+      const { data: account } = await admin.auth.admin.getUserById(request.user_id);
+      if (account.user && isSuperAdmin(account.user)) {
+        throw new Error(SUPER_ADMIN_NO_FLAT);
+      }
+    }
 
     const { data: inventory, error: inventoryError } = await admin
       .from("flats")
@@ -43,6 +53,7 @@ export async function approveRegistration(requestId: number): Promise<ActionResu
       .update({
         user_id: request.user_id,
         owner_name: request.owner_name,
+        email: request.email || null,
         phone: request.phone,
         sale_status: "sold",
         occupancy: "owner_stay",
@@ -91,10 +102,12 @@ export async function approveRegistration(requestId: number): Promise<ActionResu
     }
 
     revalidatePath("/");
-    revalidatePath("/admin");
+    revalidatePath("/account");
     revalidatePath("/register");
     revalidatePath("/update");
     revalidatePath("/feed");
+    revalidatePath("/members");
+    revalidatePath("/community");
     return { ok: true };
   } catch (error) {
     return fail(error);
@@ -107,13 +120,17 @@ export async function rejectRegistration(
 ): Promise<ActionResult> {
   try {
     const adminUser = await requireAdminUser();
+    const trimmed = reason.trim();
+    if (trimmed.length < 3) {
+      throw new Error("Type a short reason before rejecting.");
+    }
     const admin = createAdminClient();
 
     const { error } = await admin
       .from("registration_requests")
       .update({
         status: "rejected",
-        reject_reason: reason.trim() || null,
+        reject_reason: trimmed,
         reviewed_at: new Date().toISOString(),
         reviewed_by: adminUser.id,
       })
@@ -121,7 +138,7 @@ export async function rejectRegistration(
       .eq("status", "pending");
     if (error) throw new Error(error.message);
 
-    revalidatePath("/admin");
+    revalidatePath("/account");
     return { ok: true };
   } catch (error) {
     return fail(error);

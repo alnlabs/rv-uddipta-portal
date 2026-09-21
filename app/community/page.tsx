@@ -60,6 +60,7 @@ export default async function CommunityPage() {
       saleStatus: "sold",
       occupancyLabel: saleOccupancyLabel(owned),
       ownerName: owned.ownerName || undefined,
+      ownerEmail: owned.ownerEmail || undefined,
       phoneMasked: owned.phoneMasked || undefined,
       tenantName: owned.tenantName || undefined,
       tenantPhoneMasked: owned.tenantPhoneMasked || undefined,

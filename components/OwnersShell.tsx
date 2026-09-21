@@ -11,6 +11,88 @@ type NavItem = {
   icon: "home" | "feed" | "floors" | "model" | "flat" | "admin" | "bell" | "people"
 };
 
+function SidebarAccountCard({
+  isSuperAdmin,
+  accountLabel,
+  flatNumber,
+  pendingApproval,
+  active = false,
+}: {
+  readonly isSuperAdmin: boolean
+  readonly accountLabel: string | null
+  readonly flatNumber: string | null
+  readonly pendingApproval: boolean
+  readonly active?: boolean
+}) {
+  if (isSuperAdmin) {
+    return (
+      <Link
+        href="/account"
+        className={`relative mb-5 overflow-hidden rounded-2xl bg-gradient-to-br from-[rgba(201,164,92,0.22)] to-[rgba(255,255,255,0.04)] px-3.5 py-3.5 ring-1 ${
+          active
+            ? "ring-[#c9a45c]"
+            : "ring-[rgba(232,213,163,0.16)]"
+        }`}
+      >
+        <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#c9a45c] uppercase">
+          Super admin
+        </p>
+        <p className="mt-1 truncate text-sm font-semibold">
+          {accountLabel || "Account"}
+        </p>
+        <span className="mt-2 inline-block text-xs font-semibold text-[#e8d5a3]">
+          Your account
+        </span>
+      </Link>
+    );
+  }
+
+  if (flatNumber) {
+    return (
+      <Link
+        href="/update"
+        className="relative mb-5 overflow-hidden rounded-2xl bg-gradient-to-br from-[rgba(201,164,92,0.22)] to-[rgba(255,255,255,0.04)] px-3.5 py-3.5 ring-1 ring-[rgba(232,213,163,0.16)] transition-transform hover:scale-[1.01]"
+      >
+        <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#c9a45c] uppercase">
+          Your flat
+        </p>
+        <div className="mt-1 flex items-end justify-between gap-2">
+          <p className="text-2xl font-semibold tracking-tight">{flatNumber}</p>
+          <span className="pb-0.5 text-xs font-semibold text-[#cbb98a]">
+            Manage →
+          </span>
+        </div>
+      </Link>
+    );
+  }
+
+  if (pendingApproval) {
+    return (
+      <div className="relative mb-5 rounded-2xl bg-[rgba(201,164,92,0.12)] px-3.5 py-3.5 ring-1 ring-[rgba(201,164,92,0.2)]">
+        <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#c9a45c] uppercase">
+          Access
+        </p>
+        <p className="mt-1 text-sm font-semibold">Waiting for approval</p>
+        <Link
+          href="/register"
+          className="mt-2 inline-block text-xs font-semibold text-[#e8d5a3] underline underline-offset-2"
+        >
+          View request
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      href="/register"
+      className="relative mb-5 rounded-2xl bg-[rgba(201,164,92,0.14)] px-3.5 py-3.5 text-sm font-semibold text-[#e8d5a3] ring-1 ring-[rgba(201,164,92,0.22)]"
+    >
+      Link your flat →
+    </Link>
+  );
+}
+
 function NavIcon({
   name,
   className = "size-4",
@@ -93,19 +175,23 @@ function NavIcon({
 export function OwnersShell({
   children,
   isAdmin = false,
+  isSuperAdmin = false,
   canEditBuilder = false,
   showMyFlat = false,
   flatNumber = null,
   pendingApproval = false,
   unreadNotifications = 0,
+  accountLabel = null,
 }: {
   children: React.ReactNode
   isAdmin?: boolean
+  isSuperAdmin?: boolean
   canEditBuilder?: boolean
   showMyFlat?: boolean
   flatNumber?: string | null
   pendingApproval?: boolean
   unreadNotifications?: number
+  accountLabel?: string | null
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -139,6 +225,40 @@ export function OwnersShell({
     },
   ];
 
+  const account: NavItem[] = [];
+  if (isSuperAdmin || isAdmin) {
+    account.push(
+      {
+        href: "/account",
+        label: "Approvals",
+        match: (p) => p === "/account",
+        icon: "admin",
+      },
+      {
+        href: "/account/owners",
+        label: "Owners",
+        match: (p) => p.startsWith("/account/owners"),
+        icon: "flat",
+      },
+    );
+  }
+  if (isSuperAdmin || isAdmin || canEditBuilder) {
+    account.push({
+      href: "/account/builder",
+      label: "Builder",
+      match: (p) => p.startsWith("/account/builder"),
+      icon: "model",
+    });
+  }
+  if (isSuperAdmin || isAdmin) {
+    account.push({
+      href: "/account/roles",
+      label: "Roles",
+      match: (p) => p.startsWith("/account/roles"),
+      icon: "people",
+    });
+  }
+
   const personal: NavItem[] = [
     {
       href: "/notifications",
@@ -157,38 +277,45 @@ export function OwnersShell({
     });
   }
 
-  const manage: NavItem[] = [];
-  if (isAdmin || canEditBuilder) {
-    manage.push({
-      href: "/admin",
-      label: "Admin",
-      match: (p) => p.startsWith("/admin"),
-      icon: "admin",
-    });
-  }
-
-  const mobileItems = [
-    explore[0]!,
-    explore[2]!,
-    explore[3]!,
-    ...(showMyFlat
-      ? [
-          {
-            href: "/update",
-            label: "My flat",
-            match: (p: string) => p.startsWith("/update"),
-            icon: "flat" as const,
-          },
-        ]
-      : [
-          {
-            href: "/notifications",
-            label: "Alerts",
-            match: (p: string) => p.startsWith("/notifications"),
-            icon: "bell" as const,
-          },
-        ]),
-  ];
+  const mobileItems = isSuperAdmin
+    ? [
+        explore[0]!,
+        {
+          href: "/account",
+          label: "Approvals",
+          match: (p: string) => p === "/account",
+          icon: "admin" as const,
+        },
+        {
+          href: "/account/owners",
+          label: "Owners",
+          match: (p: string) => p.startsWith("/account/owners"),
+          icon: "flat" as const,
+        },
+        explore[3]!,
+      ]
+    : [
+        explore[0]!,
+        explore[2]!,
+        explore[3]!,
+        ...(showMyFlat
+          ? [
+              {
+                href: "/update",
+                label: "My flat",
+                match: (p: string) => p.startsWith("/update"),
+                icon: "flat" as const,
+              },
+            ]
+          : [
+              {
+                href: "/notifications",
+                label: "Alerts",
+                match: (p: string) => p.startsWith("/notifications"),
+                icon: "bell" as const,
+              },
+            ]),
+      ];
 
   function sideLink(item: NavItem) {
     const active = item.match(pathname);
@@ -268,47 +395,20 @@ export function OwnersShell({
           </span>
         </Link>
 
-        {flatNumber ? (
-          <Link
-            href="/update"
-            className="relative mb-5 overflow-hidden rounded-2xl bg-gradient-to-br from-[rgba(201,164,92,0.22)] to-[rgba(255,255,255,0.04)] px-3.5 py-3.5 ring-1 ring-[rgba(232,213,163,0.16)] transition-transform hover:scale-[1.01]"
-          >
-            <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#c9a45c] uppercase">
-              Your flat
-            </p>
-            <div className="mt-1 flex items-end justify-between gap-2">
-              <p className="text-2xl font-semibold tracking-tight">{flatNumber}</p>
-              <span className="pb-0.5 text-xs font-semibold text-[#cbb98a]">
-                Manage →
-              </span>
-            </div>
-          </Link>
-        ) : pendingApproval ? (
-          <div className="relative mb-5 rounded-2xl bg-[rgba(201,164,92,0.12)] px-3.5 py-3.5 ring-1 ring-[rgba(201,164,92,0.2)]">
-            <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#c9a45c] uppercase">
-              Access
-            </p>
-            <p className="mt-1 text-sm font-semibold">Waiting for approval</p>
-            <Link
-              href="/register"
-              className="mt-2 inline-block text-xs font-semibold text-[#e8d5a3] underline underline-offset-2"
-            >
-              View request
-            </Link>
-          </div>
-        ) : (
-          <Link
-            href="/register"
-            className="relative mb-5 rounded-2xl bg-[rgba(201,164,92,0.14)] px-3.5 py-3.5 text-sm font-semibold text-[#e8d5a3] ring-1 ring-[rgba(201,164,92,0.22)]"
-          >
-            Link your flat →
-          </Link>
-        )}
+        <SidebarAccountCard
+          isSuperAdmin={isSuperAdmin}
+          accountLabel={accountLabel}
+          flatNumber={flatNumber}
+          pendingApproval={pendingApproval}
+          active={pathname.startsWith("/account")}
+        />
 
         <nav className="relative flex min-h-0 flex-1 flex-col overflow-y-auto pr-0.5">
+          {isSuperAdmin
+            ? section("Account", account)
+            : section("Manage", account)}
           {section("Explore", explore)}
           {section("You", personal)}
-          {section("Manage", manage)}
         </nav>
 
         <div className="relative mt-2 border-t border-[rgba(232,213,163,0.1)] pt-3">

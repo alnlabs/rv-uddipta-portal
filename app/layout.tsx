@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { OwnersShell } from "@/components/OwnersShell";
 import { SiteHeader } from "@/components/SiteHeader";
+import { isSuperAdmin } from "@/lib/admin";
 import {
   canEditBuilder,
   canEditFlat,
@@ -48,24 +49,29 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   let unreadNotifications = 0;
 
   if (user && profile) {
+    const superAdmin = isSuperAdmin(user);
     isAdmin = canManageAdmin(profile.role, user);
     builderEdit = canEditBuilder(profile.role, user);
-    showMyFlat = canEditFlat(profile.role);
+    showMyFlat = !superAdmin && canEditFlat(profile.role);
 
     const [{ data: ownFlat }, { count }] = await Promise.all([
-      supabase
-        .from("flats")
-        .select("flat_number")
-        .eq("user_id", user.id)
-        .maybeSingle(),
+      superAdmin
+        ? Promise.resolve({ data: null as { flat_number: string } | null })
+        : supabase
+            .from("flats")
+            .select("flat_number")
+            .eq("user_id", user.id)
+            .maybeSingle(),
       supabase
         .from("notifications")
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.id)
         .is("read_at", null),
     ]);
-    flatNumber = ownFlat?.flat_number ?? null;
-    if (flatNumber) showMyFlat = true;
+    if (!superAdmin) {
+      flatNumber = ownFlat?.flat_number ?? null;
+      if (flatNumber) showMyFlat = true;
+    }
     unreadNotifications = count ?? 0;
 
     if (!flatNumber && !isAdmin) {
@@ -97,11 +103,13 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         {user ? (
           <OwnersShell
             isAdmin={isAdmin}
+            isSuperAdmin={Boolean(user && isSuperAdmin(user))}
             canEditBuilder={builderEdit}
             showMyFlat={showMyFlat}
             flatNumber={flatNumber}
             pendingApproval={pendingApproval}
             unreadNotifications={unreadNotifications}
+            accountLabel={profile.displayName || user.email || null}
           >
             {children}
           </OwnersShell>

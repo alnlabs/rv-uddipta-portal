@@ -24,6 +24,7 @@ type FlatRow = {
   open_for_resale?: boolean | null;
   owner_name?: string | null;
   owner_photo_url?: string | null;
+  email?: string | null;
   phone_masked?: string | null;
   phone?: string | null;
   tenant_name?: string | null;
@@ -100,6 +101,7 @@ export function mapPublicFlat(row: FlatRow | null): PublicFlat | null {
     openForResale: Boolean(row.open_for_resale),
     ownerName: row.owner_name ?? "",
     ownerPhotoUrl: row.owner_photo_url ?? null,
+    ownerEmail: row.email ?? "",
     phoneMasked: row.phone_masked ?? maskPhone(row.phone),
     tenantName: row.tenant_name ?? "",
     tenantPhoneMasked:

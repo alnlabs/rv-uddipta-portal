@@ -30,6 +30,7 @@ export default function FlatGrid({
         openForRent: flat.openForRent,
         openForResale: flat.openForResale,
         ownerName: flat.ownerName || undefined,
+        ownerEmail: flat.ownerEmail || undefined,
         phoneMasked: flat.phoneMasked || undefined,
         tenantName: flat.tenantName || undefined,
         tenantPhoneMasked: flat.tenantPhoneMasked || undefined,

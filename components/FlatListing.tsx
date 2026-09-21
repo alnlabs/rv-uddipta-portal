@@ -21,6 +21,7 @@ export type ListedFlat = {
   openForRent?: boolean
   openForResale?: boolean
   ownerName?: string
+  ownerEmail?: string
   phoneMasked?: string
   tenantName?: string
   tenantPhoneMasked?: string
@@ -154,6 +155,11 @@ export function FlatListing({
                           <p className="truncate text-sm font-medium text-[#14241c]">
                             {flat.ownerName || "Owner"}
                           </p>
+                          {flat.ownerEmail ? (
+                            <p className="truncate text-xs text-[#3d5247]">
+                              {flat.ownerEmail}
+                            </p>
+                          ) : null}
                           {flat.phoneMasked ? (
                             <p className="mt-0.5 text-xs tabular-nums text-[#3d5247]">
                               {flat.phoneMasked}

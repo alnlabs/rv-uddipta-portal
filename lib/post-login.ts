@@ -1,13 +1,13 @@
 import type { User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { isAdminUser } from "@/lib/admin";
+import { isSuperAdmin } from "@/lib/admin";
 
 export async function postLoginPath(
   supabase: SupabaseClient,
   user: User | null,
 ) {
   if (!user) return "/login";
-  if (isAdminUser(user)) return "/";
+  if (isSuperAdmin(user)) return "/account";
 
   const { data: flat } = await supabase
     .from("flats")

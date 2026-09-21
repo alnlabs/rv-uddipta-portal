@@ -16,6 +16,7 @@ export type PublicFlat = {
   openForResale: boolean
   ownerName: string
   ownerPhotoUrl: string | null
+  ownerEmail: string
   phoneMasked: string
   tenantName: string
   tenantPhoneMasked: string

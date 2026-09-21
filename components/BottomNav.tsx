@@ -37,7 +37,7 @@ export function BottomNav({
         {signedIn
           ? item("/update", "My flat", pathname === "/update")
           : item("/login", "Login", pathname === "/login" || pathname === "/register")}
-        {isAdmin ? item("/admin", "Approvals", pathname === "/admin") : null}
+        {isAdmin ? item("/account", "Approvals", pathname === "/account") : null}
       </div>
     </nav>
   );

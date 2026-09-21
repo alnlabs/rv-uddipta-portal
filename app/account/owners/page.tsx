@@ -1,16 +1,17 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { adminSaveFlat } from "@/app/actions/admin-manage";
+import { OwnerDangerZone } from "@/components/OwnerDangerZone";
 import { canManageAdmin } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
 
-const LIST_COLUMNS = "id, flat_number, owner_name, floor, unit";
+const LIST_COLUMNS = "id, flat_number, owner_name, email, floor, unit";
 const DETAIL_COLUMNS =
-  "id, flat_number, wing, floor, type, owner_name, phone, sale_status, occupancy, tenant_name, tenant_phone, open_for_rent, open_for_resale, user_id";
+  "id, flat_number, wing, floor, type, owner_name, email, phone, sale_status, occupancy, tenant_name, tenant_phone, open_for_rent, open_for_resale, user_id";
 
 function searchTerm(raw: string) {
-  return raw.replace(/[^a-zA-Z0-9 ]/g, "").trim().slice(0, 32);
+  return raw.replace(/["\\]/g, "").replace(/[^a-zA-Z0-9@. +\-_]/g, "").trim().slice(0, 64);
 }
 
 export default async function AdminOwnersPage({
@@ -20,7 +21,7 @@ export default async function AdminOwnersPage({
 }) {
   const { user, profile } = await getAuthState();
   if (!user) redirect("/login");
-  if (!canManageAdmin(profile.role, user)) redirect("/admin/builder");
+  if (!canManageAdmin(profile.role, user)) redirect("/account/builder");
 
   const params = await searchParams;
   const q = (params.q || "").trim();
@@ -36,8 +37,8 @@ export default async function AdminOwnersPage({
 
   const filter = term
     ? /^\d{10}$/.test(term)
-      ? `flat_number.ilike.%${term}%,owner_name.ilike.%${term}%,phone.eq.${term}`
-      : `flat_number.ilike.%${term}%,owner_name.ilike.%${term}%`
+      ? `flat_number.ilike."%${term}%",owner_name.ilike."%${term}%",email.ilike."%${term}%",phone.eq.${term}`
+      : `flat_number.ilike."%${term}%",owner_name.ilike."%${term}%",email.ilike."%${term}%"`
     : null;
 
   const [{ data: listRows }, selectedRow] = await Promise.all([
@@ -64,11 +65,30 @@ export default async function AdminOwnersPage({
 
   const qParam = q ? `&q=${encodeURIComponent(q)}` : "";
 
+  let memberCount = 0;
+  let renterCount = 0;
+  if (editing) {
+    const [members, renters] = await Promise.all([
+      admin
+        .from("flat_members")
+        .select("*", { count: "exact", head: true })
+        .eq("flat_id", editing.id),
+      admin
+        .from("flat_renters")
+        .select("*", { count: "exact", head: true })
+        .eq("flat_id", editing.id),
+    ]);
+    memberCount = members.count ?? 0;
+    renterCount = renters.count ?? 0;
+  }
+
   return (
     <section>
       <h2 className="text-2xl font-semibold text-[#14241c]">Owners</h2>
       <p className="mt-1 text-sm text-[#3d5247]">
-        Create or update owner, occupancy, tenant, and listing flags for any flat.
+        Create or update owner, occupancy, tenant, and listing flags for any
+        flat. Clearing a unit uses type-to-confirm and never deletes brochure
+        inventory.
       </p>
 
       <form className="mt-4 flex gap-2">
@@ -91,7 +111,7 @@ export default async function AdminOwnersPage({
           {flats.map((flat) => (
             <li key={flat.id}>
               <Link
-                href={`/admin/owners?flat=${flat.flat_number}${qParam}`}
+                href={`/account/owners?flat=${flat.flat_number}${qParam}`}
                 className={`block border-b border-[rgba(27,58,47,0.06)] px-3 py-2 text-sm ${
                   editing?.flat_number === flat.flat_number
                     ? "bg-[#1b3a2f] text-[#e8d5a3]"
@@ -102,15 +122,21 @@ export default async function AdminOwnersPage({
                 <span className="mt-0.5 block truncate text-xs opacity-80">
                   {flat.owner_name || "Unsold"}
                 </span>
+                {flat.email ? (
+                  <span className="mt-0.5 block truncate text-xs opacity-70">
+                    {flat.email}
+                  </span>
+                ) : null}
               </Link>
             </li>
           ))}
         </ul>
 
         {editing ? (
+          <div className="min-w-0 rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.12)]">
           <form
             action={adminSaveFlat}
-            className="min-w-0 space-y-3 rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.12)]"
+            className="space-y-3"
           >
             <input type="hidden" name="flatNumber" value={editing.flat_number} />
             <h3 className="text-xl font-semibold">{editing.flat_number}</h3>
@@ -132,6 +158,15 @@ export default async function AdminOwnersPage({
               <input
                 name="phone"
                 defaultValue={editing.phone || ""}
+                className="mt-1 min-h-11 w-full rounded-xl border border-[rgba(27,58,47,0.12)] px-3 font-normal"
+              />
+            </label>
+            <label className="block text-sm font-semibold">
+              Email
+              <input
+                name="email"
+                type="email"
+                defaultValue={editing.email || ""}
                 className="mt-1 min-h-11 w-full rounded-xl border border-[rgba(27,58,47,0.12)] px-3 font-normal"
               />
             </label>
@@ -189,10 +224,6 @@ export default async function AdminOwnersPage({
               />
               Open for resale
             </label>
-            <label className="flex items-center gap-2 text-sm font-semibold text-[#8a2f2f]">
-              <input type="checkbox" name="unlinkUser" value="1" />
-              Unlink Google account
-            </label>
             <div className="flex flex-wrap gap-2 pt-2">
               <button
                 type="submit"
@@ -200,16 +231,16 @@ export default async function AdminOwnersPage({
               >
                 Save flat
               </button>
-              <button
-                type="submit"
-                name="clearOwner"
-                value="1"
-                className="min-h-11 rounded-full border border-[rgba(138,47,47,0.3)] px-5 text-sm font-semibold text-[#8a2f2f]"
-              >
-                Clear to unsold
-              </button>
             </div>
           </form>
+          <OwnerDangerZone
+            flatNumber={editing.flat_number}
+            hasLinkedUser={Boolean(editing.user_id)}
+            isSold={editing.sale_status === "sold"}
+            memberCount={memberCount}
+            renterCount={renterCount}
+          />
+          </div>
         ) : (
           <p className="text-[#3d5247]">No flats match.</p>
         )}

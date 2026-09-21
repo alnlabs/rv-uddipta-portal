@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import UpdateForm from "@/components/UpdateForm";
+import { isSuperAdmin } from "@/lib/admin";
 import { mapFlatMember, mapFlatRenter, mapOwnedFlat } from "@/lib/flats";
 import { maskPhone } from "@/lib/phone";
 import { createClient } from "@/utils/supabase/server";
@@ -13,6 +14,7 @@ export default async function UpdatePage() {
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/login");
+  if (isSuperAdmin(user)) redirect("/account");
 
   const { data: row, error } = await supabase
     .from("flats")

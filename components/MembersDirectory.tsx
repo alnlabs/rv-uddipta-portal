@@ -32,6 +32,7 @@ export type MemberCard = {
   areaSqft: number | null
   ownerName: string
   ownerPhotoUrl: string | null
+  ownerEmail: string
   phoneMasked: string
   tenantName: string
   tenantPhoneMasked: string
@@ -145,6 +146,9 @@ export function MembersDirectory({
                 <p className="mt-3 text-sm font-semibold text-[#14241c]">
                   {flat.ownerName}
                 </p>
+                {flat.ownerEmail ? (
+                  <p className="truncate text-xs text-[#3d5247]">{flat.ownerEmail}</p>
+                ) : null}
                 {flat.phoneMasked ? (
                   <p className="text-xs tabular-nums text-[#3d5247]">
                     {flat.phoneMasked}
@@ -233,6 +237,14 @@ export function MembersDirectory({
                   Owner
                 </p>
                 <p className="mt-1 text-lg font-semibold">{selected.ownerName}</p>
+                {selected.ownerEmail ? (
+                  <a
+                    href={`mailto:${selected.ownerEmail}`}
+                    className="mt-0.5 block break-all text-sm text-[#2f5a48] underline-offset-2 hover:underline"
+                  >
+                    {selected.ownerEmail}
+                  </a>
+                ) : null}
                 {selected.phoneMasked ? (
                   <p className="mt-0.5 text-sm tabular-nums text-[#3d5247]">
                     {selected.phoneMasked}

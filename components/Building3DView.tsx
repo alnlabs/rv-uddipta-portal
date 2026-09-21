@@ -179,6 +179,7 @@ export type ModelFlat = {
   openForRent?: boolean
   openForResale?: boolean
   ownerName?: string
+  ownerEmail?: string
   phoneMasked?: string
   tenantName?: string
   tenantPhoneMasked?: string
@@ -2062,6 +2063,15 @@ function FlatDetailCard({
         <h2 className="mt-0.5 text-[1.35rem] leading-tight font-semibold tracking-tight">
           {ownerTitle}
         </h2>
+
+        {sold && flat.ownerEmail ? (
+          <a
+            href={`mailto:${flat.ownerEmail}`}
+            className="mt-1 block break-all text-sm text-[#e8d5a3] underline-offset-2 hover:underline"
+          >
+            {flat.ownerEmail}
+          </a>
+        ) : null}
 
         {sold && flat.phoneMasked ? (
           <p className="mt-1 text-sm tabular-nums text-[#d8c898]">

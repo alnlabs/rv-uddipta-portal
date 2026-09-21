@@ -81,6 +81,7 @@ export function ApprovalsList({
       <h2 className="text-2xl font-semibold text-[#14241c]">Owner registrations</h2>
       <p className="mt-1 text-sm text-[#3d5247]">
         Approve a request to link that Google account to a brochure flat.
+        Rejecting needs a written reason.
       </p>
 
       {error ? <p className="mt-4 text-[#8a2f2f]">{error}</p> : null}
@@ -118,13 +119,19 @@ export function ApprovalsList({
                   onSubmit={(event) => {
                     event.preventDefault();
                     const value = new FormData(event.currentTarget).get("reason");
-                    const reason = typeof value === "string" ? value : "";
+                    const reason = typeof value === "string" ? value.trim() : "";
+                    if (reason.length < 3) {
+                      setError("Type a short reason before rejecting.");
+                      return;
+                    }
                     reject(row.id, reason);
                   }}
                 >
                   <input
                     name="reason"
-                    placeholder="Reason (optional)"
+                    required
+                    minLength={3}
+                    placeholder="Reason (required)"
                     disabled={pending}
                     className="min-h-12 flex-1 rounded-xl border border-[rgba(27,58,47,0.14)] bg-[#fffdf8] px-3 py-2"
                   />

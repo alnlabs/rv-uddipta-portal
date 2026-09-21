@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
+import { isSuperAdmin, SUPER_ADMIN_NO_FLAT } from "@/lib/admin";
 import { findInventoryFlat } from "@/lib/inventory";
 import { normalizePhone } from "@/lib/phone";
 import { createAdminClient } from "@/utils/supabase/admin";
@@ -21,6 +22,9 @@ export async function registerOwner(
 
   if (!user) {
     return { ok: false, message: "Sign in with Google first." };
+  }
+  if (isSuperAdmin(user)) {
+    return { ok: false, message: SUPER_ADMIN_NO_FLAT };
   }
 
   const phone = normalizePhone(String(formData.get("phone") || ""));

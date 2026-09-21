@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import RegisterForm from "@/components/RegisterForm";
+import { isSuperAdmin } from "@/lib/admin";
 import { createClient } from "@/utils/supabase/server";
 
 export default async function RegisterPage() {
@@ -11,6 +12,7 @@ export default async function RegisterPage() {
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/login");
+  if (isSuperAdmin(user)) redirect("/account");
 
   const { data: flat } = await supabase
     .from("flats")

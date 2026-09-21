@@ -785,6 +785,18 @@ export default function UpdateForm({
                 />
               </label>
 
+              {flat.ownerEmail ? (
+                <p className="mt-4 max-w-md text-sm text-[#3d5247]">
+                  Email{" "}
+                  <a
+                    href={`mailto:${flat.ownerEmail}`}
+                    className="break-all font-medium text-[#14241c] underline-offset-2 hover:underline"
+                  >
+                    {flat.ownerEmail}
+                  </a>
+                </p>
+              ) : null}
+
               {ownerError ? (
                 <p
                   role="alert"
