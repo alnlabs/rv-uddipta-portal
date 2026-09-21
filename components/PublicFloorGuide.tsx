@@ -13,7 +13,7 @@ export function PublicFloorGuide() {
   return (
     <section
       id="floors"
-      className="mx-auto w-[calc(100%-1.25rem)] scroll-mt-24 pb-8 md:w-[min(1100px,calc(100%-2rem))] md:scroll-mt-28 md:pb-14"
+      className="page-gutter max-w-[1100px] scroll-mt-24 pb-8 md:scroll-mt-28 md:pb-14"
     >
       <div className="mb-4">
         <h2 className="text-3xl font-semibold tracking-tight text-[#14241c]">

@@ -471,7 +471,7 @@ export default function UpdateForm({
         }}
       />
 
-      <section className="relative mx-auto w-[calc(100%-1.25rem)] max-w-5xl pb-24 pt-6 md:pb-16 md:pt-10">
+      <section className="page-gutter relative max-w-5xl pb-24 pt-6 md:pb-16 md:pt-10">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-[0.7rem] font-semibold tracking-[0.2em] text-[#c9a45c] uppercase">

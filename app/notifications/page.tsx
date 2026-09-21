@@ -36,7 +36,7 @@ export default async function NotificationsPage() {
   const unread = (rows ?? []).filter((row) => !row.read_at).length;
 
   return (
-    <section className="mx-auto w-[calc(100%-1.25rem)] max-w-5xl py-6 md:w-[calc(100%-2.5rem)] md:py-10">
+    <section className="page-gutter max-w-5xl py-6 md:py-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">

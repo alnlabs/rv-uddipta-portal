@@ -13,7 +13,7 @@ export function BuildingHighlights({
       {showSnapshot ? (
         <section
           aria-label="Project snapshot"
-          className="relative z-10 mx-auto -mt-5 w-[calc(100%-1.25rem)] rounded-2xl border border-[rgba(27,58,47,0.14)] bg-[#fffcf5]/95 p-3 shadow-xl md:-mt-8 md:w-[min(1100px,calc(100%-2rem))] md:p-4"
+          className="page-gutter relative z-10 -mt-5 max-w-[1100px] rounded-2xl border border-[rgba(27,58,47,0.14)] bg-[#fffcf5]/95 p-3 shadow-xl md:-mt-8 md:p-4"
         >
         <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5 md:gap-3">
           <li className="flex flex-col">
@@ -42,7 +42,7 @@ export function BuildingHighlights({
 
       <section
         id="project"
-        className="mx-auto w-[calc(100%-1.25rem)] py-8 md:w-[min(1100px,calc(100%-2rem))]"
+        className="page-gutter max-w-[1100px] py-8"
       >
         <div className="mb-4">
           <h2 className="text-3xl font-semibold tracking-tight text-[#14241c]">The project</h2>

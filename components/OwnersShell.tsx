@@ -243,8 +243,8 @@ export function OwnersShell({
   }
 
   return (
-    <div className="flex min-h-full flex-col md:flex-row">
-      <aside className="sticky top-0 z-30 hidden h-dvh w-[16.5rem] shrink-0 flex-col border-r border-[rgba(232,213,163,0.1)] bg-[#102018] px-3 py-4 text-[#f7f2e6] md:flex">
+    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden md:flex-row">
+      <aside className="relative z-30 hidden h-full w-[min(16.5rem,100%)] shrink-0 flex-col border-r border-[rgba(232,213,163,0.1)] bg-[#102018] px-3 py-4 text-[#f7f2e6] md:flex">
         <div
           className="pointer-events-none absolute inset-x-0 top-0 h-40 opacity-80"
           aria-hidden
@@ -335,9 +335,9 @@ export function OwnersShell({
         </div>
       </aside>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <header
-          className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-[rgba(27,58,47,0.1)] bg-[#efe8d8]/92 px-3 py-2 backdrop-blur-md md:hidden"
+          className="sticky top-0 z-20 flex shrink-0 items-center justify-between gap-3 border-b border-[rgba(27,58,47,0.1)] bg-[#efe8d8]/92 px-3 py-2 backdrop-blur-md md:hidden"
           style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}
         >
           <Link href="/" className="flex items-center gap-2">
@@ -375,7 +375,7 @@ export function OwnersShell({
           </div>
         </header>
 
-        <main className="relative min-h-0 flex-1 pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-0">
+        <main className="relative min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-0">
           {children}
         </main>
 

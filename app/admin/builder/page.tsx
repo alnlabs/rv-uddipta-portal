@@ -1,18 +1,12 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { adminSaveBuilder } from "@/app/actions/admin-manage";
 import { getProjectInfo } from "@/lib/projectInfo";
-import { canEditBuilder, ensureProfile } from "@/lib/roles";
-import { createClient } from "@/utils/supabase/server";
+import { canEditBuilder } from "@/lib/roles";
+import { getAuthState } from "@/lib/session";
 
 export default async function AdminBuilderPage() {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, profile } = await getAuthState();
   if (!user) redirect("/login");
-  const profile = await ensureProfile(user, supabase);
   if (!canEditBuilder(profile.role, user)) redirect("/");
 
   const project = await getProjectInfo();

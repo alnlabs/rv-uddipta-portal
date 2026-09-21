@@ -27,7 +27,7 @@ export default async function MembersPage({
 
   if (!community) {
     return (
-      <section className="mx-auto w-[calc(100%-1.25rem)] max-w-xl py-10 md:py-16">
+      <section className="page-gutter max-w-xl py-10 md:py-16">
         <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">
           Members
         </p>
@@ -102,7 +102,7 @@ export default async function MembersPage({
     });
 
   return (
-    <section className="mx-auto w-[calc(100%-1.25rem)] max-w-5xl py-6 md:w-[calc(100%-2.5rem)] md:py-10">
+    <section className="page-gutter max-w-5xl py-6 md:py-10">
       <header className="flex flex-col gap-4 border-b border-[rgba(27,58,47,0.1)] pb-5 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">

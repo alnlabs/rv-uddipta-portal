@@ -139,7 +139,7 @@ export function DashboardHome({
     flats.length > 0 ? Math.round((summary.sold / flats.length) * 100) : 0;
 
   return (
-    <div className="mx-auto w-[calc(100%-1.25rem)] max-w-6xl py-5 md:w-[calc(100%-2.5rem)] md:py-8">
+    <div className="page-gutter max-w-6xl py-5 md:py-8">
       <header className="flex flex-col gap-4 border-b border-[rgba(27,58,47,0.1)] pb-5 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">
@@ -215,7 +215,7 @@ export function DashboardHome({
         <h2 className="text-xs font-semibold tracking-[0.14em] text-[#3d5247] uppercase">
           Sales & stay
         </h2>
-        <ul className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 md:gap-3">
+        <ul className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 md:gap-3">
           <StatCard value={flats.length} label="Flats tracked" />
           <StatCard value={summary.sold} label="Sold" />
           <StatCard value={summary.unsold} label="Unsold" />

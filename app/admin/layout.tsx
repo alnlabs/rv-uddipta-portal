@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { canEditBuilder, canManageAdmin, ensureProfile } from "@/lib/roles";
-import { createClient } from "@/utils/supabase/server";
+import { canEditBuilder, canManageAdmin } from "@/lib/roles";
+import { getAuthState } from "@/lib/session";
 
 const TABS = [
   { href: "/admin", label: "Approvals", adminOnly: true },
@@ -16,14 +15,9 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode
 }) {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, profile } = await getAuthState();
   if (!user) redirect("/login");
 
-  const profile = await ensureProfile(user, supabase);
   const admin = canManageAdmin(profile.role, user);
   const builder = canEditBuilder(profile.role, user);
   if (!admin && !builder) redirect("/");
@@ -31,7 +25,7 @@ export default async function AdminLayout({
   const tabs = TABS.filter((tab) => (tab.adminOnly ? admin : builder));
 
   return (
-    <div className="mx-auto w-[calc(100%-1.25rem)] py-6 md:w-[min(1100px,calc(100%-2rem))] md:py-10">
+    <div className="page-gutter max-w-[1100px] py-6 md:py-10">
       <p className="text-xs font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">
         Admin
       </p>

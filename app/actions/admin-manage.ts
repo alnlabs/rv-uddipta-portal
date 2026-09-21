@@ -1,27 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
 import { normalizeSaleFields } from "@/lib/flatDisplay";
 import { normalizePhone } from "@/lib/phone";
-import { canManageAdmin, ensureProfile, type AppRole } from "@/lib/roles";
+import type { AppRole } from "@/lib/roles";
+import { requireAdminUser, requireBuilderEditor } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
-import { createClient } from "@/utils/supabase/server";
-
-async function requireAdmin() {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not allowed");
-  const profile = await ensureProfile(user, supabase);
-  if (!canManageAdmin(profile.role, user)) throw new Error("Not allowed");
-  return user;
-}
 
 export async function adminSaveFlat(formData: FormData) {
-  await requireAdmin();
+  await requireAdminUser();
   const admin = createAdminClient();
   const flatNumber = String(formData.get("flatNumber") || "").trim();
   const ownerName = String(formData.get("ownerName") || "").trim();
@@ -81,7 +68,7 @@ export async function adminSaveFlat(formData: FormData) {
 }
 
 export async function adminSaveProfile(formData: FormData) {
-  await requireAdmin();
+  await requireAdminUser();
   const admin = createAdminClient();
   const userId = String(formData.get("userId") || "").trim();
   const role = String(formData.get("role") || "visitor") as AppRole;
@@ -118,16 +105,7 @@ export async function adminSaveProfile(formData: FormData) {
 }
 
 export async function adminSaveBuilder(formData: FormData) {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not allowed");
-  const profile = await ensureProfile(user, supabase);
-  const { canEditBuilder } = await import("@/lib/roles");
-  if (!canEditBuilder(profile.role, user)) throw new Error("Not allowed");
-
+  await requireBuilderEditor();
   const admin = createAdminClient();
   const amenities = String(formData.get("amenities") || "")
     .split("\n")

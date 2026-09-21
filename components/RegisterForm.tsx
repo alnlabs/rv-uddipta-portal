@@ -24,7 +24,7 @@ export default function RegisterForm({
   }, [flatNumber]);
 
   return (
-    <section className="mx-auto grid w-[calc(100%-1.25rem)] place-items-start py-6 md:min-h-[70vh] md:w-[min(1100px,calc(100%-2rem))] md:place-items-center md:py-12">
+    <section className="page-gutter grid max-w-[1100px] place-items-start py-6 md:min-h-[70vh] md:place-items-center md:py-12">
       <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-[rgba(27,58,47,0.12)] bg-[#fffcf5]/95 shadow-xl">
         <div className="bg-[#14241c] px-5 py-5 text-[#f7f2e6] md:px-6">
           <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">

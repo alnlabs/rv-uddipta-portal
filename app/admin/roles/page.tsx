@@ -1,25 +1,27 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { adminSaveProfile } from "@/app/actions/admin-manage";
-import { canManageAdmin, ensureProfile } from "@/lib/roles";
+import { canManageAdmin } from "@/lib/roles";
+import { getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
-import { createClient } from "@/utils/supabase/server";
 
 export default async function AdminRolesPage() {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, profile } = await getAuthState();
   if (!user) redirect("/login");
-  const profile = await ensureProfile(user, supabase);
   if (!canManageAdmin(profile.role, user)) redirect("/admin/builder");
 
   const admin = createAdminClient();
-  const { data: profiles } = await admin
-    .from("profiles")
-    .select("user_id, role, flat_id, display_name, updated_at")
-    .order("updated_at", { ascending: false });
+  const [{ data: profiles }, usersPage] = await Promise.all([
+    admin
+      .from("profiles")
+      .select("user_id, role, flat_id, display_name, updated_at")
+      .order("updated_at", { ascending: false }),
+    admin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+  ]);
+
+  const emails: Record<string, string> = {};
+  for (const account of usersPage.data?.users ?? []) {
+    if (account.email) emails[account.id] = account.email;
+  }
 
   const flatIds = [
     ...new Set(
@@ -35,16 +37,6 @@ export default async function AdminRolesPage() {
       .select("id, flat_number")
       .in("id", flatIds);
     for (const f of flats ?? []) flatMap[f.id] = f.flat_number;
-  }
-
-  const emails: Record<string, string> = {};
-  for (const row of profiles ?? []) {
-    try {
-      const { data } = await admin.auth.admin.getUserById(row.user_id);
-      if (data.user?.email) emails[row.user_id] = data.user.email;
-    } catch {
-      /* ignore */
-    }
   }
 
   return (

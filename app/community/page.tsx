@@ -73,7 +73,7 @@ export default async function CommunityPage() {
   return (
     <Suspense
       fallback={
-        <div className="mx-auto w-[calc(100%-1.25rem)] max-w-6xl py-10 text-sm text-[#3d5247]">
+        <div className="page-gutter max-w-6xl py-10 text-sm text-[#3d5247]">
           Loading community…
         </div>
       }

@@ -104,7 +104,7 @@ export function FlatListing({
                   {group.flats.length}
                 </span>
               </div>
-              <ul className="grid grid-cols-2 gap-2.5 md:grid-cols-3 lg:grid-cols-4">
+              <ul className="grid grid-cols-1 gap-2.5 min-[380px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {group.flats.map((flat) => {
                   const sold = Boolean(
                     showOwners &&
@@ -114,7 +114,7 @@ export function FlatListing({
                   return (
                     <li
                       key={flat.flatNumber}
-                      className={`rounded-2xl border p-3.5 transition-shadow ${
+                      className={`min-w-0 rounded-2xl border p-3.5 transition-shadow ${
                         sold
                           ? rented
                             ? "border-[rgba(154,91,60,0.45)] bg-[#f7efe8] shadow-[inset_3px_0_0_#9a5b3c]"

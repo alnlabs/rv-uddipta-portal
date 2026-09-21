@@ -53,12 +53,12 @@ export function HomeBoard({
     <div
       className={
         view === "3d"
-          ? "flex h-[calc(100dvh-7.5rem)] min-h-0 flex-col px-2 pt-2 md:h-dvh md:px-4 md:pt-3 md:pb-3"
-          : "mx-auto w-[calc(100%-1.25rem)] max-w-6xl py-5 md:w-[calc(100%-2.5rem)] md:py-8"
+          ? "flex h-full min-h-0 flex-col px-2 pt-2 md:px-4 md:pt-3 md:pb-3"
+          : "page-gutter max-w-6xl py-5 md:py-8"
       }
     >
       <header
-        className={`flex shrink-0 flex-col gap-4 md:flex-row md:items-end md:justify-between ${
+        className={`flex min-w-0 shrink-0 flex-col gap-4 md:flex-row md:items-end md:justify-between ${
           view === "3d"
             ? "mb-2 border-b border-[rgba(27,58,47,0.1)] pb-3 md:mb-3"
             : "border-b border-[rgba(27,58,47,0.1)] pb-5"

@@ -1,15 +1,13 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { cookies } from "next/headers";
 import { OwnersShell } from "@/components/OwnersShell";
 import { SiteHeader } from "@/components/SiteHeader";
 import {
   canEditBuilder,
   canEditFlat,
   canManageAdmin,
-  ensureProfile,
 } from "@/lib/roles";
-import { createClient } from "@/utils/supabase/server";
+import { getAuthState } from "@/lib/session";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -40,11 +38,7 @@ export const viewport = {
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, profile, supabase } = await getAuthState();
 
   let flatNumber: string | null = null;
   let pendingApproval = false;
@@ -53,19 +47,26 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   let showMyFlat = false;
   let unreadNotifications = 0;
 
-  if (user) {
-    const profile = await ensureProfile(user, supabase);
+  if (user && profile) {
     isAdmin = canManageAdmin(profile.role, user);
     builderEdit = canEditBuilder(profile.role, user);
     showMyFlat = canEditFlat(profile.role);
 
-    const { data: ownFlat } = await supabase
-      .from("flats")
-      .select("flat_number")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    const [{ data: ownFlat }, { count }] = await Promise.all([
+      supabase
+        .from("flats")
+        .select("flat_number")
+        .eq("user_id", user.id)
+        .maybeSingle(),
+      supabase
+        .from("notifications")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .is("read_at", null),
+    ]);
     flatNumber = ownFlat?.flat_number ?? null;
     if (flatNumber) showMyFlat = true;
+    unreadNotifications = count ?? 0;
 
     if (!flatNumber && !isAdmin) {
       const { data: request } = await supabase
@@ -78,22 +79,21 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         .maybeSingle();
       pendingApproval = request?.status === "pending";
     }
-
-    const { count } = await supabase
-      .from("notifications")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .is("read_at", null);
-    unreadNotifications = count ?? 0;
   }
 
   return (
     <html
       lang="en"
       data-scroll-behavior="smooth"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} antialiased ${
+        user ? "app-shell" : "h-full"
+      }`}
     >
-      <body className="flex min-h-full flex-col text-[#14241c]">
+      <body
+        className={`flex flex-col text-[#14241c] ${
+          user ? "h-full min-h-0" : "min-h-full"
+        }`}
+      >
         {user ? (
           <OwnersShell
             isAdmin={isAdmin}
@@ -108,7 +108,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         ) : (
           <>
             <SiteHeader signedIn={false} />
-            <main className="relative flex-1">{children}</main>
+            <main className="relative min-w-0 flex-1 overflow-x-clip">
+              {children}
+            </main>
             <footer className="relative hidden border-t border-[rgba(27,58,47,0.1)] px-4 py-8 text-sm text-[#3d5247] md:block md:px-8">
               RV Uddiipta · Karmanghat · {new Date().getFullYear()}
             </footer>

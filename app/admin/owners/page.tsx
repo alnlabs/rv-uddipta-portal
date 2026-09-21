@@ -1,53 +1,68 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { adminSaveFlat } from "@/app/actions/admin-manage";
-import { canManageAdmin, ensureProfile } from "@/lib/roles";
+import { canManageAdmin } from "@/lib/roles";
+import { getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
-import { createClient } from "@/utils/supabase/server";
+
+const LIST_COLUMNS = "id, flat_number, owner_name, floor, unit";
+const DETAIL_COLUMNS =
+  "id, flat_number, wing, floor, type, owner_name, phone, sale_status, occupancy, tenant_name, tenant_phone, open_for_rent, open_for_resale, user_id";
+
+function searchTerm(raw: string) {
+  return raw.replace(/[^a-zA-Z0-9 ]/g, "").trim().slice(0, 32);
+}
 
 export default async function AdminOwnersPage({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string; flat?: string }>
 }) {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, profile } = await getAuthState();
   if (!user) redirect("/login");
-  const profile = await ensureProfile(user, supabase);
   if (!canManageAdmin(profile.role, user)) redirect("/admin/builder");
 
   const params = await searchParams;
-  const q = (params.q || "").trim().toUpperCase();
+  const q = (params.q || "").trim();
   const selected = (params.flat || "").trim().toUpperCase();
+  const term = searchTerm(q);
 
   const admin = createAdminClient();
-  let query = admin
+  const listQuery = admin
     .from("flats")
-    .select(
-      "id, flat_number, wing, floor, type, owner_name, phone, sale_status, occupancy, tenant_name, tenant_phone, open_for_rent, open_for_resale, user_id",
-    )
+    .select(LIST_COLUMNS)
     .order("floor")
     .order("unit");
 
-  const { data: rows } = await query;
-  let flats = rows ?? [];
-  if (q) {
-    flats = flats.filter(
-      (f) =>
-        f.flat_number.includes(q) ||
-        (f.owner_name || "").toUpperCase().includes(q),
-    );
+  const filter = term
+    ? /^\d{10}$/.test(term)
+      ? `flat_number.ilike.%${term}%,owner_name.ilike.%${term}%,phone.eq.${term}`
+      : `flat_number.ilike.%${term}%,owner_name.ilike.%${term}%`
+    : null;
+
+  const [{ data: listRows }, selectedRow] = await Promise.all([
+    filter ? listQuery.or(filter) : listQuery,
+    selected
+      ? admin
+          .from("flats")
+          .select(DETAIL_COLUMNS)
+          .eq("flat_number", selected)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+  const flats = listRows ?? [];
+
+  let editing = selectedRow.data;
+  if (!editing && flats[0]) {
+    const { data } = await admin
+      .from("flats")
+      .select(DETAIL_COLUMNS)
+      .eq("flat_number", flats[0].flat_number)
+      .maybeSingle();
+    editing = data;
   }
 
-  const editing =
-    flats.find((f) => f.flat_number === selected) ||
-    flats.find((f) => f.owner_name) ||
-    flats[0] ||
-    null;
+  const qParam = q ? `&q=${encodeURIComponent(q)}` : "";
 
   return (
     <section>
@@ -71,12 +86,12 @@ export default async function AdminOwnersPage({
         </button>
       </form>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[14rem_minmax(0,1fr)]">
-        <ul className="max-h-[28rem] overflow-auto rounded-2xl border border-[rgba(27,58,47,0.12)] bg-[#fffcf5]">
-          {flats.slice(0, 120).map((flat) => (
+      <div className="mt-6 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
+        <ul className="max-h-[min(28rem,calc(100dvh-12rem))] overflow-auto rounded-2xl border border-[rgba(27,58,47,0.12)] bg-[#fffcf5]">
+          {flats.map((flat) => (
             <li key={flat.id}>
               <Link
-                href={`/admin/owners?flat=${flat.flat_number}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+                href={`/admin/owners?flat=${flat.flat_number}${qParam}`}
                 className={`block border-b border-[rgba(27,58,47,0.06)] px-3 py-2 text-sm ${
                   editing?.flat_number === flat.flat_number
                     ? "bg-[#1b3a2f] text-[#e8d5a3]"
@@ -95,7 +110,7 @@ export default async function AdminOwnersPage({
         {editing ? (
           <form
             action={adminSaveFlat}
-            className="space-y-3 rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.12)]"
+            className="min-w-0 space-y-3 rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.12)]"
           >
             <input type="hidden" name="flatNumber" value={editing.flat_number} />
             <h3 className="text-xl font-semibold">{editing.flat_number}</h3>

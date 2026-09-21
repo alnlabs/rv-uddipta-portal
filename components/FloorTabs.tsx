@@ -10,7 +10,7 @@ export function FloorTabs({
   onChange: (floor: number) => void
 }) {
   return (
-    <div className="grid grid-cols-5 gap-2" role="tablist" aria-label="Floors">
+    <div className="grid grid-cols-5 gap-1.5 sm:gap-2" role="tablist" aria-label="Floors">
       {floors.map((floor) => {
         const active = activeFloor === floor;
         return (
