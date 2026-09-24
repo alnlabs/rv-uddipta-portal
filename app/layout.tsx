@@ -9,6 +9,7 @@ import {
   canManageAdmin,
 } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
+import { createAdminClient } from "@/utils/supabase/admin";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -47,6 +48,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   let builderEdit = false;
   let showMyFlat = false;
   let unreadNotifications = 0;
+  let pendingApprovals = 0;
 
   if (user && profile) {
     const superAdmin = isSuperAdmin(user);
@@ -73,6 +75,15 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       if (flatNumber) showMyFlat = true;
     }
     unreadNotifications = count ?? 0;
+
+    if (isAdmin) {
+      const admin = createAdminClient();
+      const { count: waiting } = await admin
+        .from("registration_requests")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "pending");
+      pendingApprovals = waiting ?? 0;
+    }
 
     if (!flatNumber && !isAdmin) {
       const { data: request } = await supabase
@@ -109,6 +120,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             flatNumber={flatNumber}
             pendingApproval={pendingApproval}
             unreadNotifications={unreadNotifications}
+            pendingApprovals={pendingApprovals}
             accountLabel={profile.displayName || user.email || null}
           >
             {children}

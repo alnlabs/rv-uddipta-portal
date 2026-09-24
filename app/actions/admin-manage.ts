@@ -2,14 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/app/actions/admin";
-import {
-  isSuperAdmin,
-  isSuperAdminContact,
-  SUPER_ADMIN_NO_FLAT,
-} from "@/lib/admin";
+import { isSuperAdmin, isSuperAdminContact } from "@/lib/admin";
 import { normalizeEmail } from "@/lib/email";
 import { normalizeSaleFields } from "@/lib/flatDisplay";
 import { normalizePhone } from "@/lib/phone";
+import { applyPersonAccess, assertSocietyPerson } from "@/lib/assignAccess";
 import type { AppRole } from "@/lib/roles";
 import { requireAdminUser, requireBuilderEditor } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
@@ -101,15 +98,21 @@ export async function adminSaveFlat(formData: FormData) {
     openForRent,
     openForResale,
   });
-  const { error } = await admin
+  const patchRow = {
+    owner_name: ownerName || null,
+    ...(phone ? { phone } : {}),
+    ...patch,
+  };
+  let { error } = await admin
     .from("flats")
-    .update({
-      owner_name: ownerName || null,
-      email,
-      ...(phone ? { phone } : {}),
-      ...patch,
-    })
+    .update({ ...patchRow, email })
     .eq("flat_number", flatNumber);
+  if (error && /column flats\.email does not exist/i.test(error.message)) {
+    ({ error } = await admin
+      .from("flats")
+      .update(patchRow)
+      .eq("flat_number", flatNumber));
+  }
   if (error) throw new Error(error.message);
 
   revalidateOwnerSurfaces();
@@ -248,57 +251,72 @@ export async function adminWipeHousehold(
   }
 }
 
-export async function adminSaveProfile(formData: FormData) {
-  await requireAdminUser();
-  const admin = createAdminClient();
-  const userId = String(formData.get("userId") || "").trim();
-  const role = String(formData.get("role") || "visitor") as AppRole;
-  const flatNumber = String(formData.get("flatNumber") || "").trim();
-  const displayName = String(formData.get("displayName") || "").trim();
+export async function adminAssignRole(
+  formData: FormData,
+): Promise<ActionResult> {
+  try {
+    await requireAdminUser();
+    const admin = createAdminClient();
+    const userId = String(formData.get("userId") || "").trim();
+    const role = String(formData.get("role") || "visitor") as AppRole;
+    const flatNumber = String(formData.get("flatNumber") || "")
+      .trim()
+      .toUpperCase();
+    const displayName = String(formData.get("displayName") || "").trim();
 
-  if (!userId) throw new Error("User required");
-
-  const { data: account } = await admin.auth.admin.getUserById(userId);
-  if (account.user && isSuperAdmin(account.user)) {
-    if (role !== "admin" || flatNumber) {
-      throw new Error(SUPER_ADMIN_NO_FLAT);
-    }
-    const { error } = await admin.from("profiles").upsert({
-      user_id: userId,
-      role: "admin",
-      flat_id: null,
-      display_name: displayName || account.user.email || "Super admin",
-    });
+    if (!userId) throw new Error("Choose a person from the list.");
+    const { data: account, error } = await admin.auth.admin.getUserById(userId);
     if (error) throw new Error(error.message);
+    if (!account.user) {
+      throw new Error("That person is not in the portal yet.");
+    }
+    await assertSocietyPerson(admin, account.user);
+
+    await applyPersonAccess(admin, {
+      user: account.user,
+      role,
+      flatNumber,
+      displayName,
+    });
+    revalidateOwnerSurfaces();
     revalidatePath("/account/roles");
-    return;
+    return { ok: true };
+  } catch (error) {
+    return fail(error);
   }
+}
 
-  let flatId: number | null = null;
-  if (flatNumber) {
-    const { data: flat } = await admin
-      .from("flats")
-      .select("id")
-      .eq("flat_number", flatNumber)
-      .maybeSingle();
-    flatId = flat?.id ?? null;
-    if (!flatId) throw new Error(`Flat ${flatNumber} not found`);
+export async function adminSaveProfile(
+  formData: FormData,
+): Promise<ActionResult> {
+  try {
+    await requireAdminUser();
+    const admin = createAdminClient();
+    const userId = String(formData.get("userId") || "").trim();
+    const role = String(formData.get("role") || "visitor") as AppRole;
+    const flatNumber = String(formData.get("flatNumber") || "")
+      .trim()
+      .toUpperCase();
+    const displayName = String(formData.get("displayName") || "").trim();
+
+    if (!userId) throw new Error("Person required");
+    const { data: account, error } = await admin.auth.admin.getUserById(userId);
+    if (error) throw new Error(error.message);
+    if (!account.user) throw new Error("Google account not found");
+    await assertSocietyPerson(admin, account.user);
+
+    await applyPersonAccess(admin, {
+      user: account.user,
+      role,
+      flatNumber,
+      displayName,
+    });
+    revalidateOwnerSurfaces();
+    revalidatePath("/account/roles");
+    return { ok: true };
+  } catch (error) {
+    return fail(error);
   }
-
-  if (["owner", "co_owner", "tenant"].includes(role) && !flatId) {
-    throw new Error("Flat required for this role");
-  }
-  if (role === "visitor") flatId = null;
-
-  const { error } = await admin.from("profiles").upsert({
-    user_id: userId,
-    role,
-    flat_id: flatId,
-    display_name: displayName || null,
-  });
-  if (error) throw new Error(error.message);
-
-  revalidatePath("/account/roles");
 }
 
 export async function adminResetProfile(

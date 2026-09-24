@@ -41,7 +41,7 @@ function SidebarAccountCard({
           {accountLabel || "Account"}
         </p>
         <span className="mt-2 inline-block text-xs font-semibold text-[#e8d5a3]">
-          Your account
+          Admin home
         </span>
       </Link>
     );
@@ -181,6 +181,7 @@ export function OwnersShell({
   flatNumber = null,
   pendingApproval = false,
   unreadNotifications = 0,
+  pendingApprovals = 0,
   accountLabel = null,
 }: {
   children: React.ReactNode
@@ -191,6 +192,7 @@ export function OwnersShell({
   flatNumber?: string | null
   pendingApproval?: boolean
   unreadNotifications?: number
+  pendingApprovals?: number
   accountLabel?: string | null
 }) {
   const pathname = usePathname();
@@ -223,6 +225,12 @@ export function OwnersShell({
       match: (p) => p.startsWith("/members"),
       icon: "people",
     },
+    {
+      href: "/designer",
+      label: "Designer",
+      match: (p) => p.startsWith("/designer"),
+      icon: "model",
+    },
   ];
 
   const account: NavItem[] = [];
@@ -230,7 +238,7 @@ export function OwnersShell({
     account.push(
       {
         href: "/account",
-        label: "Approvals",
+        label: "Admin",
         match: (p) => p === "/account",
         icon: "admin",
       },
@@ -243,17 +251,19 @@ export function OwnersShell({
     );
   }
   if (isSuperAdmin || isAdmin || canEditBuilder) {
-    account.push({
-      href: "/account/builder",
-      label: "Builder",
-      match: (p) => p.startsWith("/account/builder"),
-      icon: "model",
-    });
+    account.push(
+      {
+        href: "/account/builder",
+        label: "Builder",
+        match: (p) => p.startsWith("/account/builder"),
+        icon: "model",
+      },
+    );
   }
   if (isSuperAdmin || isAdmin) {
     account.push({
       href: "/account/roles",
-      label: "Roles",
+      label: "People",
       match: (p) => p.startsWith("/account/roles"),
       icon: "people",
     });
@@ -277,12 +287,12 @@ export function OwnersShell({
     });
   }
 
-  const mobileItems = isSuperAdmin
+  const manageMobile = isSuperAdmin || isAdmin;
+  const mobileItems = manageMobile
     ? [
-        explore[0]!,
         {
           href: "/account",
-          label: "Approvals",
+          label: "Admin",
           match: (p: string) => p === "/account",
           icon: "admin" as const,
         },
@@ -292,7 +302,13 @@ export function OwnersShell({
           match: (p: string) => p.startsWith("/account/owners"),
           icon: "flat" as const,
         },
-        explore[3]!,
+        {
+          href: "/account/roles",
+          label: "People",
+          match: (p: string) => p.startsWith("/account/roles"),
+          icon: "people" as const,
+        },
+        explore[0]!,
       ]
     : [
         explore[0]!,
@@ -319,8 +335,13 @@ export function OwnersShell({
 
   function sideLink(item: NavItem) {
     const active = item.match(pathname);
-    const showBadge =
-      item.href === "/notifications" && unreadNotifications > 0;
+    const badgeCount =
+      item.href === "/notifications"
+        ? unreadNotifications
+        : item.href === "/account"
+          ? pendingApprovals
+          : 0;
+    const showBadge = badgeCount > 0;
 
     return (
       <Link
@@ -350,7 +371,7 @@ export function OwnersShell({
         <span className="min-w-0 flex-1 truncate">{item.label}</span>
         {showBadge ? (
           <span className="grid min-w-5 place-items-center rounded-full bg-[#c9a45c] px-1.5 py-0.5 text-[10px] font-bold text-[#14241c]">
-            {unreadNotifications > 9 ? "9+" : unreadNotifications}
+            {badgeCount > 9 ? "9+" : badgeCount}
           </span>
         ) : null}
       </Link>
@@ -404,9 +425,7 @@ export function OwnersShell({
         />
 
         <nav className="relative flex min-h-0 flex-1 flex-col overflow-y-auto pr-0.5">
-          {isSuperAdmin
-            ? section("Account", account)
-            : section("Manage", account)}
+          {section(isSuperAdmin || isAdmin ? "Admin" : "Manage", account)}
           {section("Explore", explore)}
           {section("You", personal)}
         </nav>
@@ -488,7 +507,8 @@ export function OwnersShell({
             {mobileItems.map((item) => {
               const active = item.match(pathname);
               const showBadge =
-                item.href === "/notifications" && unreadNotifications > 0;
+                (item.href === "/notifications" && unreadNotifications > 0) ||
+                (item.href === "/account" && pendingApprovals > 0);
               return (
                 <Link
                   key={item.href}

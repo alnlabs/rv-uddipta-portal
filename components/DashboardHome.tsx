@@ -125,11 +125,13 @@ export function DashboardHome({
   includeOwners,
   myFlatNumber,
   recentActivity = [],
+  adminTools = false,
 }: {
   flats: PublicFlat[]
   includeOwners: boolean
   myFlatNumber?: string | null
   recentActivity?: DashboardActivity[]
+  adminTools?: boolean
 }) {
   const summary = summarize(flats);
   const openRent = flats.filter((f) => f.openForRent);
@@ -181,6 +183,30 @@ export function DashboardHome({
           ) : null}
         </div>
       </header>
+
+      {adminTools ? (
+        <nav
+          aria-label="Admin tools"
+          className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4"
+        >
+          {(
+            [
+              ["/account", "Admin"],
+              ["/account/owners", "Owners"],
+              ["/account/roles", "People"],
+              ["/account/builder", "Builder"],
+            ] as const
+          ).map(([href, label]) => (
+            <Link
+              key={href}
+              href={href}
+              className="inline-flex min-h-11 items-center justify-center rounded-2xl bg-[#14241c] px-3 text-sm font-semibold text-[#e8d5a3]"
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
+      ) : null}
 
       {myFlat ? (
         <Link

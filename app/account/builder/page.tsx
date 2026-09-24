@@ -1,7 +1,8 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { adminSaveBuilder } from "@/app/actions/admin-manage";
 import { getProjectInfo } from "@/lib/projectInfo";
-import { canEditBuilder } from "@/lib/roles";
+import { canEditBuilder, canManageAdmin } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
 
 export default async function AdminBuilderPage() {
@@ -11,12 +12,25 @@ export default async function AdminBuilderPage() {
 
   const project = await getProjectInfo();
 
+  const showAdminHome = canManageAdmin(profile.role, user);
+
   return (
     <section>
-      <h2 className="text-2xl font-semibold text-[#14241c]">Builder details</h2>
-      <p className="mt-1 text-sm text-[#3d5247]">
-        Project facts shown on the dashboard and public surfaces.
+      <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">
+        Administration
       </p>
+      <h2 className="mt-1 text-2xl font-semibold text-[#14241c]">Builder details</h2>
+      <p className="mt-1 text-sm text-[#3d5247]">
+        These facts appear on the public home page and signed-in dashboard.
+      </p>
+      {showAdminHome ? (
+        <Link
+          href="/account"
+          className="mt-3 inline-flex min-h-10 items-center text-sm font-semibold text-[#2f5a48]"
+        >
+          ← Admin home
+        </Link>
+      ) : null}
 
       <form
         action={adminSaveBuilder}

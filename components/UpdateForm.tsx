@@ -5,6 +5,7 @@ import MembersEditor from "@/components/MembersEditor";
 import RentersEditor from "@/components/RentersEditor";
 import { ProfilePhotoPicker } from "@/components/ProfilePhotoPicker";
 import { cleanError } from "@/lib/auth";
+import { FlatTextFacts, FlatViews, toPlanInput } from "@/components/FlatViews";
 import { facingLabel, normalizeSaleFields, typeLabel } from "@/lib/flatDisplay";
 import { normalizePhone } from "@/lib/phone";
 import {
@@ -524,6 +525,17 @@ export default function UpdateForm({
         </div>
 
         <div className="mt-6 h-px w-full bg-gradient-to-r from-transparent via-[rgba(232,213,163,0.35)] to-transparent" />
+
+        <div className="mt-8 rounded-3xl bg-white/6 p-4 ring-1 ring-[rgba(232,213,163,0.14)] md:p-5">
+          <p className="mb-3 text-[0.7rem] font-semibold tracking-[0.16em] text-[#c9a45c] uppercase">
+            Flat views
+          </p>
+          <FlatViews
+            flat={toPlanInput(flat)}
+            tone="dark"
+            text={<FlatTextFacts flat={toPlanInput(flat)} tone="dark" />}
+          />
+        </div>
 
         {panel === "journey" ? (
           <div className="mt-8 space-y-4">

@@ -26,8 +26,10 @@ type Override = {
 
 export function ApprovalsList({
   requests,
+  embedded = false,
 }: {
   readonly requests: AdminRegistrationRequest[]
+  readonly embedded?: boolean
 }) {
   const [error, setError] = useState<string | null>(null);
   const [overrides, setOverrides] = useState<Record<number, Override>>({});
@@ -78,17 +80,38 @@ export function ApprovalsList({
 
   return (
     <section>
-      <h2 className="text-2xl font-semibold text-[#14241c]">Owner registrations</h2>
-      <p className="mt-1 text-sm text-[#3d5247]">
-        Approve a request to link that Google account to a brochure flat.
-        Rejecting needs a written reason.
-      </p>
+      {embedded ? (
+        <>
+          <h2 className="text-lg font-semibold tracking-tight text-[#14241c]">
+            Owner registrations
+          </h2>
+          <p className="mt-1 text-sm text-[#3d5247]">
+            Approve to link a Google account to a brochure flat. Rejecting
+            needs a written reason.
+          </p>
+        </>
+      ) : (
+        <>
+          <h2 className="text-2xl font-semibold text-[#14241c]">
+            Owner registrations
+          </h2>
+          <p className="mt-1 text-sm text-[#3d5247]">
+            Approve a request to link that Google account to a brochure flat.
+            Rejecting needs a written reason.
+          </p>
+        </>
+      )}
 
       {error ? <p className="mt-4 text-[#8a2f2f]">{error}</p> : null}
 
-      <h3 className="mt-8 text-lg font-semibold">Pending</h3>
+      <h3 className="mt-6 text-lg font-semibold">Pending</h3>
       {waiting.length === 0 ? (
-        <p className="mt-3 text-[#3d5247]">No pending requests.</p>
+        <div className="mt-3 rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.12)]">
+          <p className="font-medium text-[#14241c]">No one is waiting</p>
+          <p className="mt-1 text-sm text-[#3d5247]">
+            New Google sign-ups that claim a vacant flat will show up here.
+          </p>
+        </div>
       ) : (
         <ul className="mt-4 flex flex-col gap-3">
           {waiting.map((row) => (

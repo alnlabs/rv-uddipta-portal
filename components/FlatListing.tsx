@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { FlatTextFacts, FlatViewSheet, toPlanInput } from "@/components/FlatViews";
 import {
   facingLabel,
   listingChipTone,
@@ -41,6 +42,7 @@ export function FlatListing({
   showOwners?: boolean
 }) {
   const [filter, setFilter] = useState<Filter>("all");
+  const [open, setOpen] = useState<ListedFlat | null>(null);
 
   const visible = useMemo(
     () => (filter === "all" ? flats : flats.filter((flat) => flat.type === filter)),
@@ -54,6 +56,18 @@ export function FlatListing({
     }));
     return groups.filter((group) => group.flats.length > 0);
   }, [visible]);
+
+  const selectUnit = useCallback(
+    (flatNumber: string) => {
+      const next = flats.find((row) => row.flatNumber === flatNumber);
+      if (next) setOpen(next);
+    },
+    [flats],
+  );
+
+  const openPlan = open
+    ? toPlanInput({ ...open, floor })
+    : null;
 
   return (
     <div>
@@ -113,16 +127,18 @@ export function FlatListing({
                   );
                   const rented = sold && flat.occupancyLabel === "Rented";
                   return (
-                    <li
-                      key={flat.flatNumber}
-                      className={`min-w-0 rounded-2xl border p-3.5 transition-shadow ${
-                        sold
-                          ? rented
-                            ? "border-[rgba(154,91,60,0.45)] bg-[#f7efe8] shadow-[inset_3px_0_0_#9a5b3c]"
-                            : "border-[rgba(47,120,80,0.4)] bg-[#eef6f1] shadow-[inset_3px_0_0_#2f7a55]"
-                          : "border-[rgba(27,58,47,0.12)] bg-[#fffcf5]"
-                      }`}
-                    >
+                    <li key={flat.flatNumber}>
+                      <button
+                        type="button"
+                        onClick={() => setOpen(flat)}
+                        className={`min-w-0 w-full rounded-2xl border p-3.5 text-left transition-shadow hover:shadow-[0_8px_24px_rgba(20,36,28,0.08)] ${
+                          sold
+                            ? rented
+                              ? "border-[rgba(154,91,60,0.45)] bg-[#f7efe8] shadow-[inset_3px_0_0_#9a5b3c]"
+                              : "border-[rgba(47,120,80,0.4)] bg-[#eef6f1] shadow-[inset_3px_0_0_#2f7a55]"
+                            : "border-[rgba(27,58,47,0.12)] bg-[#fffcf5]"
+                        }`}
+                      >
                       <div className="flex items-start justify-between gap-2">
                         <strong className="text-lg tracking-tight text-[#14241c]">
                           {flat.flatNumber}
@@ -214,6 +230,10 @@ export function FlatListing({
                           Unsold
                         </p>
                       ) : null}
+                      <p className="mt-3 text-[10px] font-semibold tracking-[0.14em] text-[#3d5247] uppercase">
+                        Text · 2D · 3D
+                      </p>
+                      </button>
                     </li>
                   );
                 })}
@@ -222,6 +242,47 @@ export function FlatListing({
           ))}
         </div>
       )}
+
+      {open && openPlan ? (
+        <FlatViewSheet
+          flat={openPlan}
+          title={open.flatNumber}
+          eyebrow={
+            showOwners
+              ? open.occupancyLabel || "Flat views"
+              : "Flat views"
+          }
+          onClose={() => setOpen(null)}
+          onSelectUnit={selectUnit}
+          text={
+            <div className="space-y-4">
+              <FlatTextFacts flat={openPlan} />
+              {showOwners ? (
+                <div className="border-t border-[rgba(27,58,47,0.08)] pt-3 text-sm">
+                  <p className="text-xs font-semibold tracking-[0.12em] text-[#3d5247] uppercase">
+                    {open.occupancyLabel || "Unsold"}
+                  </p>
+                  {open.ownerName ? (
+                    <p className="mt-1 font-semibold text-[#14241c]">
+                      {open.ownerName}
+                    </p>
+                  ) : null}
+                  {open.phoneMasked ? (
+                    <p className="mt-0.5 text-xs tabular-nums text-[#3d5247]">
+                      {open.phoneMasked}
+                    </p>
+                  ) : null}
+                  {open.tenantName ? (
+                    <p className="mt-2 text-[#3d5247]">
+                      Tenant {open.tenantName}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          }
+        />
+      ) : null}
     </div>
   );
 }

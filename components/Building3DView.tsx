@@ -32,6 +32,7 @@ import {
   type Group,
 } from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
+import { FlatTextFacts, FlatViews, toPlanInput } from "@/components/FlatViews";
 import { facingLabel, typeLabel } from "@/lib/flatDisplay";
 import { BUILDING } from "@/lib/building";
 import {
@@ -1999,11 +2000,13 @@ function FlatDetailCard({
   flat,
   myFlatNumber,
   onClose,
+  onSelectUnit,
   cardRef,
 }: {
   flat: ModelFlat
   myFlatNumber?: string | null
   onClose: () => void
+  onSelectUnit?: (flatNumber: string) => void
   cardRef: RefObject<HTMLDivElement | null>
 }) {
   const mine = flat.flatNumber === myFlatNumber;
@@ -2022,7 +2025,7 @@ function FlatDetailCard({
   return (
     <aside
       ref={cardRef}
-      className="pointer-events-auto absolute top-16 right-3 z-30 w-[min(18.5rem,calc(100%-1.25rem))] overflow-hidden rounded-2xl border border-[rgba(232,213,163,0.22)] bg-[#0d1a14]/95 text-[#f7f2e6] shadow-[0_12px_40px_rgba(0,0,0,0.35)] backdrop-blur-md md:top-[4.25rem]"
+      className="pointer-events-auto absolute top-16 right-3 z-30 max-h-[min(34rem,calc(100%-6.5rem))] w-[min(28rem,calc(100%-1.25rem))] overflow-y-auto rounded-2xl border border-[rgba(232,213,163,0.22)] bg-[#0d1a14]/95 text-[#f7f2e6] shadow-[0_12px_40px_rgba(0,0,0,0.35)] backdrop-blur-md md:top-[4.25rem]"
       onPointerDown={(event) => event.stopPropagation()}
     >
       <header className="relative border-b border-[rgba(232,213,163,0.14)] px-3.5 pt-3.5 pb-3">
@@ -2137,37 +2140,35 @@ function FlatDetailCard({
           <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#b0a070] uppercase">
             Unit
           </p>
-          <p className="mt-1.5 text-sm leading-snug font-medium text-[#f7f2e6]">
+          <p className="mt-1.5 mb-3 text-sm leading-snug font-medium text-[#f7f2e6]">
             {unitBits.join(" · ")}
           </p>
-          <dl className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-            <div>
-              <dt className="text-[#9a8a60]">Sale</dt>
-              <dd className="mt-0.5 font-semibold">{sold ? "Sold" : "Unsold"}</dd>
-            </div>
-            {flat.occupancyLabel ? (
-              <div>
-                <dt className="text-[#9a8a60]">Occupancy</dt>
-                <dd className="mt-0.5 font-semibold">{flat.occupancyLabel}</dd>
+          <FlatViews
+            flat={toPlanInput(flat)}
+            tone="dark"
+            onSelectUnit={onSelectUnit}
+            text={
+              <div className="space-y-3">
+                <FlatTextFacts flat={toPlanInput(flat)} tone="dark" />
+                <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                  <div>
+                    <dt className="text-[#9a8a60]">Sale</dt>
+                    <dd className="mt-0.5 font-semibold">
+                      {sold ? "Sold" : "Unsold"}
+                    </dd>
+                  </div>
+                  {flat.occupancyLabel ? (
+                    <div>
+                      <dt className="text-[#9a8a60]">Occupancy</dt>
+                      <dd className="mt-0.5 font-semibold">
+                        {flat.occupancyLabel}
+                      </dd>
+                    </div>
+                  ) : null}
+                </dl>
               </div>
-            ) : null}
-            {flat.facing ? (
-              <div>
-                <dt className="text-[#9a8a60]">Facing</dt>
-                <dd className="mt-0.5 font-semibold">
-                  {facingLabel(flat.facing)}
-                </dd>
-              </div>
-            ) : null}
-            {flat.areaSqft ? (
-              <div>
-                <dt className="text-[#9a8a60]">Area</dt>
-                <dd className="mt-0.5 font-semibold">
-                  {flat.areaSqft.toLocaleString()} sft
-                </dd>
-              </div>
-            ) : null}
-          </dl>
+            }
+          />
         </section>
       </div>
 
@@ -2870,6 +2871,10 @@ export default function Building3DView({
               flat={selected}
               myFlatNumber={myFlatNumber}
               onClose={clearSelection}
+              onSelectUnit={(flatNumber) => {
+                const next = flats.find((row) => row.flatNumber === flatNumber);
+                if (next) onSelect(next);
+              }}
               cardRef={cardRef}
             />
           </>

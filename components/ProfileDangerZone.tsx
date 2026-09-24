@@ -32,18 +32,19 @@ export function ProfileDangerZone({
             setError(result.error);
             return;
           }
-          setNotice("Role reset to visitor. Google login was unlinked from any flat.");
+          setNotice("They are now a visitor. Any flat link was removed.");
           router.refresh();
         });
       }}
     >
       <input type="hidden" name="userId" value={userId} />
       <p className="text-xs font-semibold tracking-[0.12em] text-[#8a2f2f] uppercase">
-        Safe delete
+        Remove access
       </p>
       <p className="text-sm text-[#3d5247]">
-        Reset portal access to visitor. Does not delete the Google account. Type{" "}
-        <code className="rounded bg-[#efe8d8] px-1">{email}</code>.
+        Turns them into a visitor and unlinks any flat. Their Google login
+        still works. Type{" "}
+        <code className="rounded bg-[#efe8d8] px-1">{email}</code> to confirm.
       </p>
       {error ? <p className="text-sm text-[#8a2f2f]">{error}</p> : null}
       {notice ? <p className="text-sm text-[#1b3a2f]">{notice}</p> : null}
@@ -59,7 +60,7 @@ export function ProfileDangerZone({
         disabled={pending}
         className="min-h-10 rounded-full border border-[rgba(138,47,47,0.3)] px-4 text-sm font-semibold text-[#8a2f2f] disabled:opacity-60"
       >
-        Reset to visitor
+        Remove flat access
       </button>
     </form>
   );

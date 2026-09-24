@@ -6,11 +6,18 @@ import { useState } from "react";
 import { Building3DLoader } from "@/components/Building3DLoader";
 import type { ModelFlat } from "@/components/Building3DView";
 import FlatGrid from "@/components/FlatGrid";
+import { FloorPlate2D } from "@/components/FlatPlan2D";
+import {
+  FlatTextFacts,
+  FlatViewSheet,
+  toPlanInput,
+} from "@/components/FlatViews";
 import { FloorTabs } from "@/components/FloorTabs";
+import { possessionLabel, saleOccupancyLabel } from "@/lib/flatDisplay";
 import type { MemberSummary } from "@/lib/boardData";
-import type { BoardData } from "@/lib/types";
+import type { BoardData, PublicFlat } from "@/lib/types";
 
-type CommunityView = "floors" | "3d";
+type CommunityView = "floors" | "2d" | "3d";
 
 export function HomeBoard({
   data,
@@ -31,9 +38,11 @@ export function HomeBoard({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const rawView = searchParams.get("view");
   const view: CommunityView =
-    searchParams.get("view") === "3d" ? "3d" : "floors";
+    rawView === "3d" ? "3d" : rawView === "2d" ? "2d" : "floors";
   const [activeFloor, setActiveFloor] = useState(data?.floors[0]?.floor ?? null);
+  const [openFlat, setOpenFlat] = useState<PublicFlat | null>(null);
   const selected = data?.floors.find((floor) => floor.floor === activeFloor);
   const myFlat = myFlatNumber
     ? data?.flats.find((flat) => flat.flatNumber === myFlatNumber)
@@ -42,11 +51,20 @@ export function HomeBoard({
   function setView(next: CommunityView) {
     const params = new URLSearchParams(searchParams.toString());
     if (next === "3d") params.set("view", "3d");
+    else if (next === "2d") params.set("view", "2d");
     else params.delete("view");
     const query = params.toString();
     router.replace(query ? `/community?${query}` : "/community", {
       scroll: false,
     });
+  }
+
+  function openUnit(flatNumber: string) {
+    const next =
+      selected?.flats.find((flat) => flat.flatNumber === flatNumber) ??
+      data?.flats.find((flat) => flat.flatNumber === flatNumber) ??
+      null;
+    setOpenFlat(next);
   }
 
   return (
@@ -84,9 +102,11 @@ export function HomeBoard({
               ? includeOwners
                 ? "Green = sold. Grey = unsold. Open a flat for owner and listing details."
                 : "Public view — sold vs unsold. Owner contacts stay private."
-              : showOwners
-                ? "Sold flats show owner stay or rented. Tenant details are community contact info only."
-                : "Public brochure view — sold vs unsold and open listings. Owner contacts stay private."}
+              : view === "2d"
+                ? "Tap a unit on the floor plate for text, 2D, and 3D views."
+                : showOwners
+                  ? "Sold flats show owner stay or rented. Tenant details are community contact info only."
+                  : "Public brochure view — sold vs unsold and open listings. Owner contacts stay private."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -98,6 +118,7 @@ export function HomeBoard({
             {(
               [
                 ["floors", "Floors"],
+                ["2d", "2D"],
                 ["3d", "3D"],
               ] as const
             ).map(([id, label]) => {
@@ -148,6 +169,40 @@ export function HomeBoard({
         <div className="min-h-0 flex-1">
           <Building3DLoader flats={modelFlats} myFlatNumber={myFlatNumber} />
         </div>
+      ) : view === "2d" ? (
+        <section className="mt-5">
+          {data ? (
+            <>
+              <div className="mb-4">
+                <FloorTabs
+                  floors={data.floors.map((floor) => floor.floor)}
+                  activeFloor={activeFloor}
+                  onChange={setActiveFloor}
+                />
+              </div>
+              {selected ? (
+                <figure className="rounded-3xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.12)] md:p-6">
+                  <figcaption className="mb-3 text-xs font-semibold tracking-[0.14em] text-[#3d5247] uppercase">
+                    Floor {selected.floor} · tap a flat
+                  </figcaption>
+                  <FloorPlate2D
+                    floor={selected.floor}
+                    highlight={openFlat?.flatNumber}
+                    onSelectUnit={openUnit}
+                  />
+                  <p className="mt-3 text-xs text-[#3d5247]">
+                    Schematic massing plate. Open a unit for text, 2D plan, and
+                    3D.
+                  </p>
+                </figure>
+              ) : null}
+            </>
+          ) : (
+            <p className="rounded-2xl bg-[#fffcf5] px-4 py-3 text-[#3d5247] ring-1 ring-[rgba(27,58,47,0.1)]">
+              {error || "Gathering floor data…"}
+            </p>
+          )}
+        </section>
       ) : (
         <>
           <section aria-label="Possession snapshot" className="mt-5">
@@ -224,6 +279,47 @@ export function HomeBoard({
           </section>
         </>
       )}
+
+      {openFlat ? (
+        <FlatViewSheet
+          flat={toPlanInput(openFlat)}
+          title={openFlat.flatNumber}
+          eyebrow={
+            showOwners
+              ? saleOccupancyLabel(openFlat)
+              : "Flat views"
+          }
+          onClose={() => setOpenFlat(null)}
+          onSelectUnit={openUnit}
+          text={
+            <div className="space-y-4">
+              <FlatTextFacts flat={toPlanInput(openFlat)} />
+              {showOwners ? (
+                <div className="border-t border-[rgba(27,58,47,0.08)] pt-3 text-sm">
+                  <p className="text-xs font-semibold tracking-[0.12em] text-[#3d5247] uppercase">
+                    {saleOccupancyLabel(openFlat)}
+                  </p>
+                  {openFlat.ownerName ? (
+                    <p className="mt-1 font-semibold text-[#14241c]">
+                      {openFlat.ownerName}
+                    </p>
+                  ) : null}
+                  {openFlat.phoneMasked ? (
+                    <p className="mt-0.5 text-xs tabular-nums text-[#3d5247]">
+                      {openFlat.phoneMasked}
+                    </p>
+                  ) : null}
+                  {possessionLabel(openFlat) ? (
+                    <p className="mt-2 text-[#3d5247]">
+                      {possessionLabel(openFlat)}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          }
+        />
+      ) : null}
     </div>
   );
 }

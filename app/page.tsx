@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { DashboardHome } from "@/components/DashboardHome";
 import { PublicGate } from "@/components/PublicGate";
 import { loadBoardPayload } from "@/lib/boardData";
-import { ensureProfile, isCommunityRole } from "@/lib/roles";
+import { canManageAdmin, ensureProfile, isCommunityRole } from "@/lib/roles";
 import { createClient } from "@/utils/supabase/server";
 
 export default async function Page() {
@@ -72,6 +72,7 @@ export default async function Page() {
       includeOwners={board.includeOwners}
       myFlatNumber={ownFlat?.flat_number ?? null}
       recentActivity={recentActivity}
+      adminTools={canManageAdmin(profile.role, user)}
     />
   );
 }
