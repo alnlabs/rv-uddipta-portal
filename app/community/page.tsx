@@ -39,22 +39,8 @@ export default async function CommunityPage() {
       type: flat.type,
       facing: flat.facing,
       areaSqft: flat.areaSqft,
-      saleStatus: owned?.saleStatus === "sold" ? "sold" : "unsold",
-      openForRent: owned?.openForRent,
-      openForResale: owned?.openForResale,
     };
-    if (!owned || owned.saleStatus !== "sold") return base;
-    if (!board.includeOwners) {
-      return {
-        ...base,
-        saleStatus: "sold",
-        occupancyLabel: owned.openForRent
-          ? "Open for rent"
-          : owned.openForResale
-            ? "Open for resale"
-            : "Sold",
-      };
-    }
+    if (!board.includeOwners || !owned || owned.saleStatus !== "sold") return base;
     return {
       ...base,
       saleStatus: "sold",

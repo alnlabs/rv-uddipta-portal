@@ -1,6 +1,6 @@
 "use client";
 
-import { ContactShadows, OrbitControls } from "@react-three/drei";
+import { ContactShadows, Html, OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import {
   edgesForPlan,
@@ -12,12 +12,26 @@ import {
   type PlanOpening,
   type PlanRoom,
 } from "@/lib/flatPlan";
+import {
+  cadPlanForFlat,
+  type CadDoor,
+  type CadExtent,
+  type CadPlan,
+  type CadRoomKind,
+  type CadWall,
+} from "@/lib/plans/cad";
 
-const SCALE = 0.07;
 const WALL_H = 1.28;
 const WALL_T = 0.055;
 const DOOR_H = 0.98;
 const FLOOR_Y = 0.04;
+const CAD_FILL: Record<CadRoomKind, string> = {
+  room: "#f7f1e4",
+  wet: "#dce4ea",
+  balcony: "#d4c19a",
+  utility: "#eee4d2",
+  corridor: "#e4e0d6",
+};
 
 const FLOOR: Record<PlanRoom["kind"], string> = {
   room: "#efe4cf",
@@ -26,13 +40,42 @@ const FLOOR: Record<PlanRoom["kind"], string> = {
   balcony: "#c4a56a",
 };
 
-function world(plan: FlatPlan, x: number, y: number, w: number, h: number) {
+function scaleOf(width: number, height: number) {
+  return 7.6 / Math.max(width, height);
+}
+
+function worldBox(
+  originX: number,
+  originY: number,
+  width: number,
+  height: number,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+) {
+  const scale = scaleOf(width, height);
   return {
-    x: (x + w / 2 - plan.width / 2) * SCALE,
-    z: (y + h / 2 - plan.height / 2) * SCALE,
-    w: Math.max(w * SCALE, 0.02),
-    d: Math.max(h * SCALE, 0.02),
+    x: (x + w / 2 - (originX + width / 2)) * scale,
+    z: (y + h / 2 - (originY + height / 2)) * scale,
+    w: Math.max(w * scale, 0.02),
+    d: Math.max(h * scale, 0.02),
   };
+}
+
+function world(plan: FlatPlan, x: number, y: number, w: number, h: number) {
+  return worldBox(0, 0, plan.width, plan.height, x, y, w, h);
+}
+
+function cadWorld(extent: CadExtent, x: number, y: number, w: number, h: number) {
+  return worldBox(extent.x, extent.y, extent.w, extent.h, x, y, w, h);
+}
+
+function doorHole(door: CadDoor) {
+  if (door.wall === "e" || door.wall === "w") {
+    return { x: door.x - 0.7, y: door.y, w: 1.4, h: door.length };
+  }
+  return { x: door.x, y: door.y - 0.7, w: door.length, h: 1.4 };
 }
 
 function FloorSlab({ room, plan }: { room: PlanRoom; plan: FlatPlan }) {
@@ -107,8 +150,11 @@ function DoorLintel({ hole, plan }: { hole: PlanOpening; plan: FlatPlan }) {
   );
 }
 
-function WindowPane({ hole, plan }: { hole: PlanOpening; plan: FlatPlan }) {
-  const box = world(plan, hole.x, hole.y, hole.w, hole.h);
+function WindowPane({
+  box,
+}: {
+  box: { x: number; z: number; w: number; d: number }
+}) {
   return (
     <group>
       <mesh position={[box.x, 0.72, box.z]}>
@@ -263,8 +309,7 @@ function EntryLeaf({ plan }: { plan: FlatPlan }) {
   );
 }
 
-function UnitInterior({ flat }: { flat: FlatPlanInput }) {
-  const plan = planForFlat(flat);
+function UnitInterior({ plan }: { plan: FlatPlan }) {
   return (
     <group>
       {plan.rooms.map((room) => (
@@ -277,7 +322,10 @@ function UnitInterior({ flat }: { flat: FlatPlanInput }) {
       {plan.openings
         .filter((item) => item.kind === "window")
         .map((hole) => (
-          <WindowPane key={hole.id} hole={hole} plan={plan} />
+          <WindowPane
+            key={hole.id}
+            box={world(plan, hole.x, hole.y, hole.w, hole.h)}
+          />
         ))}
       {plan.rooms
         .filter((room) => room.kind === "balcony")
@@ -292,11 +340,151 @@ function UnitInterior({ flat }: { flat: FlatPlanInput }) {
   );
 }
 
+function CadWallMesh({ wall, extent }: { wall: CadWall; extent: CadExtent }) {
+  const horizontal = Math.abs(wall.y1 - wall.y2) < 0.05;
+  const length = horizontal
+    ? Math.abs(wall.x2 - wall.x1)
+    : Math.abs(wall.y2 - wall.y1);
+  const box = cadWorld(
+    extent,
+    horizontal ? Math.min(wall.x1, wall.x2) : wall.x1 - 0.35,
+    horizontal ? wall.y1 - 0.35 : Math.min(wall.y1, wall.y2),
+    horizontal ? length : 0.7,
+    horizontal ? 0.7 : length,
+  );
+  const height = wall.parapet ? 0.42 : WALL_H;
+  return (
+    <mesh position={[box.x, height / 2, box.z]} castShadow receiveShadow>
+      <boxGeometry
+        args={[
+          horizontal ? box.w : WALL_T,
+          height,
+          horizontal ? WALL_T : box.d,
+        ]}
+      />
+      <meshStandardMaterial
+        color={wall.outer ? "#f4ebda" : "#efe6d4"}
+        roughness={0.82}
+      />
+    </mesh>
+  );
+}
+
+function CadEntryLeaf({ door, extent }: { door: CadDoor; extent: CadExtent }) {
+  const hole = doorHole(door);
+  const box = cadWorld(extent, hole.x, hole.y, hole.w, hole.h);
+  return (
+    <mesh position={[box.x, DOOR_H / 2, box.z]} castShadow>
+      <boxGeometry args={[0.04, DOOR_H, box.d * 0.92]} />
+      <meshStandardMaterial color="#5c3d18" roughness={0.55} />
+    </mesh>
+  );
+}
+
+function CadInterior({ cad }: { cad: CadPlan }) {
+  const { extent } = cad;
+  const entry = cad.doors.find((item) => item.entrance);
+  return (
+    <group>
+      {cad.rooms.map((room) => {
+        const box = cadWorld(extent, room.x, room.y, room.w, room.h);
+        const balcony = room.kind === "balcony";
+        return (
+          <mesh
+            key={room.id}
+            position={[box.x, balcony ? -0.02 : FLOOR_Y, box.z]}
+            receiveShadow
+          >
+            <boxGeometry args={[box.w, balcony ? 0.05 : 0.08, box.d]} />
+            <meshStandardMaterial
+              color={CAD_FILL[room.kind]}
+              roughness={balcony ? 0.7 : 0.9}
+            />
+          </mesh>
+        );
+      })}
+      {cad.openings.map((opening) => {
+        const box = cadWorld(extent, opening.x, opening.y, opening.w, opening.h);
+        return (
+          <mesh key={opening.id} position={[box.x, FLOOR_Y, box.z]} receiveShadow>
+            <boxGeometry args={[box.w, 0.08, box.d]} />
+            <meshStandardMaterial color="#f7f1e4" roughness={0.9} />
+          </mesh>
+        );
+      })}
+      {cad.walls.map((wall, index) => (
+        <CadWallMesh
+          key={`${wall.x1}-${wall.y1}-${index}`}
+          wall={wall}
+          extent={extent}
+        />
+      ))}
+      {cad.doors.map((door) => {
+        const hole = doorHole(door);
+        const box = cadWorld(extent, hole.x, hole.y, hole.w, hole.h);
+        const lintelH = WALL_H - DOOR_H;
+        return (
+          <mesh
+            key={`lintel-${door.id}`}
+            position={[box.x, DOOR_H + lintelH / 2, box.z]}
+            castShadow
+          >
+            <boxGeometry
+              args={[
+                Math.max(box.w, WALL_T * 1.4),
+                lintelH,
+                Math.max(box.d, WALL_T * 1.4),
+              ]}
+            />
+            <meshStandardMaterial color="#e8dcc4" roughness={0.8} />
+          </mesh>
+        );
+      })}
+      {cad.windows.map((item) => (
+        <WindowPane
+          key={item.id}
+          box={cadWorld(extent, item.x, item.y, item.w, item.h)}
+        />
+      ))}
+      {entry ? <CadEntryLeaf door={entry} extent={extent} /> : null}
+      {cad.rooms
+        .filter((room) => room.kind !== "corridor" && room.label)
+        .map((room) => {
+          const box = cadWorld(extent, room.x, room.y, room.w, room.h);
+          return (
+            <Html
+              key={`${room.id}-label`}
+              position={[box.x, 0.22, box.z]}
+              center
+              zIndexRange={[2, 0]}
+              style={{ pointerEvents: "none" }}
+            >
+              <div className="whitespace-nowrap text-center leading-tight">
+                <p className="text-[10px] font-bold text-[#14241c]">{room.label}</p>
+                {room.dim ? (
+                  <p className="text-[8px] text-[#3d5247]">{room.dim}</p>
+                ) : null}
+              </div>
+            </Html>
+          );
+        })}
+    </group>
+  );
+}
+
 export default function FlatUnit3D({ flat }: { readonly flat: FlatPlanInput }) {
+  const cad = cadPlanForFlat(flat);
+  const plan = cad ? null : planForFlat(flat);
+  const width = cad?.extent.w ?? plan!.width;
+  const height = cad?.extent.h ?? plan!.height;
+  const span = Math.max(width, height) * scaleOf(width, height);
   return (
     <div className="relative h-[28rem] overflow-hidden rounded-2xl bg-[#0f1c16] ring-1 ring-[rgba(27,58,47,0.2)] md:h-[32rem]">
       <Canvas
-        camera={{ position: [5.2, 6.4, 5.6], fov: 38 }}
+        camera={{
+          position: [span * 0.15, span * 1.85, span * 1.45],
+          fov: 42,
+        }}
         shadows
         className="touch-none"
       >
@@ -310,18 +498,18 @@ export default function FlatUnit3D({ flat }: { readonly flat: FlatPlanInput }) {
           shadow-mapSize-height={1024}
         />
         <directionalLight position={[-4, 3, -2]} intensity={0.35} />
-        <UnitInterior flat={flat} />
+        {cad ? <CadInterior cad={cad} /> : <UnitInterior plan={plan!} />}
         <ContactShadows
           position={[0, -0.02, 0]}
           opacity={0.35}
-          scale={14}
+          scale={18}
           blur={1.8}
-          far={4}
+          far={6}
         />
         <OrbitControls
           enablePan={false}
-          minDistance={4}
-          maxDistance={14}
+          minDistance={span * 1.15}
+          maxDistance={span * 3.6}
           maxPolarAngle={Math.PI / 2.08}
         />
       </Canvas>

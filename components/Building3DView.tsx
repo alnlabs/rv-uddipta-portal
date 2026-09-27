@@ -9,6 +9,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ComponentProps,
   type ErrorInfo,
   type ReactNode,
   type RefObject,
@@ -32,6 +33,7 @@ import {
   type Group,
 } from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
+import { CompassHud, CompassSync } from "@/components/ViewCompass";
 import { FlatTextFacts, FlatViews, toPlanInput } from "@/components/FlatViews";
 import { facingLabel, typeLabel } from "@/lib/flatDisplay";
 import { BUILDING } from "@/lib/building";
@@ -322,6 +324,14 @@ function isBought(flat: ModelFlat) {
   return flat.saleStatus === "sold" || Boolean(flat.ownerName);
 }
 
+/** Keep 3D HTML labels under the HUD and the flat popup. */
+function SceneHtml({
+  zIndexRange: _zIndexRange,
+  ...props
+}: ComponentProps<typeof Html>) {
+  return <Html {...props} zIndexRange={[8, 0]} />;
+}
+
 function colorFor(
   flat: ModelFlat,
   selected: boolean,
@@ -466,7 +476,7 @@ function UnitMesh({
         />
       </mesh>
       {mine && showMyLabel ? (
-        <Html
+        <SceneHtml
           position={[0, size[1] * 0.58, 0]}
           center
           distanceFactor={22}
@@ -482,7 +492,7 @@ function UnitMesh({
               aria-hidden
             />
           </div>
-        </Html>
+        </SceneHtml>
       ) : null}
     </group>
   );
@@ -1420,9 +1430,9 @@ function Site() {
           <coneGeometry args={[0.22, 0.85, 3]} />
           <meshStandardMaterial color="#e8d5a3" />
         </mesh>
-        <Html position={[0, 1.1, 0]} center transform style={{ pointerEvents: "none" }}>
+        <SceneHtml position={[0, 1.1, 0]} center transform style={{ pointerEvents: "none" }}>
           <span className="text-sm font-semibold text-[#e8d5a3]">N</span>
-        </Html>
+        </SceneHtml>
       </group>
     </>
   );
@@ -1640,19 +1650,19 @@ function GroundLabels({
     <>
       {labels.units
         ? FOOTPRINT_IDS.map((id) => (
-            <Html
+            <SceneHtml
               key={`fl-unit-${id}`}
               position={labelPosition(id, floorFocus)}
               center
               style={{ pointerEvents: "none", transform: "translate(-50%, -50%)" }}
             >
               <span className={HEAVY_LABEL}>{id}</span>
-            </Html>
+            </SceneHtml>
           ))
         : null}
 
       {labels.clubhouse ? (
-        <Html
+        <SceneHtml
           position={(() => {
             const [x, , z] = clubhouseMarkPosition(0, 0);
             const y =
@@ -1665,30 +1675,30 @@ function GroundLabels({
           style={{ pointerEvents: "none", transform: "translate(-50%, -50%)" }}
         >
           <span className={HEAVY_LABEL}>{CLUBHOUSE_ID}</span>
-        </Html>
+        </SceneHtml>
       ) : null}
 
       {labels.gate ? (
-        <Html
+        <SceneHtml
           position={withGroundY(compoundGatePosition())}
           center
           style={{ pointerEvents: "none", transform: "translate(-50%, -50%)" }}
         >
           <span className={HEAVY_LABEL}>Gate</span>
-        </Html>
+        </SceneHtml>
       ) : null}
 
       {LAWN_LABEL_GROUP_OPTIONS.map((group) =>
         labels[LAWN_GROUP_KEY[group.key]]
           ? LAWN_PARTS_BY_GROUP[group.key].map((part) => (
-              <Html
+              <SceneHtml
                 key={`gf-lawn-${part.id}`}
                 position={part.position}
                 center
                 style={{ pointerEvents: "none", transform: "translate(-50%, -50%)" }}
               >
                 <span className={DEBUG_LAWN_LABEL}>{part.label}</span>
-              </Html>
+              </SceneHtml>
             ))
           : null,
       )}
@@ -1696,7 +1706,7 @@ function GroundLabels({
       {labels.siteMarks
         ? SITE_AREA_LABELS.filter((area) => SITE_MARK_LABEL_IDS.has(area.id)).map(
             (area) => (
-              <Html
+              <SceneHtml
                 key={`gf-site-${area.id}`}
                 position={area.position}
                 center
@@ -1705,7 +1715,7 @@ function GroundLabels({
                 <span className={HEAVY_LABEL}>
                   {SITE_AREA_LABEL_TEXT[area.id] ?? area.id}
                 </span>
-              </Html>
+              </SceneHtml>
             ),
           )
         : null}
@@ -1716,7 +1726,7 @@ function GroundLabels({
               const n = AMENITY_NUMBER_BY_ID[area.id];
               if (n == null) return null;
               return (
-                <Html
+                <SceneHtml
                   key={`gf-amenity-${area.id}`}
                   position={area.position}
                   center
@@ -1728,7 +1738,7 @@ function GroundLabels({
                   <span className={AMENITY_NUMBER_LABEL} aria-label={`Amenity ${n}`}>
                     {n}
                   </span>
-                </Html>
+                </SceneHtml>
               );
             },
           )
@@ -1737,7 +1747,7 @@ function GroundLabels({
       {labels.compound ? (
         <>
           {COMPOUND_FACE_MARKS.filter((mark) => mark.abbr !== "e").map((mark) => (
-            <Html
+            <SceneHtml
               key={`gf-${COMPOUND_ID}-${mark.abbr}`}
               position={withGroundY(compoundMarkPosition(mark.dx, mark.dz))}
               center
@@ -1747,10 +1757,10 @@ function GroundLabels({
                 {COMPOUND_ID}
                 {mark.abbr}
               </span>
-            </Html>
+            </SceneHtml>
           ))}
           {compoundExtraMarks().map((mark) => (
-            <Html
+            <SceneHtml
               key={`gf-${COMPOUND_ID}-${mark.abbr}`}
               position={withGroundY(mark.position)}
               center
@@ -1760,10 +1770,10 @@ function GroundLabels({
                 {COMPOUND_ID}
                 {mark.abbr}
               </span>
-            </Html>
+            </SceneHtml>
           ))}
           {INNER_SHORT_WALL.labels.map((mark) => (
-            <Html
+            <SceneHtml
               key={`gf-${INNER_SHORT_WALL.id}-${mark.abbr || "mid"}`}
               position={mark.position}
               center
@@ -1773,23 +1783,23 @@ function GroundLabels({
                 {INNER_SHORT_WALL.id}
                 {mark.abbr}
               </span>
-            </Html>
+            </SceneHtml>
           ))}
         </>
       ) : null}
 
       {labels.corridors
         ? CORRIDORS.flatMap((corridor) => [
-            <Html
+            <SceneHtml
               key={`fl-${corridor.id}`}
               position={corridorMarkPosition(corridor, 0, floorFocus)}
               center
               style={{ pointerEvents: "none", transform: "translate(-50%, -50%)" }}
             >
               <span className={HEAVY_LABEL}>{corridor.id}</span>
-            </Html>,
+            </SceneHtml>,
             ...corridorDebugMarks(corridor).map((mark) => (
-              <Html
+              <SceneHtml
                 key={`fl-${corridor.id}-${mark.abbr}`}
                 position={corridorMarkPosition(corridor, mark.t, floorFocus)}
                 center
@@ -1799,10 +1809,10 @@ function GroundLabels({
                   {corridor.id}
                   {mark.abbr}
                 </span>
-              </Html>
+              </SceneHtml>
             )),
             ...corridorEndMarks(corridor).map((mark) => (
-              <Html
+              <SceneHtml
                 key={`fl-${corridor.id}-end-${mark.abbr}`}
                 position={corridorEndPosition(corridor, mark, floorFocus)}
                 center
@@ -1812,7 +1822,7 @@ function GroundLabels({
                   {corridor.id}
                   {mark.abbr}
                 </span>
-              </Html>
+              </SceneHtml>
             )),
           ])
         : null}
@@ -1821,7 +1831,7 @@ function GroundLabels({
         <>
           {FOOTPRINT_IDS.flatMap((id) =>
             FACE_MARKS.map((mark) => (
-              <Html
+              <SceneHtml
                 key={`fl-face-${id}-${mark.abbr}`}
                 position={debugMarkPosition(id, mark.dx, mark.dz, floorFocus)}
                 center
@@ -1831,11 +1841,11 @@ function GroundLabels({
                   {id}
                   {mark.abbr}
                 </span>
-              </Html>
+              </SceneHtml>
             )),
           )}
           {FACE_MARKS.map((mark) => (
-            <Html
+            <SceneHtml
               key={`fl-face-${CLUBHOUSE_ID}-${mark.abbr}`}
               position={(() => {
                 const [x, , z] = clubhouseMarkPosition(mark.dx, mark.dz);
@@ -1854,7 +1864,7 @@ function GroundLabels({
                 {CLUBHOUSE_ID}
                 {mark.abbr}
               </span>
-            </Html>
+            </SceneHtml>
           ))}
         </>
       ) : null}
@@ -2000,13 +2010,11 @@ function FlatDetailCard({
   flat,
   myFlatNumber,
   onClose,
-  onSelectUnit,
   cardRef,
 }: {
   flat: ModelFlat
   myFlatNumber?: string | null
   onClose: () => void
-  onSelectUnit?: (flatNumber: string) => void
   cardRef: RefObject<HTMLDivElement | null>
 }) {
   const mine = flat.flatNumber === myFlatNumber;
@@ -2025,7 +2033,7 @@ function FlatDetailCard({
   return (
     <aside
       ref={cardRef}
-      className="pointer-events-auto absolute top-16 right-3 z-30 max-h-[min(34rem,calc(100%-6.5rem))] w-[min(28rem,calc(100%-1.25rem))] overflow-y-auto rounded-2xl border border-[rgba(232,213,163,0.22)] bg-[#0d1a14]/95 text-[#f7f2e6] shadow-[0_12px_40px_rgba(0,0,0,0.35)] backdrop-blur-md md:top-[4.25rem]"
+      className="pointer-events-auto absolute top-3 right-3 z-50 max-h-[min(38rem,calc(100%-1rem))] w-[min(28rem,calc(100%-1.25rem))] overflow-y-auto rounded-2xl border border-[rgba(232,213,163,0.22)] bg-[#0d1a14]/95 text-[#f7f2e6] shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-md"
       onPointerDown={(event) => event.stopPropagation()}
     >
       <header className="relative border-b border-[rgba(232,213,163,0.14)] px-3.5 pt-3.5 pb-3">
@@ -2146,7 +2154,6 @@ function FlatDetailCard({
           <FlatViews
             flat={toPlanInput(flat)}
             tone="dark"
-            onSelectUnit={onSelectUnit}
             text={
               <div className="space-y-3">
                 <FlatTextFacts flat={toPlanInput(flat)} tone="dark" />
@@ -2310,6 +2317,7 @@ function Scene({
   labels,
   onSelect,
   controlsRef,
+  roseRef,
   onSelectedScreen,
 }: {
   flats: ModelFlat[]
@@ -2319,6 +2327,7 @@ function Scene({
   labels: LabelVisibility
   onSelect: (flat: ModelFlat) => void
   controlsRef: RefObject<OrbitControlsImpl | null>
+  roseRef: RefObject<HTMLDivElement | null>
   onSelectedScreen: (
     point: { clientX: number; clientY: number; visible: boolean } | null,
   ) => void
@@ -2364,6 +2373,7 @@ function Scene({
       <GroundLabels labels={labels} focusFloor={focusFloor} />
       <FocusMyFlat flat={myFlat} controlsRef={controlsRef} />
       <ProjectSelectedAnchor flat={selectedFlat} onScreen={onSelectedScreen} />
+      <CompassSync roseRef={roseRef} controlsRef={controlsRef} />
 
       <OrbitControls
         ref={controlsRef}
@@ -2724,6 +2734,7 @@ export default function Building3DView({
     visible: boolean
   } | null>(null);
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
+  const roseRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
 
@@ -2823,16 +2834,13 @@ export default function Building3DView({
             {fullScreen ? "Exit" : "Full screen"}
           </button>
         </div>
+        <CompassHud roseRef={roseRef} />
         {showAmenityLegend ? (
-          <div className="absolute bottom-16 left-3 z-10 max-h-[min(42vh,22rem)] max-w-[min(100%-6.5rem,18rem)] overflow-y-auto">
+          <div className="absolute bottom-[5.35rem] left-[5.75rem] z-10 max-h-[min(42vh,22rem)] max-w-[min(100%-8rem,18rem)] overflow-y-auto">
             <AmenityLegend invert />
           </div>
         ) : null}
-        <div
-          className={`absolute z-10 ${
-            selected ? "bottom-16 left-3" : "right-3 bottom-16"
-          }`}
-        >
+        <div className="absolute right-3 bottom-16 z-10">
           <ZoomButtons
             onZoomIn={() => zoomBy(true)}
             onZoomOut={() => zoomBy(false)}
@@ -2855,30 +2863,11 @@ export default function Building3DView({
               labels={visibleLabels}
               onSelect={onSelect}
               controlsRef={controlsRef}
+              roseRef={roseRef}
               onSelectedScreen={onSelectedScreen}
             />
           </Canvas>
         </CanvasErrorBoundary>
-
-        {selected ? (
-          <>
-            <SelectionLeaderLine
-              anchor={anchor}
-              cardRef={cardRef}
-              containerRef={stageRef}
-            />
-            <FlatDetailCard
-              flat={selected}
-              myFlatNumber={myFlatNumber}
-              onClose={clearSelection}
-              onSelectUnit={(flatNumber) => {
-                const next = flats.find((row) => row.flatNumber === flatNumber);
-                if (next) onSelect(next);
-              }}
-              cardRef={cardRef}
-            />
-          </>
-        ) : null}
 
         <div
           className="absolute inset-x-0 bottom-0 z-10 border-t border-[rgba(232,213,163,0.16)] bg-[#14241c]/88 px-3 pt-2.5 backdrop-blur-sm"
@@ -2900,6 +2889,22 @@ export default function Building3DView({
             <ColorKey invert />
           </div>
         </div>
+
+        {selected ? (
+          <>
+            <SelectionLeaderLine
+              anchor={anchor}
+              cardRef={cardRef}
+              containerRef={stageRef}
+            />
+            <FlatDetailCard
+              flat={selected}
+              myFlatNumber={myFlatNumber}
+              onClose={clearSelection}
+              cardRef={cardRef}
+            />
+          </>
+        ) : null}
       </div>
     </div>
   );

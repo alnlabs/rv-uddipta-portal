@@ -23,20 +23,12 @@ export function SiteHeader({ signedIn = false }: { signedIn?: boolean; isAdmin?:
         </span>
       </Link>
       {!signedIn ? (
-        <div className="flex items-center gap-2">
-          <Link
-            href="/designer"
-            className="inline-flex min-h-10 items-center rounded-full px-3 text-sm font-semibold text-[#1b3a2f]"
-          >
-            Designer
-          </Link>
-          <Link
-            href="/login"
-            className="inline-flex min-h-10 items-center rounded-full bg-[#1b3a2f] px-4 text-sm font-semibold text-[#e8d5a3]"
-          >
-            Sign in
-          </Link>
-        </div>
+        <Link
+          href="/login"
+          className="inline-flex min-h-10 items-center rounded-full bg-[#1b3a2f] px-4 text-sm font-semibold text-[#e8d5a3]"
+        >
+          Sign in
+        </Link>
       ) : null}
     </header>
   );

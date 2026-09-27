@@ -178,6 +178,7 @@ export function OwnersShell({
   isSuperAdmin = false,
   canEditBuilder = false,
   showMyFlat = false,
+  showPrivateCommunity = false,
   flatNumber = null,
   pendingApproval = false,
   unreadNotifications = 0,
@@ -189,6 +190,7 @@ export function OwnersShell({
   isSuperAdmin?: boolean
   canEditBuilder?: boolean
   showMyFlat?: boolean
+  showPrivateCommunity?: boolean
   flatNumber?: string | null
   pendingApproval?: boolean
   unreadNotifications?: number
@@ -208,30 +210,30 @@ export function OwnersShell({
   const explore: NavItem[] = [
     { href: "/", label: "Dashboard", match: (p) => p === "/", icon: "home" },
     {
-      href: "/feed",
-      label: "Feed",
-      match: (p) => p.startsWith("/feed"),
-      icon: "feed",
-    },
-    {
       href: "/community",
       label: "Community",
       match: (p) => p.startsWith("/community"),
       icon: "floors",
     },
-    {
+  ];
+  if (showPrivateCommunity) {
+    explore.splice(
+      1,
+      0,
+      {
+        href: "/feed",
+        label: "Feed",
+        match: (p) => p.startsWith("/feed"),
+        icon: "feed",
+      },
+    );
+    explore.push({
       href: "/members",
       label: "Members",
       match: (p) => p.startsWith("/members"),
       icon: "people",
-    },
-    {
-      href: "/designer",
-      label: "Designer",
-      match: (p) => p.startsWith("/designer"),
-      icon: "model",
-    },
-  ];
+    });
+  }
 
   const account: NavItem[] = [];
   if (isSuperAdmin || isAdmin) {
@@ -287,6 +289,10 @@ export function OwnersShell({
     });
   }
 
+  const dashboardItem = explore.find((item) => item.href === "/")!;
+  const communityItem = explore.find((item) => item.href === "/community")!;
+  const feedItem = explore.find((item) => item.href === "/feed");
+  const membersItem = explore.find((item) => item.href === "/members");
   const manageMobile = isSuperAdmin || isAdmin;
   const mobileItems = manageMobile
     ? [
@@ -308,12 +314,13 @@ export function OwnersShell({
           match: (p: string) => p.startsWith("/account/roles"),
           icon: "people" as const,
         },
-        explore[0]!,
+        dashboardItem,
       ]
     : [
-        explore[0]!,
-        explore[2]!,
-        explore[3]!,
+        dashboardItem,
+        communityItem,
+        ...(feedItem ? [feedItem] : []),
+        ...(membersItem ? [membersItem] : []),
         ...(showMyFlat
           ? [
               {

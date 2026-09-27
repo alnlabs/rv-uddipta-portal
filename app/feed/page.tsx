@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { postBuilderUpdate } from "@/app/actions/activity";
+import { isSuperAdmin } from "@/lib/admin";
 import { canEditBuilder, ensureProfile, isCommunityRole } from "@/lib/roles";
 import { createClient } from "@/utils/supabase/server";
 
@@ -24,20 +25,15 @@ export default async function FeedPage() {
   if (!user) redirect("/login");
 
   const profile = await ensureProfile(user, supabase);
-  const community = isCommunityRole(profile.role);
+  const community = isCommunityRole(profile.role) || isSuperAdmin(user);
+  if (!community) redirect("/");
   const canPost = canEditBuilder(profile.role, user);
 
-  let query = supabase
+  const { data: events, error } = await supabase
     .from("activity_events")
     .select("id, kind, title, body, visibility, created_at, flat_id, actor_user_id")
     .order("created_at", { ascending: false })
     .limit(80);
-
-  if (!community) {
-    query = query.eq("visibility", "public");
-  }
-
-  const { data: events, error } = await query;
 
   const flatIds = [
     ...new Set(

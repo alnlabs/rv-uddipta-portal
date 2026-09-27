@@ -7,6 +7,7 @@ import {
   canEditBuilder,
   canEditFlat,
   canManageAdmin,
+  isCommunityRole,
 } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
@@ -122,6 +123,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             unreadNotifications={unreadNotifications}
             pendingApprovals={pendingApprovals}
             accountLabel={profile.displayName || user.email || null}
+            showPrivateCommunity={
+              isCommunityRole(profile.role) || isSuperAdmin(user)
+            }
           >
             {children}
           </OwnersShell>

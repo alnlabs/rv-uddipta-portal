@@ -1,3 +1,5 @@
+import { a1ToFlatPlan, isA1Unit } from "@/lib/plans/a1";
+
 export type PlanKind = "room" | "wet" | "balcony" | "foyer";
 
 export type PlanRoom = {
@@ -280,6 +282,7 @@ function familyFor(input: FlatPlanInput): FlatPlan["family"] {
 }
 
 export function planForFlat(input: FlatPlanInput): FlatPlan {
+  if (isA1Unit(input)) return a1ToFlatPlan();
   const family = familyFor(input);
   const base =
     family === "2bhk"
@@ -301,9 +304,9 @@ export function planForFlat(input: FlatPlanInput): FlatPlan {
 export function roomsForFlat(type: string, facing: string) {
   return planForFlat({
     flatNumber: "",
-    wing: "A",
+    wing: "X",
     floor: 1,
-    unit: 1,
+    unit: 0,
     type,
     facing,
   }).rooms;
@@ -401,6 +404,10 @@ function splitEdge(edge: PlanEdge, holes: PlanOpening[]): PlanEdge[] {
   return parts;
 }
 
+export function edgesFromWalls(walls: PlanEdge[], openings: PlanOpening[]): PlanEdge[] {
+  return walls.flatMap((edge) => splitEdge(edge, openings));
+}
+
 export function edgesForPlan(plan: FlatPlan): PlanEdge[] {
   const map = new Map<string, PlanEdge & { count: number }>();
   for (const item of plan.rooms.filter((row) => row.kind !== "balcony")) {
@@ -425,7 +432,7 @@ export function edgesForPlan(plan: FlatPlan): PlanEdge[] {
     y2: edge.y2,
     outer: edge.count === 1,
   }));
-  return unique.flatMap((edge) => splitEdge(edge, plan.openings));
+  return edgesFromWalls(unique, plan.openings);
 }
 
 export function lintelsForPlan(plan: FlatPlan): PlanOpening[] {

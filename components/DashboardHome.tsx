@@ -150,14 +150,15 @@ export function DashboardHome({
       <header className="flex flex-col gap-4 border-b border-[rgba(27,58,47,0.1)] pb-5 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">
-            Live community data
+            {includeOwners ? "Live community data" : "Brochure"}
           </p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[#14241c] md:text-4xl">
             Dashboard
           </h1>
           <p className="mt-2 max-w-xl text-sm text-[#3d5247] md:text-base">
-            Sales, stay, possession progress, listings, and recent activity from
-            linked flats.
+            {includeOwners
+              ? "Sales, stay, possession progress, listings, and recent activity from linked flats."
+              : "Public brochure details. Owner names, who bought which flat, and the community feed stay private until your flat is approved."}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -245,6 +246,7 @@ export function DashboardHome({
         </Link>
       ) : null}
 
+      {includeOwners ? (
       <section className="mt-5" aria-label="Sales snapshot">
         <h2 className="text-xs font-semibold tracking-[0.14em] text-[#3d5247] uppercase">
           Sales & stay
@@ -254,16 +256,21 @@ export function DashboardHome({
           <StatCard value={summary.sold} label="Sold" />
           <StatCard value={summary.unsold} label="Unsold" />
           <StatCard value={`${soldPct}%`} label="Sold rate" />
-          {includeOwners ? (
-            <>
-              <StatCard value={summary.ownerStay} label="Owner stay" />
-              <StatCard value={summary.rented} label="Rented" />
-            </>
-          ) : null}
+          <StatCard value={summary.ownerStay} label="Owner stay" />
+          <StatCard value={summary.rented} label="Rented" />
           <StatCard value={summary.openForRent} label="Open for rent" />
           <StatCard value={summary.openForResale} label="Open for resale" />
         </ul>
       </section>
+      ) : (
+      <section className="mt-5" aria-label="Project snapshot">
+        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 md:gap-3">
+          <StatCard value={flats.length} label="Homes" />
+          <StatCard value={types.two} label="2 BHK" />
+          <StatCard value={types.three} label="3 BHK" />
+        </ul>
+      </section>
+      )}
 
       {includeOwners ? (
         <section className="mt-5" aria-label="Possession progress">
@@ -292,6 +299,7 @@ export function DashboardHome({
         </section>
       ) : null}
 
+      {includeOwners ? (
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <section className="rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.12)] md:p-5">
           <h2 className="text-lg font-semibold tracking-tight text-[#14241c]">
@@ -303,18 +311,14 @@ export function DashboardHome({
               <span className="text-sm font-medium text-[#14241c]">2 BHK</span>
               <span className="text-sm text-[#3d5247]">
                 <strong className="text-[#1b3a2f]">{types.two}</strong>
-                {includeOwners ? (
-                  <span className="ml-1">· {soldTypes.two} sold</span>
-                ) : null}
+                <span className="ml-1">· {soldTypes.two} sold</span>
               </span>
             </li>
             <li className="flex items-baseline justify-between gap-2">
               <span className="text-sm font-medium text-[#14241c]">3 BHK</span>
               <span className="text-sm text-[#3d5247]">
                 <strong className="text-[#1b3a2f]">{types.three}</strong>
-                {includeOwners ? (
-                  <span className="ml-1">· {soldTypes.three} sold</span>
-                ) : null}
+                <span className="ml-1">· {soldTypes.three} sold</span>
               </span>
             </li>
             {types.other > 0 ? (
@@ -355,7 +359,9 @@ export function DashboardHome({
           </ul>
         </section>
       </div>
+      ) : null}
 
+      {includeOwners ? (
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <ListingList
           title="Open for rent"
@@ -370,8 +376,10 @@ export function DashboardHome({
           empty="No flats are marked open for resale yet."
         />
       </div>
+      ) : null}
 
-      <section className="mt-4 rounded-2xl bg-[#fffcf5]5 p-4 ring-1 ring-[rgba(27,58,47,0.1)] md:p-5">
+      {includeOwners ? (
+      <section className="mt-4 rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.1)] md:p-5">
         <div className="flex items-baseline justify-between gap-2">
           <h2 className="text-lg font-semibold tracking-tight text-[#14241c]">
             Recent activity
@@ -412,6 +420,7 @@ export function DashboardHome({
           </ul>
         )}
       </section>
+      ) : null}
     </div>
   );
 }

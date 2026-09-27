@@ -35,11 +35,6 @@ const TOOLS = [
     hint: () => "Public project facts and amenities",
   },
   {
-    href: "/designer",
-    title: "Designer",
-    hint: () => "Numbered 2D grid and prompt files",
-  },
-  {
     href: "/members",
     title: "Members",
     hint: (s: AdminHomeStats) =>

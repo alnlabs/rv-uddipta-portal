@@ -24,17 +24,13 @@ export default async function Page() {
       .select("flat_number")
       .eq("user_id", user.id)
       .maybeSingle(),
-    (async () => {
-      let query = supabase
-        .from("activity_events")
-        .select("id, kind, title, body, created_at, flat_id")
-        .order("created_at", { ascending: false })
-        .limit(6);
-      if (!community) {
-        query = query.eq("visibility", "public");
-      }
-      return query;
-    })(),
+    community
+      ? supabase
+          .from("activity_events")
+          .select("id, kind, title, body, created_at, flat_id")
+          .order("created_at", { ascending: false })
+          .limit(6)
+      : Promise.resolve({ data: [] as never[] }),
   ]);
 
   const { data: events } = feedQuery;

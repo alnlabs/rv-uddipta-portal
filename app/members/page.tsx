@@ -1,6 +1,5 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { MembersDirectory } from "@/components/MembersDirectory";
 import { loadBoardPayload } from "@/lib/boardData";
 import { possessionLabel, saleOccupancyLabel } from "@/lib/flatDisplay";
@@ -25,36 +24,7 @@ export default async function MembersPage({
   const params = await searchParams;
   const q = (params.q || "").trim().toLowerCase();
 
-  if (!community) {
-    return (
-      <section className="page-gutter max-w-xl py-10 md:py-16">
-        <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">
-          Members
-        </p>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[#14241c]">
-          Community directory
-        </h1>
-        <p className="mt-3 text-[#3d5247]">
-          Owner and household names are visible after your flat is linked and
-          approved. You can still browse the public dashboard and Community 3D.
-        </p>
-        <div className="mt-6 flex flex-wrap gap-2">
-          <Link
-            href="/register"
-            className="inline-flex min-h-11 items-center rounded-full bg-[#1b3a2f] px-5 text-sm font-semibold text-[#e8d5a3]"
-          >
-            Link your flat
-          </Link>
-          <Link
-            href="/"
-            className="inline-flex min-h-11 items-center rounded-full border border-[rgba(27,58,47,0.14)] px-5 text-sm font-semibold text-[#1b3a2f]"
-          >
-            Dashboard
-          </Link>
-        </div>
-      </section>
-    );
-  }
+  if (!community) redirect("/");
 
   const sold = board.flats
     .filter((flat) => flat.saleStatus === "sold" && flat.ownerName)

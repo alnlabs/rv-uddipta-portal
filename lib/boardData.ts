@@ -33,7 +33,10 @@ export type BoardPayload = {
 function stripOwnerPii(flat: PublicFlat): PublicFlat {
   return {
     ...flat,
+    saleStatus: "unsold",
     occupancy: null,
+    openForRent: false,
+    openForResale: false,
     ownerName: "",
     ownerPhotoUrl: null,
     ownerEmail: "",

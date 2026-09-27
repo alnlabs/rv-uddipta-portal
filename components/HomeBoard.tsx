@@ -101,12 +101,12 @@ export function HomeBoard({
             {view === "3d"
               ? includeOwners
                 ? "Green = sold. Grey = unsold. Open a flat for owner and listing details."
-                : "Public view — sold vs unsold. Owner contacts stay private."
+                : "Brochure 3D — tap a flat for plans. Sale and owner details stay private."
               : view === "2d"
                 ? "Tap a unit on the floor plate for text, 2D, and 3D views."
                 : showOwners
                   ? "Sold flats show owner stay or rented. Tenant details are community contact info only."
-                  : "Public brochure view — sold vs unsold and open listings. Owner contacts stay private."}
+                  : "Brochure view — type, facing, and size only. Who bought a flat stays private."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -210,19 +210,19 @@ export function HomeBoard({
               <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5 md:gap-3">
                 {[
                   { value: data.total, label: "Flats tracked" },
-                  { value: data.summary.sold, label: "Sold" },
-                  { value: data.summary.unsold, label: "Unsold" },
                   ...(showOwners
                     ? [
+                        { value: data.summary.sold, label: "Sold" },
+                        { value: data.summary.unsold, label: "Unsold" },
                         { value: data.summary.ownerStay, label: "Owner stay" },
                         { value: data.summary.rented, label: "Rented" },
+                        { value: data.summary.openForRent, label: "Open for rent" },
+                        {
+                          value: data.summary.openForResale,
+                          label: "Open for resale",
+                        },
                       ]
                     : []),
-                  { value: data.summary.openForRent, label: "Open for rent" },
-                  {
-                    value: data.summary.openForResale,
-                    label: "Open for resale",
-                  },
                 ].map((item) => (
                   <li
                     key={item.label}
@@ -248,8 +248,9 @@ export function HomeBoard({
                 Floors
               </h2>
               <p className="text-sm text-[#3d5247]">
-                Pick a floor and wing. Coloured tags show the latest possession
-                step.
+                {showOwners
+                  ? "Pick a floor and wing. Coloured tags show the latest possession step."
+                  : "Pick a floor and wing. Open a flat for brochure plans."}
               </p>
             </div>
             {error ? (
@@ -290,7 +291,6 @@ export function HomeBoard({
               : "Flat views"
           }
           onClose={() => setOpenFlat(null)}
-          onSelectUnit={openUnit}
           text={
             <div className="space-y-4">
               <FlatTextFacts flat={toPlanInput(openFlat)} />

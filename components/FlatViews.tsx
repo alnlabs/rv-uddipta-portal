@@ -33,13 +33,11 @@ export function FlatViews({
   text,
   tone = "light",
   defaultMode = "text",
-  onSelectUnit,
 }: {
   readonly flat: FlatPlanInput
   readonly text: ReactNode
   readonly tone?: "light" | "dark"
   readonly defaultMode?: FlatViewMode
-  readonly onSelectUnit?: (flatNumber: string) => void
 }) {
   const [mode, setMode] = useState<FlatViewMode>(defaultMode);
   const dark = tone === "dark";
@@ -80,9 +78,7 @@ export function FlatViews({
 
       <div className="mt-4">
         {mode === "text" ? text : null}
-        {mode === "2d" ? (
-          <FlatPlan2D flat={flat} onSelectUnit={onSelectUnit} />
-        ) : null}
+        {mode === "2d" ? <FlatPlan2D flat={flat} /> : null}
         {mode === "3d" ? <FlatUnit3D flat={flat} /> : null}
       </div>
     </div>
@@ -139,14 +135,12 @@ export function FlatViewSheet({
   eyebrow,
   text,
   onClose,
-  onSelectUnit,
 }: {
   readonly flat: FlatPlanInput
   readonly title: string
   readonly eyebrow?: string
   readonly text: ReactNode
   readonly onClose: () => void
-  readonly onSelectUnit?: (flatNumber: string) => void
 }) {
   const titleId = useId();
 
@@ -200,7 +194,7 @@ export function FlatViewSheet({
           </button>
         </div>
         <div className="px-5 py-5">
-          <FlatViews flat={flat} text={text} onSelectUnit={onSelectUnit} />
+          <FlatViews flat={flat} text={text} />
         </div>
       </div>
     </div>
