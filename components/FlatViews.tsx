@@ -33,20 +33,28 @@ export function FlatViews({
   text,
   tone = "light",
   defaultMode = "text",
+  mode: controlledMode,
+  onModeChange,
 }: {
   readonly flat: FlatPlanInput
   readonly text: ReactNode
   readonly tone?: "light" | "dark"
   readonly defaultMode?: FlatViewMode
+  readonly mode?: FlatViewMode
+  readonly onModeChange?: (next: FlatViewMode) => void
 }) {
-  const [mode, setMode] = useState<FlatViewMode>(defaultMode);
+  const [uncontrolled, setUncontrolled] = useState<FlatViewMode>(defaultMode);
+  const mode = controlledMode ?? uncontrolled;
+  const setMode = onModeChange ?? setUncontrolled;
   const dark = tone === "dark";
 
   return (
     <div>
       <div
-        className={`inline-flex rounded-full p-1 ${
-          dark ? "bg-white/8" : "bg-[rgba(27,58,47,0.08)]"
+        className={`inline-flex gap-px ${
+          dark
+            ? "border-b border-[rgba(232,213,163,0.2)]"
+            : "border-b border-[rgba(27,58,47,0.14)]"
         }`}
         role="tablist"
         aria-label={`${flat.flatNumber} view`}
@@ -60,17 +68,17 @@ export function FlatViews({
               role="tab"
               aria-selected={active}
               onClick={() => setMode(item.id)}
-              className={`min-h-9 rounded-full px-3.5 text-sm font-semibold ${
+              className={`min-h-12 px-5 text-sm font-semibold ${
                 active
                   ? dark
-                    ? "bg-[#c9a45c] text-[#14241c]"
-                    : "bg-[#1b3a2f] text-[#e8d5a3]"
+                    ? "border-b-2 border-[#c9a45c] text-[#f7f2e6]"
+                    : "border-b-2 border-[#14241c] text-[#14241c]"
                   : dark
-                    ? "text-[#d8c898]"
+                    ? "text-[#b0a070]"
                     : "text-[#3d5247]"
               }`}
             >
-              {item.label}
+              {item.label.toUpperCase()}
             </button>
           );
         })}

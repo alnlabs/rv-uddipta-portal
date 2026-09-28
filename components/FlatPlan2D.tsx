@@ -23,6 +23,7 @@ import { B12ArchitecturalPlan } from "@/components/B12ArchitecturalPlan";
 import { B13ArchitecturalPlan } from "@/components/B13ArchitecturalPlan";
 import { B14ArchitecturalPlan } from "@/components/B14ArchitecturalPlan";
 import { B15ArchitecturalPlan } from "@/components/B15ArchitecturalPlan";
+import { parseFlatNumber } from "@/lib/flatNumber";
 import { INVENTORY } from "@/lib/inventory";
 import {
   edgesForPlan,
@@ -375,31 +376,36 @@ function TypicalUnitPlan({ flat }: { readonly flat: FlatPlanInput }) {
 
 export function FlatPlan2D({
   flat,
+  homeLabel,
+  compact = false,
 }: {
   readonly flat: FlatPlanInput
+  readonly homeLabel?: string
+  readonly compact?: boolean
 }) {
-  if (isA1Unit(flat)) return <A1ArchitecturalPlan />;
-  if (isA2Unit(flat)) return <A2ArchitecturalPlan />;
-  if (isA3Unit(flat)) return <A3ArchitecturalPlan />;
-  if (isA4Unit(flat)) return <A4ArchitecturalPlan />;
-  if (isA6Unit(flat)) return <A6ArchitecturalPlan />;
-  if (isA7Unit(flat)) return <A7ArchitecturalPlan />;
-  if (isA8Unit(flat)) return <A8ArchitecturalPlan />;
-  if (isA10Unit(flat)) return <A10ArchitecturalPlan />;
-  if (isB1Unit(flat)) return <B1ArchitecturalPlan />;
-  if (isB2Unit(flat)) return <B2ArchitecturalPlan />;
-  if (isB3Unit(flat)) return <B3ArchitecturalPlan />;
-  if (isB4Unit(flat)) return <B4ArchitecturalPlan />;
-  if (isB5Unit(flat)) return <B5ArchitecturalPlan />;
-  if (isB6Unit(flat)) return <B6ArchitecturalPlan />;
-  if (isB7Unit(flat)) return <B7ArchitecturalPlan />;
-  if (isB8Unit(flat)) return <B8ArchitecturalPlan />;
-  if (isB9Unit(flat)) return <B9ArchitecturalPlan />;
-  if (isB10Unit(flat)) return <B10ArchitecturalPlan />;
-  if (isB11Unit(flat)) return <B11ArchitecturalPlan />;
-  if (isB12Unit(flat)) return <B12ArchitecturalPlan />;
-  if (isB13Unit(flat)) return <B13ArchitecturalPlan />;
-  if (isB14Unit(flat)) return <B14ArchitecturalPlan />;
-  if (isB15Unit(flat)) return <B15ArchitecturalPlan />;
+  const label = homeLabel ?? parseFlatNumber(flat.flatNumber)?.flatNumber;
+  if (isA1Unit(flat)) return <A1ArchitecturalPlan homeLabel={label} />;
+  if (isA2Unit(flat)) return <A2ArchitecturalPlan homeLabel={label} />;
+  if (isA3Unit(flat)) return <A3ArchitecturalPlan homeLabel={label} />;
+  if (isA4Unit(flat)) return <A4ArchitecturalPlan homeLabel={label} />;
+  if (isA6Unit(flat)) return <A6ArchitecturalPlan homeLabel={label} />;
+  if (isA7Unit(flat)) return <A7ArchitecturalPlan homeLabel={label} />;
+  if (isA8Unit(flat)) return <A8ArchitecturalPlan homeLabel={label} />;
+  if (isA10Unit(flat)) return <A10ArchitecturalPlan homeLabel={label} />;
+  if (isB1Unit(flat)) return <B1ArchitecturalPlan homeLabel={label} />;
+  if (isB2Unit(flat)) return <B2ArchitecturalPlan homeLabel={label} />;
+  if (isB3Unit(flat)) return <B3ArchitecturalPlan homeLabel={label} />;
+  if (isB4Unit(flat)) return <B4ArchitecturalPlan homeLabel={label} />;
+  if (isB5Unit(flat)) return <B5ArchitecturalPlan homeLabel={label} />;
+  if (isB6Unit(flat)) return <B6ArchitecturalPlan homeLabel={label} />;
+  if (isB7Unit(flat)) return <B7ArchitecturalPlan homeLabel={label} />;
+  if (isB8Unit(flat)) return <B8ArchitecturalPlan homeLabel={label} />;
+  if (isB9Unit(flat)) return <B9ArchitecturalPlan homeLabel={label} />;
+  if (isB10Unit(flat)) return <B10ArchitecturalPlan homeLabel={label} />;
+  if (isB11Unit(flat)) return <B11ArchitecturalPlan homeLabel={label} />;
+  if (isB12Unit(flat)) return <B12ArchitecturalPlan homeLabel={label} />;
+  if (isB13Unit(flat)) return <B13ArchitecturalPlan homeLabel={label} />;
+  if (isB14Unit(flat)) return <B14ArchitecturalPlan homeLabel={label} compact={compact} />;
+  if (isB15Unit(flat)) return <B15ArchitecturalPlan homeLabel={label} />;
   return <TypicalUnitPlan flat={flat} />;
 }

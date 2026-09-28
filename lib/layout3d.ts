@@ -14,9 +14,14 @@
  *   4  A9 A10                 (no B on this row)
  *
  * Dark roof strips are corridor / lift cores between towers.
- * North = −Z, west = −X.
  *
- * First-load screen map (camera from south looking north):
+ * Real-world directions live in lib/siteOrientation.ts (do not redefine here):
+ *   EAST  = −X = compound gate / main entry
+ *   WEST  = +X
+ *   NORTH = +Z  (A1–B11 facade)
+ *   SOUTH = −Z  (A9–A10)
+ *
+ * First-load screen map (camera from north / +Z looking south):
  *   screen left  = east  = wing A  = compound gate side
  *   screen right = west  = wing B
  *   screen bottom = north (near / A1–B11 facade)
@@ -622,17 +627,7 @@ export const AMENITY_NUMBER_BY_ID: Record<string, number> = Object.fromEntries(
   AMENITY_LEGEND.flatMap((entry) => entry.ids.map((id) => [id, entry.n])),
 );
 
-/** N = −Z, E = +X, S = +Z, W = −X */
-export const FACE_MARKS = [
-  { abbr: "n", dx: 0, dz: -1 },
-  { abbr: "e", dx: 1, dz: 0 },
-  { abbr: "s", dx: 0, dz: 1 },
-  { abbr: "w", dx: -1, dz: 0 },
-  { abbr: "ne", dx: 1, dz: -1 },
-  { abbr: "nw", dx: -1, dz: -1 },
-  { abbr: "se", dx: 1, dz: 1 },
-  { abbr: "sw", dx: -1, dz: 1 },
-] as const;
+export { SITE_FACE_MARKS as FACE_MARKS } from "./siteOrientation";
 
 export function debugMarkPosition(
   id: string,

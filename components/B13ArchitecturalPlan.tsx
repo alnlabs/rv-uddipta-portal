@@ -141,9 +141,12 @@ function WetFixture({
 
 export function B13ArchitecturalPlan({
   framed = true,
+  homeLabel,
 }: {
   readonly framed?: boolean
+  readonly homeLabel?: string
 }) {
+  const unitLabel = homeLabel ?? B13_META.unit;
   const vbW = u(B13_EXTENT.w + 16);
   const vbH = u(B13_EXTENT.h + 16);
   const walls = splitB13Walls();
@@ -165,7 +168,7 @@ export function B13ArchitecturalPlan({
         RV UDDIIPTA · B-BLOCK · EAST OF B12
       </text>
       <text x="-50" y="-34" fill="#14241c" fontSize="20" fontWeight="700">
-        {B13_META.unit} · {B13_META.type}
+        {unitLabel} · {B13_META.type}
       </text>
       <text x="210" y="-34" fill="#3d5247" fontSize="11">
         SBUA {B13_META.sbuaSft.toLocaleString()} sft
@@ -366,7 +369,7 @@ export function B13ArchitecturalPlan({
 
       <circle cx={u(2.6)} cy={u(20.8)} r="11" fill="#c0392b" />
       <text x={u(2.6)} y={u(21.2)} textAnchor="middle" fill="#fff" fontSize="10" fontWeight="700">
-        B13
+        {unitLabel}
       </text>
 
       <NorthRose x={-118} y={u(7)} />

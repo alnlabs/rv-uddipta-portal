@@ -39,10 +39,7 @@ export default async function NotificationsPage() {
     <section className="page-gutter max-w-5xl py-6 md:py-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">
-            Inbox
-          </p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[#14241c]">
+          <h1 className="font-semibold tracking-tight text-[#14241c] text-[clamp(2rem,5vw,3.25rem)] leading-[1.05]">
             Notifications
           </h1>
           <p className="mt-2 text-sm text-[#3d5247]">

@@ -5,7 +5,6 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { isSuperAdmin } from "@/lib/admin";
 import {
   canEditBuilder,
-  canEditFlat,
   canManageAdmin,
   isCommunityRole,
 } from "@/lib/roles";
@@ -47,7 +46,6 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   let pendingApproval = false;
   let isAdmin = false;
   let builderEdit = false;
-  let showMyFlat = false;
   let unreadNotifications = 0;
   let pendingApprovals = 0;
 
@@ -55,7 +53,6 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     const superAdmin = isSuperAdmin(user);
     isAdmin = canManageAdmin(profile.role, user);
     builderEdit = canEditBuilder(profile.role, user);
-    showMyFlat = !superAdmin && canEditFlat(profile.role);
 
     const [{ data: ownFlat }, { count }] = await Promise.all([
       superAdmin
@@ -73,7 +70,6 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     ]);
     if (!superAdmin) {
       flatNumber = ownFlat?.flat_number ?? null;
-      if (flatNumber) showMyFlat = true;
     }
     unreadNotifications = count ?? 0;
 
@@ -117,7 +113,6 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             isAdmin={isAdmin}
             isSuperAdmin={Boolean(user && isSuperAdmin(user))}
             canEditBuilder={builderEdit}
-            showMyFlat={showMyFlat}
             flatNumber={flatNumber}
             pendingApproval={pendingApproval}
             unreadNotifications={unreadNotifications}

@@ -87,11 +87,8 @@ export default async function AdminRolesPage() {
 
   return (
     <section>
-      <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">
-        Administration
-      </p>
-      <h1 className="mt-1 text-2xl font-semibold text-[#14241c]">
-        People & access
+      <h1 className="text-[clamp(2rem,4vw,2.75rem)] font-semibold tracking-tight text-[#14241c]">
+        People
       </h1>
       <p className="mt-2 max-w-2xl text-sm text-[#3d5247]">
         Only people already registered in the portal, or already stored as
@@ -102,12 +99,6 @@ export default async function AdminRolesPage() {
         </Link>
         .
       </p>
-      <Link
-        href="/account"
-        className="mt-3 inline-flex min-h-10 items-center text-sm font-semibold text-[#2f5a48]"
-      >
-        ← Admin home
-      </Link>
 
       <RoleAssignForm
         candidates={people

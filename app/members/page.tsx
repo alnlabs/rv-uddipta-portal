@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { PageShell, PageTitle } from "@/components/chrome";
 import { MembersDirectory } from "@/components/MembersDirectory";
 import { loadBoardPayload } from "@/lib/boardData";
 import { possessionLabel, saleOccupancyLabel } from "@/lib/flatDisplay";
@@ -74,26 +75,13 @@ export default async function MembersPage({
     });
 
   return (
-    <section className="page-gutter max-w-5xl py-6 md:py-10">
-      <header className="flex flex-col gap-4 border-b border-[rgba(27,58,47,0.1)] pb-5 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">
-            Directory
-          </p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[#14241c]">
-            Members
-          </h1>
-          <p className="mt-2 max-w-xl text-sm text-[#3d5247]">
-            Tap a card for full owner, household, and unit details. Phones are
-            masked.
-          </p>
-        </div>
-        <p className="text-sm font-semibold text-[#3d5247]">
-          {sold.length} flat{sold.length === 1 ? "" : "s"}
-        </p>
-      </header>
-
+    <PageShell>
+      <PageTitle
+        title="Directory"
+        lede="Residents of Uddiipta, grouped by name."
+        action={<p className="text-sm text-[#3d5247]">{sold.length} homes</p>}
+      />
       <MembersDirectory flats={sold} initialQuery={params.q || ""} />
-    </section>
+    </PageShell>
   );
 }

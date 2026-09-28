@@ -1,7 +1,34 @@
+"use client";
+
+import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { FlatPlan2D } from "@/components/FlatPlan2D";
+import { PageShell, SectionHead, Segmented, TextLink } from "@/components/chrome";
+import { JourneyDetail } from "@/components/JourneyDetail";
+import ProfileAvatar from "@/components/ProfileAvatar";
+import UpdateForm from "@/components/UpdateForm";
+import {
+  apartmentLayout,
+  heroMeta,
+  interiorLinks,
+  layoutGroups,
+  occupancyCopy,
+} from "@/lib/apartmentLayout";
+import { facingLabel, typeLabel } from "@/lib/flatDisplay";
 import { summarize } from "@/lib/flats";
-import { typeLabel } from "@/lib/flatDisplay";
-import type { PublicFlat } from "@/lib/types";
+import { greeting, journeySteps } from "@/lib/homeDisplay";
+import { relationLabel } from "@/lib/status";
+import type { FlatMember, FlatRenter, OwnedFlat, PublicFlat } from "@/lib/types";
+
+const FlatUnit3D = dynamic(() => import("@/components/FlatUnit3D"), {
+  ssr: false,
+  loading: () => (
+    <div className="grid h-[22rem] place-items-center bg-[#1b3a2f] text-sm font-semibold text-[#e8d5a3] md:h-[26rem]">
+      Loading 3D unit…
+    </div>
+  ),
+});
 
 export type DashboardActivity = {
   id: number
@@ -12,13 +39,14 @@ export type DashboardActivity = {
   flatNumber: string | null
 };
 
-function StatCard({ value, label }: { value: number | string; label: string }) {
-  return (
-    <li className="rounded-2xl bg-[#fffcf5] px-3 py-3 ring-1 ring-[rgba(27,58,47,0.12)]">
-      <strong className="block text-2xl text-[#1b3a2f]">{value}</strong>
-      <span className="text-sm text-[#3d5247]">{label}</span>
-    </li>
-  );
+type PlanMode = "2d" | "3d";
+type HomeSection = "hub" | "stay" | "documents";
+
+function sectionFromHash(): HomeSection {
+  if (typeof window === "undefined") return "hub";
+  const hash = window.location.hash.replace("#", "");
+  if (hash === "stay" || hash === "documents") return hash;
+  return "hub";
 }
 
 function relativeTime(iso: string) {
@@ -32,395 +60,715 @@ function relativeTime(iso: string) {
   return `${days}d ago`;
 }
 
-function ListingList({
-  title,
-  flats,
-  includeOwners,
-  empty,
-}: {
-  title: string
-  flats: PublicFlat[]
-  includeOwners: boolean
-  empty: string
-}) {
-  return (
-    <section className="rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.12)] md:p-5">
-      <div className="flex items-baseline justify-between gap-2">
-        <h2 className="text-lg font-semibold tracking-tight text-[#14241c]">
-          {title}
-        </h2>
-        <span className="text-sm font-semibold text-[#3d5247]">{flats.length}</span>
-      </div>
-      {flats.length === 0 ? (
-        <p className="mt-3 text-sm text-[#3d5247]">{empty}</p>
-      ) : (
-        <ul className="mt-3 divide-y divide-[rgba(27,58,47,0.08)]">
-          {flats.slice(0, 12).map((flat) => (
-            <li
-              key={flat.flatNumber}
-              className="flex flex-wrap items-baseline justify-between gap-2 py-2.5"
-            >
-              <div>
-                <strong className="text-[#14241c]">{flat.flatNumber}</strong>
-                <p className="text-sm text-[#3d5247]">
-                  {typeLabel(flat.type)}
-                  {flat.wing ? ` · Wing ${flat.wing}` : ""}
-                  {` · Floor ${flat.floor}`}
-                  {flat.areaSqft ? ` · ${flat.areaSqft.toLocaleString()} sft` : ""}
-                </p>
-              </div>
-              {includeOwners && flat.ownerName ? (
-                <p className="text-sm font-medium text-[#2f5a48]">
-                  {flat.ownerName}
-                  {flat.ownerEmail ? (
-                    <span className="mt-0.5 block truncate text-xs font-normal text-[#3d5247]">
-                      {flat.ownerEmail}
-                    </span>
-                  ) : null}
-                  {flat.phoneMasked ? (
-                    <span className="mt-0.5 block text-xs tabular-nums text-[#3d5247]">
-                      {flat.phoneMasked}
-                    </span>
-                  ) : null}
-                </p>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
+function planInput(flat: PublicFlat) {
+  return {
+    flatNumber: flat.flatNumber,
+    wing: flat.wing,
+    floor: flat.floor,
+    unit: flat.unit,
+    type: flat.type,
+    facing: flat.facing,
+    areaSqft: flat.areaSqft,
+  };
 }
 
-function typeCounts(flats: PublicFlat[]) {
-  let two = 0;
-  let three = 0;
-  let other = 0;
-  for (const flat of flats) {
-    const t = flat.type.toLowerCase();
-    if (t.includes("2") || t.includes("two")) two += 1;
-    else if (t.includes("3") || t.includes("three")) three += 1;
-    else other += 1;
+function Mark({ mark }: { readonly mark: "done" | "active" | "upcoming" }) {
+  if (mark === "done") {
+    return (
+      <span className="grid size-6 place-items-center rounded-full bg-[#1b3a2f] text-[11px] font-bold text-[#e8d5a3]">
+        ✓
+      </span>
+    );
   }
-  return { two, three, other };
-}
-
-function wingBreakdown(flats: PublicFlat[]) {
-  const map = new Map<string, { sold: number; unsold: number; total: number }>();
-  for (const flat of flats) {
-    const wing = flat.wing || "—";
-    const row = map.get(wing) ?? { sold: 0, unsold: 0, total: 0 };
-    row.total += 1;
-    if (flat.saleStatus === "sold") row.sold += 1;
-    else row.unsold += 1;
-    map.set(wing, row);
+  if (mark === "active") {
+    return (
+      <span className="grid size-6 place-items-center rounded-full ring-2 ring-[#c9a45c]">
+        <span className="size-2 rounded-full bg-[#c9a45c]" />
+      </span>
+    );
   }
-  return [...map.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([wing, counts]) => ({ wing, ...counts }));
+  return <span className="grid size-6 place-items-center rounded-full ring-1 ring-[rgba(27,58,47,0.22)]" />;
 }
 
 export function DashboardHome({
   flats,
   includeOwners,
   myFlatNumber,
+  greetingName = null,
   recentActivity = [],
-  adminTools = false,
+  members = [],
+  renters = [],
+  ownedFlat = null,
+  ownerPhoneMasked = "",
 }: {
   flats: PublicFlat[]
   includeOwners: boolean
   myFlatNumber?: string | null
+  greetingName?: string | null
   recentActivity?: DashboardActivity[]
-  adminTools?: boolean
+  members?: FlatMember[]
+  renters?: FlatRenter[]
+  ownedFlat?: OwnedFlat | null
+  ownerPhoneMasked?: string
 }) {
+  const [mode, setMode] = useState<PlanMode>("2d");
+  const [section, setSection] = useState<HomeSection>("hub");
+  const [journeyOpen, setJourneyOpen] = useState(false);
+
+  useEffect(() => {
+    function apply() {
+      const hash = window.location.hash.replace("#", "");
+      setSection(sectionFromHash());
+      setJourneyOpen(hash === "journey");
+      if (hash === "2d" || hash === "3d") setMode(hash);
+    }
+    apply();
+    window.addEventListener("hashchange", apply);
+    return () => window.removeEventListener("hashchange", apply);
+  }, []);
+
+  useEffect(() => {
+    if (section !== "hub") return;
+    const hash = window.location.hash.replace("#", "");
+    const scrollId =
+      hash === "3d" || hash === "2d"
+        ? "your-apartment"
+        : hash === "interior" || hash === "your-apartment" || hash === "activity"
+          ? hash
+          : null;
+    if (!scrollId) return;
+    const timer = window.setTimeout(() => {
+      document.getElementById(scrollId)?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 50);
+    return () => window.clearTimeout(timer);
+  }, [section]);
+
+  function openSection(next: HomeSection) {
+    setJourneyOpen(false);
+    setSection(next);
+    window.history.replaceState(null, "", next === "hub" ? "/" : `/#${next}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function openJourney() {
+    setJourneyOpen(true);
+    window.history.replaceState(null, "", "/#journey");
+  }
+
+  function closeJourney() {
+    setJourneyOpen(false);
+    if (window.location.hash === "#journey") {
+      window.history.replaceState(null, "", "/");
+    }
+  }
   const summary = summarize(flats);
-  const openRent = flats.filter((f) => f.openForRent);
-  const openResale = flats.filter((f) => f.openForResale);
-  const types = typeCounts(flats);
-  const soldTypes = typeCounts(flats.filter((f) => f.saleStatus === "sold"));
-  const wings = wingBreakdown(flats);
-  const myFlat = myFlatNumber
-    ? flats.find((f) => f.flatNumber === myFlatNumber) ?? null
-    : null;
-  const soldPct =
-    flats.length > 0 ? Math.round((summary.sold / flats.length) * 100) : 0;
+  const myFlat =
+    ownedFlat ??
+    (myFlatNumber
+      ? flats.find((flat) => flat.flatNumber === myFlatNumber) ?? null
+      : null);
+  const hello = greeting(greetingName || myFlat?.ownerName);
+
+  if (ownedFlat && section === "stay") {
+    return (
+      <UpdateForm
+        key={section}
+        ownerPhoneMasked={ownerPhoneMasked}
+        initialFlat={ownedFlat}
+        initialMembers={members}
+        initialRenters={renters}
+        initialPanel={section}
+        onClose={() => openSection("hub")}
+      />
+    );
+  }
+
+  if (section === "documents" && myFlat) {
+    return (
+      <PageShell>
+        <div className="flex items-start justify-between gap-4">
+          <h1 className="font-semibold tracking-tight text-[#14241c] text-[clamp(2rem,5vw,3.25rem)] leading-[1.05]">
+            Documents & records
+          </h1>
+          <button
+            type="button"
+            onClick={() => openSection("hub")}
+            aria-label={`Close and return to ${myFlat.flatNumber}`}
+            className="grid size-11 shrink-0 place-items-center rounded-full text-2xl leading-none text-[#14241c] ring-1 ring-[rgba(27,58,47,0.16)] hover:bg-[rgba(27,58,47,0.05)]"
+          >
+            ×
+          </button>
+        </div>
+        <p className="mt-4 max-w-xl text-[#3d5247]">
+          No apartment files are stored here yet. Floor plans live in Your
+          apartment. Registration papers, allotment records and interior
+          documents will appear here when they are added.
+        </p>
+      </PageShell>
+    );
+  }
+
+  if (!myFlat) {
+    return (
+      <PageShell wide>
+        <p className="text-sm text-[#7a5c22]">{hello}</p>
+        <h1 className="mt-2 font-semibold tracking-tight text-[#14241c] text-[clamp(2rem,5vw,3.25rem)] leading-[1.05]">
+          My home
+        </h1>
+        <p className="mt-3 max-w-xl text-[#3d5247]">
+          {includeOwners
+            ? "Explore the community while your flat is linked."
+            : "Brochure details only until your flat is approved."}
+        </p>
+        {!includeOwners ? (
+          <p className="mt-4">
+            <TextLink href="/register">Link your flat →</TextLink>
+          </p>
+        ) : null}
+      </PageShell>
+    );
+  }
+
+  const stay = occupancyCopy(myFlat);
+  const steps = journeySteps(myFlat);
+  const journeyComplete = steps.every((step) => step.mark === "done");
+  const layout = apartmentLayout(myFlat);
+  const groups = layoutGroups(layout);
+  const drawing = layout.rooms.find((room) => /drawing/i.test(room.label));
+  const dining = layout.rooms.find((room) => /dining/i.test(room.label));
+  const interior = steps.find((step) => step.key === "interior");
+  const links = interiorLinks(myFlat);
+  const homeActivity = recentActivity.filter(
+    (item) => !item.flatNumber || item.flatNumber === myFlat.flatNumber,
+  );
+
+  function showPlan(next: PlanMode) {
+    setMode(next);
+    document.getElementById("your-apartment")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
 
   return (
-    <div className="page-gutter max-w-6xl py-5 md:py-8">
-      <header className="flex flex-col gap-4 border-b border-[rgba(27,58,47,0.1)] pb-5 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">
-            {includeOwners ? "Live community data" : "Brochure"}
+    <PageShell wide>
+      <header className="flex flex-col gap-5 border-b border-[rgba(27,58,47,0.1)] pb-6 md:flex-row md:items-end md:justify-between">
+        <div className="min-w-0">
+          <p className="text-sm text-[#7a5c22]">{hello}</p>
+          <p className="mt-3 text-xs font-semibold tracking-[0.18em] text-[#7a5c22] uppercase">
+            My home
           </p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[#14241c] md:text-4xl">
-            Dashboard
+          <h1 className="mt-1 font-semibold tracking-tight text-[#14241c] text-[clamp(2.75rem,8vw,4.5rem)] leading-[0.92]">
+            {myFlat.flatNumber}
           </h1>
-          <p className="mt-2 max-w-xl text-sm text-[#3d5247] md:text-base">
-            {includeOwners
-              ? "Sales, stay, possession progress, listings, and recent activity from linked flats."
-              : "Public brochure details. Owner names, who bought which flat, and the community feed stay private until your flat is approved."}
-          </p>
+          {myFlat.ownerName ? (
+            <p className="mt-3 text-lg text-[#14241c]">{myFlat.ownerName}</p>
+          ) : null}
+          <p className="mt-1 text-sm text-[#3d5247] md:text-base">{heroMeta(myFlat)}</p>
+          <p className="mt-1 text-sm text-[#3d5247]">{stay}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link
-            href="/community"
+          <button
+            type="button"
+            onClick={() => showPlan("2d")}
             className="inline-flex min-h-11 items-center rounded-full bg-[#1b3a2f] px-4 text-sm font-semibold text-[#e8d5a3]"
           >
-            Community floors
-          </Link>
-          <Link
-            href="/community?view=3d"
-            className="inline-flex min-h-11 items-center rounded-full border border-[rgba(27,58,47,0.14)] px-4 text-sm font-semibold text-[#1b3a2f]"
+            View 2D Plan
+          </button>
+          <button
+            type="button"
+            onClick={() => showPlan("3d")}
+            className="inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold text-[#1b3a2f] ring-1 ring-[rgba(27,58,47,0.18)]"
           >
-            Community 3D
-          </Link>
-          {myFlatNumber ? (
-            <Link
-              href="/update"
-              className="inline-flex min-h-11 items-center rounded-full bg-[#c9a45c] px-4 text-sm font-semibold text-[#14241c]"
-            >
-              My flat {myFlatNumber}
-            </Link>
-          ) : null}
+            View 3D
+          </button>
         </div>
       </header>
 
-      {adminTools ? (
-        <nav
-          aria-label="Admin tools"
-          className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4"
-        >
+      <section className="mt-6 border-b border-[rgba(27,58,47,0.1)] pb-6">
+        <p className="text-xs font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">
+          Home at a glance
+        </p>
+        <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 lg:grid-cols-6">
           {(
             [
-              ["/account", "Admin"],
-              ["/account/owners", "Owners"],
-              ["/account/roles", "People"],
-              ["/account/builder", "Builder"],
+              [
+                myFlat.areaSqft
+                  ? `${myFlat.areaSqft.toLocaleString("en-IN")} sq ft`
+                  : "—",
+                "Area",
+              ],
+              [typeLabel(myFlat.type), "Configuration"],
+              [`Floor ${myFlat.floor}`, `Wing ${myFlat.wing}`],
+              [myFlat.facing ? facingLabel(myFlat.facing) : "—", "Facing"],
+              [stay, "Occupancy"],
+              [interior?.status ?? "—", "Interior"],
             ] as const
-          ).map(([href, label]) => (
-            <Link
-              key={href}
-              href={href}
-              className="inline-flex min-h-11 items-center justify-center rounded-2xl bg-[#14241c] px-3 text-sm font-semibold text-[#e8d5a3]"
-            >
-              {label}
-            </Link>
+          ).map(([value, label]) => (
+            <div key={label}>
+              <dd className="text-lg font-semibold tracking-tight text-[#14241c]">
+                {value}
+              </dd>
+              <dt className="mt-0.5 text-xs text-[#3d5247]">{label}</dt>
+            </div>
           ))}
-        </nav>
-      ) : null}
+        </dl>
+      </section>
 
-      {myFlat ? (
-        <Link
-          href="/update"
-          className="mt-5 flex flex-col gap-3 rounded-2xl bg-[#14241c] px-4 py-4 text-[#f7f2e6] sm:flex-row sm:items-center sm:justify-between md:px-5"
-        >
+      <section id="your-apartment" className="mt-8 scroll-mt-8">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#c9a45c] uppercase">
-              Your flat
-            </p>
-            <p className="mt-1 text-2xl font-semibold tracking-tight text-[#f7f2e6]">
-              {myFlat.flatNumber}
-              {myFlat.ownerName ? (
-                <span className="ml-2 text-base font-medium text-[#e8d5a3]">
-                  · {myFlat.ownerName}
-                </span>
-              ) : null}
-            </p>
-            {myFlat.ownerEmail ? (
-              <p className="mt-1 truncate text-sm text-[#d0c090]">{myFlat.ownerEmail}</p>
-            ) : null}
-            <p className="mt-1 text-sm text-[#d0c090]">
-              {typeLabel(myFlat.type)}
-              {myFlat.wing ? ` · Wing ${myFlat.wing}` : ""}
-              {` · Floor ${myFlat.floor}`}
-              {myFlat.occupancy === "rented"
-                ? " · Rented"
-                : myFlat.occupancy === "owner_stay"
-                  ? " · Owner stay"
-                  : ""}
+            <h2 className="text-xl font-semibold tracking-tight text-[#14241c] md:text-2xl">
+              Your apartment
+            </h2>
+            <p className="mt-1 text-sm text-[#3d5247]">
+              Explore the layout of {myFlat.flatNumber}
             </p>
           </div>
-          <span className="text-sm font-semibold text-[#c9a45c]">
-            Manage journey →
-          </span>
-        </Link>
-      ) : null}
+          <Segmented
+            label={`${myFlat.flatNumber} view`}
+            value={mode}
+            onChange={setMode}
+            options={[
+              { id: "2d", label: "2D" },
+              { id: "3d", label: "3D" },
+            ]}
+          />
+        </div>
 
-      {includeOwners ? (
-      <section className="mt-5" aria-label="Sales snapshot">
-        <h2 className="text-xs font-semibold tracking-[0.14em] text-[#3d5247] uppercase">
-          Sales & stay
-        </h2>
-        <ul className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 md:gap-3">
-          <StatCard value={flats.length} label="Flats tracked" />
-          <StatCard value={summary.sold} label="Sold" />
-          <StatCard value={summary.unsold} label="Unsold" />
-          <StatCard value={`${soldPct}%`} label="Sold rate" />
-          <StatCard value={summary.ownerStay} label="Owner stay" />
-          <StatCard value={summary.rented} label="Rented" />
-          <StatCard value={summary.openForRent} label="Open for rent" />
-          <StatCard value={summary.openForResale} label="Open for resale" />
-        </ul>
-      </section>
-      ) : (
-      <section className="mt-5" aria-label="Project snapshot">
-        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 md:gap-3">
-          <StatCard value={flats.length} label="Homes" />
-          <StatCard value={types.two} label="2 BHK" />
-          <StatCard value={types.three} label="3 BHK" />
-        </ul>
-      </section>
-      )}
-
-      {includeOwners ? (
-        <section className="mt-5" aria-label="Possession progress">
-          <h2 className="text-xs font-semibold tracking-[0.14em] text-[#3d5247] uppercase">
-            Possession journey
-          </h2>
-          <ul className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5 md:gap-3">
-            <StatCard
-              value={summary.registrationCompleted}
-              label="Registered"
-            />
-            <StatCard
-              value={summary.interiorInProgress}
-              label="Interior on"
-            />
-            <StatCard
-              value={summary.interiorCompleted}
-              label="Interior done"
-            />
-            <StatCard
-              value={summary.ceremonyCompleted}
-              label="Ceremony done"
-            />
-            <StatCard value={summary.movedIn} label="Moved in" />
-          </ul>
-        </section>
-      ) : null}
-
-      {includeOwners ? (
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <section className="rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.12)] md:p-5">
-          <h2 className="text-lg font-semibold tracking-tight text-[#14241c]">
-            Unit mix
-          </h2>
-          <p className="mt-1 text-sm text-[#3d5247]">From current flat records</p>
-          <ul className="mt-4 space-y-3">
-            <li className="flex items-baseline justify-between gap-2">
-              <span className="text-sm font-medium text-[#14241c]">2 BHK</span>
-              <span className="text-sm text-[#3d5247]">
-                <strong className="text-[#1b3a2f]">{types.two}</strong>
-                <span className="ml-1">· {soldTypes.two} sold</span>
-              </span>
-            </li>
-            <li className="flex items-baseline justify-between gap-2">
-              <span className="text-sm font-medium text-[#14241c]">3 BHK</span>
-              <span className="text-sm text-[#3d5247]">
-                <strong className="text-[#1b3a2f]">{types.three}</strong>
-                <span className="ml-1">· {soldTypes.three} sold</span>
-              </span>
-            </li>
-            {types.other > 0 ? (
-              <li className="flex items-baseline justify-between gap-2">
-                <span className="text-sm font-medium text-[#14241c]">Other</span>
-                <strong className="text-sm text-[#1b3a2f]">{types.other}</strong>
-              </li>
-            ) : null}
-          </ul>
-        </section>
-
-        <section className="rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.12)] md:p-5">
-          <h2 className="text-lg font-semibold tracking-tight text-[#14241c]">
-            By wing
-          </h2>
-          <p className="mt-1 text-sm text-[#3d5247]">Sold vs unsold</p>
-          <ul className="mt-4 space-y-3">
-            {wings.map((row) => (
-              <li key={row.wing}>
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-sm font-medium text-[#14241c]">
-                    Wing {row.wing}
-                  </span>
-                  <span className="text-sm text-[#3d5247]">
-                    {row.sold}/{row.total} sold
-                  </span>
+        <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(14rem,0.6fr)]">
+          <div className="overflow-hidden rounded-[1.5rem] bg-[#ebe6dc] ring-1 ring-[rgba(27,58,47,0.1)]">
+            {mode === "2d" ? (
+              <div className="mx-auto max-w-3xl p-2 md:p-3">
+                <FlatPlan2D
+                  compact
+                  homeLabel={myFlat.flatNumber}
+                  flat={planInput(myFlat)}
+                />
+              </div>
+            ) : (
+              <FlatUnit3D flat={planInput(myFlat)} />
+            )}
+          </div>
+          <aside className="lg:pt-1">
+            <h3 className="text-sm font-semibold text-[#14241c]">Apartment facts</h3>
+            <dl className="mt-4 space-y-3 text-sm">
+              {(
+                [
+                  ["Configuration", typeLabel(myFlat.type)],
+                  [
+                    "Area",
+                    myFlat.areaSqft
+                      ? `${myFlat.areaSqft.toLocaleString("en-IN")} sq ft`
+                      : "—",
+                  ],
+                  ["Floor", String(myFlat.floor)],
+                  ["Wing", myFlat.wing || "—"],
+                  ["Facing", myFlat.facing ? facingLabel(myFlat.facing) : "—"],
+                  ["Bedrooms", String(groups.bedrooms.length || "—")],
+                  ["Bathrooms", String(groups.toilets.length || "—")],
+                  ["Balconies", String(groups.balconies.length || "—")],
+                  [
+                    "Kitchen",
+                    groups.kitchen?.dim ?? (groups.kitchen ? "In plan" : "—"),
+                  ],
+                  ["Drawing", drawing?.dim ?? (drawing ? "In plan" : "—")],
+                  ["Dining", dining?.dim ?? (dining ? "In plan" : "—")],
+                ] as const
+              ).map(([label, value]) => (
+                <div
+                  key={label}
+                  className="flex items-baseline justify-between gap-3 border-b border-[rgba(27,58,47,0.08)] pb-2"
+                >
+                  <dt className="text-[#3d5247]">{label}</dt>
+                  <dd className="font-semibold text-[#14241c]">{value}</dd>
                 </div>
-                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[rgba(27,58,47,0.08)]">
-                  <div
-                    className="h-full rounded-full bg-[#1b3a2f]"
-                    style={{
-                      width: `${row.total ? Math.round((row.sold / row.total) * 100) : 0}%`,
-                    }}
-                  />
+              ))}
+            </dl>
+            <div className="mt-5 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => showPlan("2d")}
+                className="text-left text-sm font-semibold text-[#1b3a2f] underline-offset-4 hover:underline"
+              >
+                View full 2D plan
+              </button>
+              <button
+                type="button"
+                onClick={() => showPlan("3d")}
+                className="text-left text-sm font-semibold text-[#1b3a2f] underline-offset-4 hover:underline"
+              >
+                Explore in 3D
+              </button>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section className="mt-10">
+        <SectionHead
+          title={journeyComplete ? "Home journey" : "Your home journey"}
+          aside={
+            journeyComplete ? null : (
+              <button
+                type="button"
+                onClick={openJourney}
+                className="text-sm font-semibold text-[#1b3a2f] underline-offset-4 hover:underline"
+              >
+                View journey →
+              </button>
+            )
+          }
+        />
+        {journeyComplete ? (
+          <div className="mt-3">
+            <p className="font-semibold text-[#14241c]">Journey completed</p>
+            <p className="mt-1 text-sm text-[#3d5247]">
+              All major home milestones are complete.
+            </p>
+            <button
+              type="button"
+              onClick={openJourney}
+              className="mt-2 text-sm font-semibold text-[#1b3a2f] underline-offset-4 hover:underline"
+            >
+              View journey →
+            </button>
+          </div>
+        ) : (
+          <>
+            <p className="mt-3 text-sm text-[#3d5247]">
+              {steps.filter((step) => step.mark === "done").length} of{" "}
+              {steps.length} milestones completed
+            </p>
+            <ol className="mt-2">
+              {steps.map((step) => (
+                <li
+                  key={step.key}
+                  className={`flex items-center gap-3 rounded-xl px-2 py-2 ${
+                    step.mark === "active"
+                      ? "bg-[rgba(201,164,92,0.12)]"
+                      : ""
+                  }`}
+                >
+                  <Mark mark={step.mark} />
+                  <p
+                    className={`min-w-0 flex-1 ${
+                      step.mark === "active"
+                        ? "font-semibold text-[#14241c]"
+                        : "font-medium text-[#14241c]"
+                    }`}
+                  >
+                    {step.label}
+                  </p>
+                  <p
+                    className={`text-sm ${
+                      step.mark === "active"
+                        ? "font-semibold text-[#7a5c22]"
+                        : "text-[#3d5247]"
+                    }`}
+                  >
+                    {step.status}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </>
+        )}
+      </section>
+
+      <section id="interior" className="mt-10 scroll-mt-8">
+        <SectionHead title="Interior" />
+        <p className="mt-4 text-2xl font-semibold tracking-tight text-[#14241c]">
+          {interior?.status ?? "Not started"}
+        </p>
+        <div className="mt-5 flex flex-wrap gap-2">
+          {links.map((item) => {
+            const className =
+              "inline-flex min-h-10 items-center rounded-full px-3.5 text-sm font-semibold ring-1 ring-[rgba(27,58,47,0.14)]";
+            if (item.href && item.ready) {
+              return (
+                <Link key={item.id} href={item.href} className={`${className} text-[#14241c]`}>
+                  {item.label}
+                </Link>
+              );
+            }
+            if (item.action === "3d") {
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => showPlan("3d")}
+                  className={`${className} text-[#14241c]`}
+                >
+                  {item.label}
+                </button>
+              );
+            }
+            return (
+              <span key={item.id} className={`${className} text-[#3d5247]`}>
+                {item.label}
+                <span className="ml-2 font-normal">Coming soon</span>
+              </span>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="mt-10">
+        <SectionHead title={`Everything about ${myFlat.flatNumber}`} />
+        <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {(
+            [
+              {
+                href: "#interior",
+                title: "Interior",
+                copy: "Quotation, designs, materials and progress",
+                action: "View interior",
+              },
+              {
+                href: "#your-apartment",
+                title: "Apartment",
+                copy: "Floor plan, rooms, dimensions and layout",
+                action: "View apartment",
+              },
+              {
+                href: "#documents",
+                title: "Documents",
+                copy: "Important apartment documents and records",
+                action: "View documents",
+              },
+              {
+                href: "#stay",
+                title: "Household",
+                copy: "Owner, family members and occupancy",
+                action: "Manage household",
+              },
+              {
+                href: "/community",
+                title: "Community",
+                copy: "Floor, wing and neighbour information",
+                action: "Explore community",
+              },
+              {
+                href: "#activity",
+                title: "Activity",
+                copy: `Recent updates related to ${myFlat.flatNumber}`,
+                action: "View activity",
+              },
+            ] as const
+          ).map((card) => {
+            const body = (
+              <>
+                <p className="font-semibold text-[#14241c]">{card.title}</p>
+                <p className="mt-1 text-sm text-[#3d5247]">{card.copy}</p>
+                <p className="mt-3 text-sm font-semibold text-[#1b3a2f]">
+                  {card.action} →
+                </p>
+              </>
+            );
+            const className =
+              "block w-full rounded-2xl bg-[#fffcf5] px-5 py-4 text-left ring-1 ring-[rgba(27,58,47,0.1)]";
+            if (card.href === "#stay" || card.href === "#documents") {
+              return (
+                <li key={card.title}>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      openSection(card.href === "#stay" ? "stay" : "documents")
+                    }
+                    className={className}
+                  >
+                    {body}
+                  </button>
+                </li>
+              );
+            }
+            return (
+              <li key={card.title}>
+                <Link href={card.href} className={className}>
+                  {body}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      <section className="mt-10">
+        <SectionHead title="About your apartment" />
+        <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 md:grid-cols-4">
+          {(
+            [
+              ["Configuration", typeLabel(myFlat.type)],
+              [
+                "Area",
+                myFlat.areaSqft
+                  ? `${myFlat.areaSqft.toLocaleString("en-IN")} sq ft`
+                  : "—",
+              ],
+              ["Wing", myFlat.wing || "—"],
+              ["Floor", String(myFlat.floor)],
+              ["Facing", myFlat.facing ? facingLabel(myFlat.facing) : "—"],
+              ["Bedrooms", String(groups.bedrooms.length || "—")],
+              [
+                "Kitchen",
+                groups.kitchen?.dim ?? (groups.kitchen ? "In plan" : "—"),
+              ],
+              ["Drawing", drawing?.dim ?? (drawing ? "In plan" : "—")],
+              ["Dining", dining?.dim ?? (dining ? "In plan" : "—")],
+              ["Bathrooms", String(groups.toilets.length || "—")],
+              ["Balconies", String(groups.balconies.length || "—")],
+            ] as const
+          ).map(([label, value]) => (
+            <div key={label}>
+              <dt className="text-sm text-[#3d5247]">{label}</dt>
+              <dd className="mt-0.5 font-semibold text-[#14241c]">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      <section className="mt-10">
+        <SectionHead
+          title="Household"
+          aside={
+            ownedFlat ? (
+              <button
+                type="button"
+                onClick={() => openSection("stay")}
+                className="text-sm font-semibold text-[#1b3a2f] underline-offset-4 hover:underline"
+              >
+                Manage household →
+              </button>
+            ) : null
+          }
+        />
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <ProfileAvatar
+            name={myFlat.ownerName || myFlat.flatNumber}
+            photoUrl={myFlat.ownerPhotoUrl}
+          />
+          <div>
+            <p className="font-semibold text-[#14241c]">
+              {myFlat.ownerName || "Owner"}
+            </p>
+            <p className="text-sm text-[#3d5247]">Owner · {myFlat.flatNumber}</p>
+          </div>
+        </div>
+        {members.length ? (
+          <ul className="mt-4 divide-y divide-[rgba(27,58,47,0.08)]">
+            {members.map((member) => (
+              <li key={member.id} className="flex items-center gap-3 py-2.5">
+                <ProfileAvatar
+                  name={member.name}
+                  photoUrl={member.photoUrl}
+                  size="sm"
+                  tone="member"
+                />
+                <div>
+                  <p className="font-semibold text-[#14241c]">{member.name}</p>
+                  <p className="text-sm text-[#3d5247]">
+                    {relationLabel(member.relation)}
+                  </p>
                 </div>
               </li>
             ))}
           </ul>
-        </section>
-      </div>
-      ) : null}
-
-      {includeOwners ? (
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <ListingList
-          title="Open for rent"
-          flats={openRent}
-          includeOwners={includeOwners}
-          empty="No flats are marked open for rent yet."
-        />
-        <ListingList
-          title="Open for resale"
-          flats={openResale}
-          includeOwners={includeOwners}
-          empty="No flats are marked open for resale yet."
-        />
-      </div>
-      ) : null}
-
-      {includeOwners ? (
-      <section className="mt-4 rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.1)] md:p-5">
-        <div className="flex items-baseline justify-between gap-2">
-          <h2 className="text-lg font-semibold tracking-tight text-[#14241c]">
-            Recent activity
-          </h2>
-          <Link
-            href="/feed"
-            className="text-sm font-semibold text-[#2f5a48] hover:underline"
-          >
-            Full feed
-          </Link>
-        </div>
-        {recentActivity.length === 0 ? (
-          <p className="mt-3 text-sm text-[#3d5247]">
-            No recent community updates yet.
-          </p>
         ) : (
-          <ul className="mt-3 divide-y divide-[rgba(27,58,47,0.08)]">
-            {recentActivity.map((item) => (
-              <li key={item.id} className="py-2.5">
+          <p className="mt-4 text-sm text-[#3d5247]">
+            No household members added yet.
+          </p>
+        )}
+      </section>
+
+      <section id="documents" className="mt-10 scroll-mt-8">
+        <SectionHead
+          title="Documents & records"
+          aside={
+            <button
+              type="button"
+              onClick={() => openSection("documents")}
+              className="text-sm font-semibold text-[#1b3a2f] underline-offset-4 hover:underline"
+            >
+              View documents →
+            </button>
+          }
+        />
+        <p className="mt-4 max-w-xl text-sm text-[#3d5247]">
+          Apartment documents, registration records and future interior records
+          will appear here. Nothing is stored yet.
+        </p>
+      </section>
+
+      <section className="mt-10">
+        <SectionHead title="Your community" />
+        <p className="mt-4 text-[#14241c]">
+          {myFlat.flatNumber} · Wing {myFlat.wing} · Floor {myFlat.floor}
+        </p>
+        <p className="mt-1 text-sm text-[#3d5247]">
+          {summary.sold} occupied · {summary.unsold} available
+        </p>
+        <nav className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
+          <TextLink href="/community?view=3d">Explore site</TextLink>
+          <TextLink href={`/community?floor=${myFlat.floor}`}>
+            Floor {myFlat.floor}
+          </TextLink>
+          {includeOwners ? <TextLink href="/members">Directory</TextLink> : null}
+          {includeOwners ? <TextLink href="/feed">Community feed</TextLink> : null}
+        </nav>
+      </section>
+
+      <section id="activity" className="mt-10 scroll-mt-8">
+        <SectionHead
+          title="Recent activity"
+          aside={includeOwners ? <TextLink href="/feed">All</TextLink> : undefined}
+        />
+        {homeActivity.length ? (
+          <ol className="mt-2 divide-y divide-[rgba(27,58,47,0.08)]">
+            {homeActivity.map((item) => (
+              <li key={item.id} className="py-3.5">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <p className="font-medium text-[#14241c]">{item.title}</p>
-                  <span className="text-xs text-[#3d5247]">
+                  <span className="text-sm text-[#3d5247]">
                     {relativeTime(item.createdAt)}
                   </span>
                 </div>
                 {item.body ? (
-                  <p className="mt-0.5 line-clamp-2 text-sm text-[#3d5247]">
+                  <p className="mt-1 line-clamp-2 text-sm text-[#3d5247]">
                     {item.body}
-                  </p>
-                ) : null}
-                {item.flatNumber ? (
-                  <p className="mt-0.5 text-xs font-semibold text-[#2f5a48]">
-                    {item.flatNumber}
                   </p>
                 ) : null}
               </li>
             ))}
-          </ul>
+          </ol>
+        ) : (
+          <p className="mt-4 text-[#3d5247]">
+            No recent updates for {myFlat.flatNumber}.
+          </p>
         )}
       </section>
+
+      {journeyOpen ? (
+        <JourneyDetail
+          steps={steps}
+          onClose={closeJourney}
+          onViewCurrent={
+            steps.some((step) => step.mark === "active" && step.key === "interior")
+              ? () => {
+                  closeJourney();
+                  window.history.replaceState(null, "", "/#interior");
+                  document.getElementById("interior")?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                  });
+                }
+              : undefined
+          }
+        />
       ) : null}
-    </div>
+    </PageShell>
   );
 }

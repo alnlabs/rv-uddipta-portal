@@ -120,9 +120,12 @@ function WetFixture({
 
 export function A1ArchitecturalPlan({
   framed = true,
+  homeLabel,
 }: {
   readonly framed?: boolean
+  readonly homeLabel?: string
 }) {
+  const unitLabel = homeLabel ?? A1_META.unit;
   const vbW = u(A1_EXTENT.w + 14);
   const vbH = u(A1_EXTENT.h + 12);
   const walls = splitA1Walls();
@@ -139,7 +142,7 @@ export function A1ArchitecturalPlan({
         RV UDDIIPTA · A-BLOCK · SOUTH-WEST CORNER
       </text>
       <text x="0" y="-20" fill="#14241c" fontSize="20" fontWeight="700">
-        {A1_META.unit} · {A1_META.type}
+        {unitLabel} · {A1_META.type}
       </text>
       <text x="220" y="-20" fill="#3d5247" fontSize="11">
         SBUA {A1_META.sbuaSft.toLocaleString()} sft · Carpet {A1_META.carpetSft.toLocaleString()} sft · Balcony{" "}
@@ -319,7 +322,7 @@ export function A1ArchitecturalPlan({
 
       <circle cx={u(42.4)} cy={u(15.6)} r="11" fill="#c0392b" />
       <text x={u(42.4)} y={u(16)} textAnchor="middle" fill="#fff" fontSize="10" fontWeight="700">
-        A1
+        {unitLabel}
       </text>
 
       <NorthRose x={-36} y={u(8)} />

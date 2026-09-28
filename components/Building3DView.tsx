@@ -34,6 +34,11 @@ import {
 } from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { CompassHud, CompassSync } from "@/components/ViewCompass";
+import {
+  CARDINAL_LABEL,
+  SITE_ORIENTATION,
+  cardinalIdForDir,
+} from "@/lib/siteOrientation";
 import { FlatTextFacts, FlatViews, toPlanInput } from "@/components/FlatViews";
 import { facingLabel, typeLabel } from "@/lib/flatDisplay";
 import { BUILDING } from "@/lib/building";
@@ -1426,12 +1431,21 @@ function Site() {
       <Clubhouse />
       <StiltLevel />
       <group position={SITE.north}>
-        <mesh position={[0, 0.08, -0.35]} rotation={[-Math.PI / 2, 0, 0]}>
+        <mesh
+          position={[
+            SITE_ORIENTATION.south.x * 0.35,
+            0.08,
+            SITE_ORIENTATION.south.z * 0.35,
+          ]}
+          rotation={[-Math.PI / 2, 0, 0]}
+        >
           <coneGeometry args={[0.22, 0.85, 3]} />
           <meshStandardMaterial color="#e8d5a3" />
         </mesh>
         <SceneHtml position={[0, 1.1, 0]} center transform style={{ pointerEvents: "none" }}>
-          <span className="text-sm font-semibold text-[#e8d5a3]">N</span>
+          <span className="text-sm font-semibold text-[#e8d5a3]">
+            {CARDINAL_LABEL[cardinalIdForDir(SITE_ORIENTATION.south.x, SITE_ORIENTATION.south.z)]}
+          </span>
         </SceneHtml>
       </group>
     </>
@@ -2182,10 +2196,10 @@ function FlatDetailCard({
       {mine ? (
         <div className="border-t border-[rgba(232,213,163,0.14)] px-3.5 py-3">
           <a
-            href="/update"
+            href="/"
             className="inline-flex min-h-10 w-full items-center justify-center rounded-full bg-[#c9a45c] px-4 text-sm font-semibold text-[#14241c]"
           >
-            Manage my flat
+            Open my home
           </a>
         </div>
       ) : null}

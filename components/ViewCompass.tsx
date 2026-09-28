@@ -1,13 +1,36 @@
 "use client";
 
 import { useFrame, useThree } from "@react-three/fiber";
-import type { RefObject } from "react";
+import type { CSSProperties, RefObject } from "react";
 import { Vector3 } from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
+import {
+  CARDINAL_LABEL,
+  CARDINALS,
+  cardinalScreenAngleDeg,
+  type CardinalId,
+} from "@/lib/siteOrientation";
 
-/** World axes in the community massing model: N = −Z, E = +X, S = +Z, W = −X. */
 const LOOK = new Vector3();
-const RIGHT = new Vector3();
+
+const LABEL_STYLE: Record<CardinalId, CSSProperties> = {
+  N: {
+    color: "#c9a45c",
+    transform: "rotate(var(--compass-N)) translateY(-1.55rem) rotate(calc(-1 * var(--compass-N)))",
+  },
+  E: {
+    color: "#e8d5a3",
+    transform: "rotate(var(--compass-E)) translateY(-1.55rem) rotate(calc(-1 * var(--compass-E)))",
+  },
+  S: {
+    color: "#e8d5a3",
+    transform: "rotate(var(--compass-S)) translateY(-1.55rem) rotate(calc(-1 * var(--compass-S)))",
+  },
+  W: {
+    color: "#e8d5a3",
+    transform: "rotate(var(--compass-W)) translateY(-1.55rem) rotate(calc(-1 * var(--compass-W)))",
+  },
+};
 
 export function CompassSync({
   roseRef,
@@ -30,9 +53,10 @@ export function CompassSync({
     }
     if (LOOK.lengthSq() < 1e-10) return;
     LOOK.normalize();
-    RIGHT.set(-LOOK.z, 0, LOOK.x);
-    const deg = (Math.atan2(-RIGHT.z, -LOOK.z) * 180) / Math.PI;
-    el.style.transform = `rotate(${deg}deg)`;
+    for (const item of CARDINALS) {
+      const deg = cardinalScreenAngleDeg(item.x, item.z, LOOK.x, LOOK.z);
+      el.style.setProperty(`--compass-${item.id}`, `${deg}deg`);
+    }
   });
 
   return null;
@@ -46,82 +70,62 @@ export function CompassHud({
   return (
     <div className="pointer-events-none absolute bottom-[5.35rem] left-3 z-10">
       <div
+        ref={roseRef}
         className="relative grid size-[4.75rem] place-items-center rounded-full bg-[#14241c]/82 shadow-[0_6px_20px_rgba(0,0,0,0.35)] ring-1 ring-[rgba(232,213,163,0.28)] backdrop-blur-sm"
+        style={
+          {
+            "--compass-N": "133.2deg",
+            "--compass-E": "-136.8deg",
+            "--compass-S": "-46.8deg",
+            "--compass-W": "43.2deg",
+          } as CSSProperties
+        }
         role="img"
-        aria-label="Compass. North, east, south, and west stay locked to the building as you orbit."
+        aria-label="Compass. N, E, S, and W stay locked to the site. East is the gate."
       >
-        <div
-          ref={roseRef}
-          className="absolute inset-0 will-change-transform"
+        <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full" aria-hidden>
+          <circle
+            cx="50"
+            cy="50"
+            r="46"
+            fill="none"
+            stroke="rgba(232,213,163,0.28)"
+            strokeWidth="1.2"
+          />
+        </svg>
+        <svg
+          viewBox="0 0 100 100"
+          className="absolute inset-0 h-full w-full"
+          style={{ transform: "rotate(var(--compass-N))" }}
+          aria-hidden
         >
-          <svg viewBox="0 0 100 100" className="h-full w-full" aria-hidden>
-            <circle
-              cx="50"
-              cy="50"
-              r="46"
-              fill="none"
-              stroke="rgba(232,213,163,0.28)"
-              strokeWidth="1.2"
-            />
-            <polygon points="50,10 54,24 46,24" fill="#c9a45c" />
-            <line
-              x1="50"
-              y1="26"
-              x2="50"
-              y2="74"
-              stroke="rgba(232,213,163,0.35)"
-              strokeWidth="1"
-            />
-            <line
-              x1="26"
-              y1="50"
-              x2="74"
-              y2="50"
-              stroke="rgba(232,213,163,0.35)"
-              strokeWidth="1"
-            />
-            <text
-              x="50"
-              y="20"
-              textAnchor="middle"
-              fill="#c9a45c"
-              fontSize="13"
-              fontWeight="700"
-            >
-              N
-            </text>
-            <text
-              x="82"
-              y="54"
-              textAnchor="middle"
-              fill="#e8d5a3"
-              fontSize="11"
-              fontWeight="700"
-            >
-              E
-            </text>
-            <text
-              x="50"
-              y="88"
-              textAnchor="middle"
-              fill="#e8d5a3"
-              fontSize="11"
-              fontWeight="700"
-            >
-              S
-            </text>
-            <text
-              x="18"
-              y="54"
-              textAnchor="middle"
-              fill="#e8d5a3"
-              fontSize="11"
-              fontWeight="700"
-            >
-              W
-            </text>
-          </svg>
-        </div>
+          <polygon points="50,10 54,24 46,24" fill="#c9a45c" />
+          <line
+            x1="50"
+            y1="26"
+            x2="50"
+            y2="74"
+            stroke="rgba(232,213,163,0.35)"
+            strokeWidth="1"
+          />
+          <line
+            x1="26"
+            y1="50"
+            x2="74"
+            y2="50"
+            stroke="rgba(232,213,163,0.35)"
+            strokeWidth="1"
+          />
+        </svg>
+        {(Object.keys(CARDINAL_LABEL) as CardinalId[]).map((id) => (
+          <span
+            key={id}
+            className="absolute left-1/2 top-1/2 -ml-2 -mt-2 w-4 text-center text-[11px] font-bold leading-4"
+            style={LABEL_STYLE[id]}
+          >
+            {id}
+          </span>
+        ))}
       </div>
     </div>
   );

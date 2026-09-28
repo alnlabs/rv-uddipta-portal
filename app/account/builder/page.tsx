@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { adminSaveBuilder } from "@/app/actions/admin-manage";
 import { getProjectInfo } from "@/lib/projectInfo";
@@ -17,20 +16,12 @@ export default async function AdminBuilderPage() {
   return (
     <section>
       <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">
-        Administration
+        {showAdminHome ? "Admin" : "Builder"}
       </p>
       <h2 className="mt-1 text-2xl font-semibold text-[#14241c]">Builder details</h2>
       <p className="mt-1 text-sm text-[#3d5247]">
         These facts appear on the public home page and signed-in dashboard.
       </p>
-      {showAdminHome ? (
-        <Link
-          href="/account"
-          className="mt-3 inline-flex min-h-10 items-center text-sm font-semibold text-[#2f5a48]"
-        >
-          ← Admin home
-        </Link>
-      ) : null}
 
       <form
         action={adminSaveBuilder}

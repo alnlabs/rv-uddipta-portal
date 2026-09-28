@@ -1,16 +1,23 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import MembersEditor from "@/components/MembersEditor";
 import RentersEditor from "@/components/RentersEditor";
 import { ProfilePhotoPicker } from "@/components/ProfilePhotoPicker";
+import { interiorLinks } from "@/lib/apartmentLayout";
 import { cleanError } from "@/lib/auth";
-import { FlatTextFacts, FlatViews, toPlanInput } from "@/components/FlatViews";
-import { facingLabel, normalizeSaleFields, typeLabel } from "@/lib/flatDisplay";
+import { normalizeSaleFields } from "@/lib/flatDisplay";
+import {
+  formatShortDate,
+  journeyExplain,
+  journeyHeadline,
+  journeyStatusCopy,
+  journeyMark,
+} from "@/lib/homeDisplay";
 import { normalizePhone } from "@/lib/phone";
 import {
   STATUS_FIELDS,
-  STATUS_LABELS,
   type StatusDateKey,
   type StatusKey,
 } from "@/lib/status";
@@ -40,7 +47,7 @@ type OccupancyState = {
   openForResale: boolean;
 };
 
-type Panel = "journey" | "profile";
+type Panel = "journey" | "stay";
 
 function dateInput(value: string | null) {
   return value?.slice(0, 10) ?? "";
@@ -59,11 +66,6 @@ function isDone(key: StatusKey, value: string) {
   return value === "completed";
 }
 
-function shortLabel(key: StatusKey, value: string) {
-  const labels = STATUS_LABELS[key] as Record<string, string>;
-  return labels[value] ?? value;
-}
-
 function DateField({
   label,
   value,
@@ -75,13 +77,13 @@ function DateField({
 }) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-2">
-      <label className="flex min-w-[10rem] flex-1 flex-col gap-2 text-xs font-semibold tracking-[0.14em] text-[#3d5247] uppercase">
+      <label className="flex min-w-[10rem] flex-1 flex-col gap-2 text-sm text-[#d0c090]">
         {label}
         <input
           type="date"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="min-h-12 rounded-2xl border border-[rgba(27,58,47,0.12)] bg-white px-4 py-3 text-base font-normal normal-case tracking-normal text-[#14241c] outline-none focus:border-[#1b3a2f] focus:ring-2 focus:ring-[rgba(27,58,47,0.12)]"
+          className="min-h-11 border border-[rgba(232,213,163,0.22)] bg-transparent px-3 text-base font-normal text-[#f7f2e6] outline-none focus:border-[#c9a45c]"
         />
       </label>
       <div className="flex gap-2 pb-1">
@@ -144,14 +146,18 @@ export default function UpdateForm({
   initialFlat,
   initialMembers,
   initialRenters,
+  initialPanel = "stay",
+  onClose,
 }: {
   ownerPhoneMasked: string;
   initialFlat: OwnedFlat;
   initialMembers: FlatMember[];
   initialRenters: FlatRenter[];
+  initialPanel?: Panel;
+  onClose?: () => void;
 }) {
   const [flat, setFlat] = useState(initialFlat);
-  const [panel, setPanel] = useState<Panel>("journey");
+  const [panel, setPanel] = useState<Panel>(initialPanel);
   const [form, setForm] = useState<JourneyState>(() => journeyFromFlat(initialFlat));
   const [savedSnapshot, setSavedSnapshot] = useState(() =>
     snapshot(journeyFromFlat(initialFlat)),
@@ -174,6 +180,20 @@ export default function UpdateForm({
   const [occupancyMessage, setOccupancyMessage] = useState("");
   const [occupancyError, setOccupancyError] = useState("");
   const [occupancyBusy, setOccupancyBusy] = useState(false);
+  const [openStep, setOpenStep] = useState<StatusKey | null>(null);
+
+  useEffect(() => {
+    const hash = window.location.hash.replace("#", "");
+    if (hash === "stay") setPanel(hash);
+  }, []);
+
+  function goHome() {
+    if (onClose) {
+      onClose();
+      return;
+    }
+    window.location.assign("/");
+  }
 
   const ownerDirty = ownerName.trim() !== savedOwnerName.trim();
   const occupancyDirty = occupancySnapshot(occupancyForm) !== savedOccupancy;
@@ -473,242 +493,336 @@ export default function UpdateForm({
       />
 
       <section className="page-gutter relative max-w-5xl pb-24 pt-6 md:pb-16 md:pt-10">
-        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+        <div className="mb-8 flex items-start justify-between gap-4">
           <div>
-            <p className="text-[0.7rem] font-semibold tracking-[0.2em] text-[#c9a45c] uppercase">
-              My flat · {ownerPhoneMasked}
-            </p>
-            <h1 className="mt-3 text-[clamp(3rem,12vw,5.5rem)] leading-[0.9] font-semibold tracking-tight text-[#f7f2e6]">
-              {flat.flatNumber}
+            <h1 className="text-[clamp(2.25rem,6vw,3.5rem)] font-semibold leading-[0.95] tracking-tight text-[#f7f2e6]">
+              {panel === "journey" ? "Home journey" : "Ownership & stay"}
             </h1>
-            <p className="mt-3 max-w-xl text-sm text-[#e8d5a3] md:text-base">
-              {savedOwnerName ? `${savedOwnerName} · ` : ""}
-              Floor {flat.floor}
-              {flat.wing ? ` · Wing ${flat.wing}` : ""}
-              {" · "}
-              {typeLabel(flat.type)}
-              {flat.facing ? ` · ${facingLabel(flat.facing)}` : ""}
-              {flat.areaSqft ? ` · ${flat.areaSqft.toLocaleString()} sft` : ""}
-            </p>
+            {panel === "journey" ? (
+              <p className="mt-2 text-[#d0c090]">
+                Your journey to move into {flat.flatNumber}
+              </p>
+            ) : null}
           </div>
-
-          <div className="flex w-full max-w-sm flex-col gap-3 md:items-end">
-            <div className="w-full rounded-full bg-white/10 p-1 backdrop-blur-sm">
-              <div className="flex">
-                {(
-                  [
-                    ["journey", "Journey"],
-                    ["profile", "Profile"],
-                  ] as const
-                ).map(([id, label]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setPanel(id)}
-                    className={`min-h-11 flex-1 rounded-full text-sm font-semibold transition-colors ${
-                      panel === id
-                        ? "bg-[#c9a45c] text-[#14241c]"
-                        : "text-[#d8c898] hover:text-[#f7f2e6]"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <p className="text-xs font-semibold tracking-[0.14em] text-[#e8d5a3] uppercase">
-              {panel === "journey"
-                ? `${progress.doneCount} of ${progress.total} milestones done`
-                : "Owner, occupancy & household"}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-6 h-px w-full bg-gradient-to-r from-transparent via-[rgba(232,213,163,0.35)] to-transparent" />
-
-        <div className="mt-8 rounded-3xl bg-white/6 p-4 ring-1 ring-[rgba(232,213,163,0.14)] md:p-5">
-          <p className="mb-3 text-[0.7rem] font-semibold tracking-[0.16em] text-[#c9a45c] uppercase">
-            Flat views
-          </p>
-          <FlatViews
-            flat={toPlanInput(flat)}
-            tone="dark"
-            text={<FlatTextFacts flat={toPlanInput(flat)} tone="dark" />}
-          />
+          <button
+            type="button"
+            onClick={goHome}
+            aria-label={`Close and return to ${flat.flatNumber}`}
+            className="grid size-11 shrink-0 place-items-center rounded-full text-2xl leading-none text-[#e8d5a3] ring-1 ring-[rgba(232,213,163,0.28)] hover:bg-[rgba(232,213,163,0.08)]"
+          >
+            ×
+          </button>
         </div>
 
         {panel === "journey" ? (
-          <div className="mt-8 space-y-4">
-            <div className="flex flex-wrap items-end justify-between gap-3 px-1">
-              <div>
-                <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-[#c9a45c] uppercase">
-                  Journey
-                </p>
-                <h2 className="mt-1 text-2xl font-semibold tracking-tight text-[#f7f2e6] md:text-3xl">
-                  Possession milestones
-                </h2>
-                <p className="mt-1 text-sm text-[#e8d5a3]">
-                  Each milestone saves on its own.
-                </p>
-              </div>
-              <span className="rounded-full bg-[#c9a45c] px-3 py-1 text-xs font-bold tracking-wide text-[#14241c] uppercase">
-                {progress.doneCount} / {progress.total} done
-              </span>
-            </div>
+          <div className="min-h-[calc(100dvh-12rem)]">
+            <p className="text-lg font-semibold text-[#f7f2e6]">
+              {progress.doneCount} of {progress.total} milestones completed
+            </p>
+            <p className="mt-1 text-[#c9a45c]">{journeyHeadline(
+              progress.steps.map((step) => ({
+                key: step.key,
+                label: step.label,
+                value: step.value,
+                mark: journeyMark(step.key, step.value),
+                status: journeyStatusCopy(step.key, step.value),
+                date: null,
+              })),
+            )}</p>
 
-            {progress.steps.map((step) => {
-              const dirtyStep = milestoneDirty(step.key);
-              const saving = savingStep === step.key;
-              return (
-                <form
-                  key={step.key}
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    void onSaveMilestone(step.key);
-                  }}
-                  className="rounded-[1.75rem] bg-[#fffcf5] p-5 text-[#14241c] shadow-[0_20px_60px_rgba(0,0,0,0.28)] md:p-6"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <h3 className="text-xl font-semibold tracking-tight md:text-2xl">
-                        {step.label}
-                      </h3>
-                      <p className="mt-0.5 text-sm text-[#3d5247]">
-                        {shortLabel(step.key, step.value)}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
+            <ol className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-[#d0c090]">
+              {progress.steps.map((step) => {
+                const mark = journeyMark(step.key, step.value);
+                return (
+                  <li key={step.key} className="flex items-center gap-1.5">
+                    <span aria-hidden>
+                      {mark === "done" ? "✓" : mark === "active" ? "●" : "○"}
+                    </span>
+                    {step.label}
+                  </li>
+                );
+              })}
+            </ol>
+
+            <ol className="mt-10">
+              {progress.steps.map((step, index) => {
+                const dirtyStep = milestoneDirty(step.key);
+                const saving = savingStep === step.key;
+                const open = openStep === step.key;
+                const mark = journeyMark(step.key, step.value);
+                const current = mark === "active";
+                const date =
+                  step.key === "interior"
+                    ? form.interiorDate || form.interiorStartDate
+                    : form[step.dateKey];
+                const last = index === progress.steps.length - 1;
+                const tasks = interiorLinks(flat);
+                return (
+                  <li key={step.key} className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-x-4">
+                    <div className="flex flex-col items-center">
                       <span
-                        className={`inline-flex min-h-11 items-center rounded-full px-5 text-sm font-semibold ${
-                          step.done
-                            ? "bg-[#1b3a2f] text-[#e8d5a3]"
-                            : "bg-[rgba(27,58,47,0.06)] text-[#3d5247] ring-1 ring-[rgba(27,58,47,0.12)]"
+                        className={`grid size-6 shrink-0 place-items-center rounded-full text-[11px] font-bold ${
+                          mark === "done"
+                            ? "bg-[#c9a45c] text-[#14241c]"
+                            : current
+                              ? "ring-2 ring-[#c9a45c]"
+                              : "ring-1 ring-[rgba(232,213,163,0.28)]"
                         }`}
+                        aria-hidden
                       >
-                        {step.done ? "Complete" : "Open"}
+                        {mark === "done" ? "✓" : current ? "●" : ""}
                       </span>
-                      <button
-                        type="submit"
-                        disabled={saving || !dirtyStep}
-                        className="min-h-11 rounded-full bg-[#c9a45c] px-5 text-sm font-semibold text-[#14241c] disabled:opacity-45"
-                      >
-                        {saving ? "Saving…" : "Save"}
-                      </button>
+                      {last ? null : (
+                        <span
+                          className={`mt-1 min-h-[2.5rem] w-px flex-1 ${
+                            mark === "done"
+                              ? "bg-[#c9a45c]"
+                              : "bg-[rgba(232,213,163,0.22)]"
+                          }`}
+                          aria-hidden
+                        />
+                      )}
                     </div>
-                  </div>
 
-                  <div
-                    className="mt-4 grid gap-2 sm:grid-cols-2"
-                    role="radiogroup"
-                    aria-label={`${step.label} status`}
-                  >
-                    {step.options.map((opt) => {
-                      const selected = step.value === opt.value;
-                      return (
-                        <label key={opt.value} className="cursor-pointer">
-                          <input
-                            type="radio"
-                            name={step.key}
-                            value={opt.value}
-                            checked={selected}
-                            onChange={() =>
-                              setStatus(step.key, opt.value, step.dateKey)
-                            }
-                            className="sr-only"
-                          />
-                          <span
-                            className={`flex min-h-12 items-center justify-between rounded-2xl px-4 text-sm font-semibold transition-colors ${
-                              selected
-                                ? "bg-[#1b3a2f] text-[#e8d5a3]"
-                                : "bg-[rgba(27,58,47,0.04)] text-[#3d5247] ring-1 ring-[rgba(27,58,47,0.1)] hover:bg-[rgba(27,58,47,0.07)]"
-                            }`}
-                          >
-                            {opt.label}
-                            {selected ? <span aria-hidden>✓</span> : null}
-                          </span>
-                        </label>
-                      );
-                    })}
-                  </div>
-
-                  <div className="mt-4 border-t border-[rgba(27,58,47,0.08)] pt-4">
-                    {step.key === "interior" ? (
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <DateField
-                          label="Start date"
-                          value={form.interiorStartDate}
-                          onChange={(next) => {
-                            setForm((prev) => ({
-                              ...prev,
-                              interiorStartDate: next,
-                            }));
-                            setStepMessage((prev) => ({
-                              ...prev,
-                              interior: "",
-                            }));
-                          }}
-                        />
-                        <DateField
-                          label="Complete date"
-                          value={form.interiorDate}
-                          onChange={(next) => {
-                            setForm((prev) => ({
-                              ...prev,
-                              interiorDate: next,
-                            }));
-                            setStepMessage((prev) => ({
-                              ...prev,
-                              interior: "",
-                            }));
-                          }}
-                        />
-                      </div>
-                    ) : (
-                      <DateField
-                        label={
-                          step.key === "registration"
-                            ? "Registration date"
-                            : step.key === "ceremony"
-                              ? "Home ceremony date"
-                              : "Move-in date"
+                    <div className={`min-w-0 pb-8 ${current ? "pb-10" : ""} ${last ? "pb-0" : ""}`}>
+                      <div
+                        className={
+                          current
+                            ? "rounded-[1.25rem] bg-[rgba(232,213,163,0.08)] p-5 ring-1 ring-[rgba(201,164,92,0.28)]"
+                            : ""
                         }
-                        value={form[step.dateKey]}
-                        onChange={(next) => {
-                          setForm((prev) => ({
-                            ...prev,
-                            [step.dateKey]: next,
-                          }));
-                          setStepMessage((prev) => ({
-                            ...prev,
-                            [step.key]: "",
-                          }));
-                        }}
-                      />
-                    )}
-                  </div>
+                      >
+                        <h2
+                          className={`font-semibold tracking-tight ${
+                            current
+                              ? "text-2xl text-[#f7f2e6] md:text-3xl"
+                              : "text-lg text-[#f7f2e6]"
+                          }`}
+                        >
+                          {step.label}
+                        </h2>
+                        <p className={`mt-1 ${current ? "text-[#c9a45c]" : "text-sm text-[#b0a070]"}`}>
+                          {journeyStatusCopy(step.key, step.value)}
+                          {step.key === "registration" && date
+                            ? ` · ${formatShortDate(date)}`
+                            : ""}
+                        </p>
+                        <p className={`mt-2 max-w-xl ${current ? "text-[#e8d5a3]" : "text-sm text-[#d0c090]"}`}>
+                          {journeyExplain(step.key, step.value)}
+                        </p>
 
-                  {stepError[step.key] ? (
-                    <p
-                      role="alert"
-                      className="mt-4 rounded-2xl bg-[rgba(138,47,47,0.08)] px-4 py-3 text-sm text-[#8a2f2f]"
-                    >
-                      {stepError[step.key]}
-                    </p>
-                  ) : null}
-                  {stepMessage[step.key] ? (
-                    <p
-                      role="status"
-                      className="mt-4 rounded-2xl bg-[rgba(47,90,72,0.1)] px-4 py-3 text-sm font-semibold text-[#2f5a48]"
-                    >
-                      {stepMessage[step.key]}
-                    </p>
-                  ) : null}
-                </form>
-              );
-            })}
+                        {step.key === "ceremony" || step.key === "moving" ? (
+                          <p className="mt-3 text-sm text-[#b0a070]">
+                            {step.key === "ceremony" ? "Date" : "Move-in date"}
+                            {" · "}
+                            {date ? formatShortDate(date) : "No date set"}
+                          </p>
+                        ) : null}
+
+                        {current && step.key === "interior" ? (
+                          <div className="mt-5">
+                            <ul className="grid gap-2 sm:grid-cols-2">
+                              {tasks.map((item) => {
+                                const status = item.ready
+                                  ? item.id === "progress"
+                                    ? "View progress"
+                                    : "Available"
+                                  : "Coming soon";
+                                const hint =
+                                  item.id === "2d"
+                                    ? "View apartment design →"
+                                    : item.id === "3d"
+                                      ? "Explore interior →"
+                                      : item.id === "progress"
+                                        ? "See dates and status →"
+                                        : null;
+                                const row = (
+                                  <>
+                                    <span className="block font-semibold text-[#f7f2e6]">
+                                      {item.label}
+                                    </span>
+                                    <span className="block text-sm text-[#b0a070]">
+                                      {status}
+                                    </span>
+                                    {hint ? (
+                                      <span className="mt-1 block text-sm font-semibold text-[#c9a45c]">
+                                        {hint}
+                                      </span>
+                                    ) : null}
+                                  </>
+                                );
+                                const className =
+                                  "rounded-2xl bg-[rgba(20,36,28,0.35)] px-4 py-3 text-left ring-1 ring-[rgba(232,213,163,0.12)]";
+                                if (item.href && item.ready) {
+                                  return (
+                                    <li key={item.id}>
+                                      <Link href={item.href} className={`block ${className}`}>
+                                        {row}
+                                      </Link>
+                                    </li>
+                                  );
+                                }
+                                if (item.action === "3d") {
+                                  return (
+                                    <li key={item.id}>
+                                      <Link href="/#3d" className={`block ${className}`}>
+                                        {row}
+                                      </Link>
+                                    </li>
+                                  );
+                                }
+                                return (
+                                  <li key={item.id} className={`${className} opacity-70`}>
+                                    {row}
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                            <Link
+                              href="/#interior"
+                              className="mt-5 inline-flex min-h-11 items-center rounded-full bg-[#c9a45c] px-5 text-sm font-semibold text-[#14241c]"
+                            >
+                              Continue interior →
+                            </Link>
+                          </div>
+                        ) : null}
+
+                        <button
+                          type="button"
+                          onClick={() => setOpenStep(open ? null : step.key)}
+                          className="mt-4 text-sm font-semibold text-[#c9a45c]"
+                        >
+                          {open ? "Hide dates" : "Update dates"}
+                        </button>
+
+                        {open ? (
+                          <form
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              void onSaveMilestone(step.key);
+                            }}
+                            className="mt-4 text-[#f7f2e6]"
+                          >
+                            <div
+                              className="grid gap-2 sm:grid-cols-2"
+                              role="radiogroup"
+                              aria-label={`${step.label} status`}
+                            >
+                              {step.options.map((opt) => {
+                                const selected = step.value === opt.value;
+                                return (
+                                  <label key={opt.value} className="cursor-pointer">
+                                    <input
+                                      type="radio"
+                                      name={step.key}
+                                      value={opt.value}
+                                      checked={selected}
+                                      onChange={() =>
+                                        setStatus(step.key, opt.value, step.dateKey)
+                                      }
+                                      className="sr-only"
+                                    />
+                                    <span
+                                      className={`flex min-h-11 items-center justify-between border px-3 text-sm ${
+                                        selected
+                                          ? "border-[#c9a45c] text-[#c9a45c]"
+                                          : "border-[rgba(232,213,163,0.18)] text-[#d0c090]"
+                                      }`}
+                                    >
+                                      {opt.label}
+                                    </span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+
+                            <div className="mt-4">
+                              {step.key === "interior" ? (
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                  <DateField
+                                    label="Start date"
+                                    value={form.interiorStartDate}
+                                    onChange={(next) => {
+                                      setForm((prev) => ({
+                                        ...prev,
+                                        interiorStartDate: next,
+                                      }));
+                                      setStepMessage((prev) => ({
+                                        ...prev,
+                                        interior: "",
+                                      }));
+                                    }}
+                                  />
+                                  <DateField
+                                    label="Complete date"
+                                    value={form.interiorDate}
+                                    onChange={(next) => {
+                                      setForm((prev) => ({
+                                        ...prev,
+                                        interiorDate: next,
+                                      }));
+                                      setStepMessage((prev) => ({
+                                        ...prev,
+                                        interior: "",
+                                      }));
+                                    }}
+                                  />
+                                </div>
+                              ) : (
+                                <DateField
+                                  label={
+                                    step.key === "registration"
+                                      ? "Registration date"
+                                      : step.key === "ceremony"
+                                        ? "Home ceremony date"
+                                        : "Move-in date"
+                                  }
+                                  value={form[step.dateKey]}
+                                  onChange={(next) => {
+                                    setForm((prev) => ({
+                                      ...prev,
+                                      [step.dateKey]: next,
+                                    }));
+                                    setStepMessage((prev) => ({
+                                      ...prev,
+                                      [step.key]: "",
+                                    }));
+                                  }}
+                                />
+                              )}
+                            </div>
+
+                            {stepError[step.key] ? (
+                              <p
+                                role="alert"
+                                className="mt-4 rounded-2xl bg-[rgba(138,47,47,0.08)] px-4 py-3 text-sm text-[#8a2f2f]"
+                              >
+                                {stepError[step.key]}
+                              </p>
+                            ) : null}
+                            {stepMessage[step.key] ? (
+                              <p role="status" className="mt-3 text-sm text-[#c9a45c]">
+                                {stepMessage[step.key]}
+                              </p>
+                            ) : null}
+                            <button
+                              type="submit"
+                              disabled={saving || !dirtyStep}
+                              className="mt-4 min-h-11 text-sm font-semibold text-[#c9a45c] disabled:opacity-40"
+                            >
+                              {saving ? "Saving…" : "Save milestone"}
+                            </button>
+                          </form>
+                        ) : null}
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
           </div>
-        ) : (
-          <div className="mt-8 space-y-5">
+        ) : panel === "stay" ? (
+          <div className="space-y-5">
             <form
               onSubmit={onSaveOwner}
               className="rounded-[1.75rem] bg-[#fffcf5] p-5 text-[#14241c] shadow-[0_20px_60px_rgba(0,0,0,0.28)] md:p-8"
@@ -1039,7 +1153,7 @@ export default function UpdateForm({
               />
             ) : null}
           </div>
-        )}
+        ) : null}
 
       </section>
 

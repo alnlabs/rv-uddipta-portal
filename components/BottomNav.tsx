@@ -35,7 +35,7 @@ export function BottomNav({
           ? item("/community?view=3d", "3D", pathname.startsWith("/community"))
           : null}
         {signedIn
-          ? item("/update", "My flat", pathname === "/update")
+          ? item("/", "My home", pathname === "/")
           : item("/login", "Login", pathname === "/login" || pathname === "/register")}
         {isAdmin ? item("/account", "Approvals", pathname === "/account") : null}
       </div>

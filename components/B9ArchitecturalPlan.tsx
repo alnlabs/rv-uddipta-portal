@@ -134,9 +134,12 @@ function WetFixture({
 
 export function B9ArchitecturalPlan({
   framed = true,
+  homeLabel,
 }: {
   readonly framed?: boolean
+  readonly homeLabel?: string
 }) {
+  const unitLabel = homeLabel ?? B9_META.unit;
   const vbW = u(B9_EXTENT.w + 16);
   const vbH = u(B9_EXTENT.h + 16);
   const walls = splitB9Walls();
@@ -158,7 +161,7 @@ export function B9ArchitecturalPlan({
         RV UDDIIPTA · B-BLOCK · EAST OF B8
       </text>
       <text x="-50" y="-34" fill="#14241c" fontSize="20" fontWeight="700">
-        {B9_META.unit} · {B9_META.type}
+        {unitLabel} · {B9_META.type}
       </text>
       <text x="160" y="-34" fill="#3d5247" fontSize="11">
         SBUA {B9_META.sbuaSft.toLocaleString()} sft · Carpet {B9_META.carpetSft.toLocaleString()} sft · Balcony{" "}
@@ -320,7 +323,7 @@ export function B9ArchitecturalPlan({
 
       <circle cx={u(2.7)} cy={u(31.6)} r="11" fill="#c0392b" />
       <text x={u(2.7)} y={u(32)} textAnchor="middle" fill="#fff" fontSize="10" fontWeight="700">
-        B9
+        {unitLabel}
       </text>
 
       <NorthRose x={-110} y={u(8)} />

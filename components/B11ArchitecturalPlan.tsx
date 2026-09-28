@@ -168,9 +168,12 @@ function Bed({ x, y, w, h }: { readonly x: number; readonly y: number; readonly 
 
 export function B11ArchitecturalPlan({
   framed = true,
+  homeLabel,
 }: {
   readonly framed?: boolean
+  readonly homeLabel?: string
 }) {
+  const unitLabel = homeLabel ?? B11_META.unit;
   const vbW = u(B11_EXTENT.w + 16);
   const vbH = u(B11_EXTENT.h + 16);
   const walls = splitB11Walls();
@@ -192,7 +195,7 @@ export function B11ArchitecturalPlan({
         RV UDDIIPTA · B-BLOCK · EAST OF B10
       </text>
       <text x="-50" y="-34" fill="#14241c" fontSize="20" fontWeight="700">
-        {B11_META.unit} · {B11_META.type}
+        {unitLabel} · {B11_META.type}
       </text>
       <text x="210" y="-34" fill="#3d5247" fontSize="11">
         SBUA {B11_META.sbuaSft.toLocaleString()} sft
@@ -403,7 +406,7 @@ export function B11ArchitecturalPlan({
 
       <circle cx={u(2.6)} cy={u(21.6)} r="11" fill="#c0392b" />
       <text x={u(2.6)} y={u(22)} textAnchor="middle" fill="#fff" fontSize="10" fontWeight="700">
-        B11
+        {unitLabel}
       </text>
 
       <NorthRose x={-118} y={u(8)} />

@@ -141,9 +141,12 @@ function WetFixture({
 
 export function A10ArchitecturalPlan({
   framed = true,
+  homeLabel,
 }: {
   readonly framed?: boolean
+  readonly homeLabel?: string
 }) {
+  const unitLabel = homeLabel ?? A10_META.unit;
   const vbX = -90;
   const vbY = -70;
   const vbW = u(A10_EXTENT.w + 16);
@@ -167,7 +170,7 @@ export function A10ArchitecturalPlan({
         RV UDDIIPTA · A-BLOCK · EAST OF A9
       </text>
       <text x="0" y="-28" fill="#14241c" fontSize="20" fontWeight="700">
-        {A10_META.unit} · {A10_META.type}
+        {unitLabel} · {A10_META.type}
       </text>
       <text x="230" y="-28" fill="#3d5247" fontSize="11">
         SBUA {A10_META.sbuaSft.toLocaleString()} sft · Carpet {A10_META.carpetSft.toLocaleString()} sft · Balcony{" "}

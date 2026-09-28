@@ -11,88 +11,6 @@ type NavItem = {
   icon: "home" | "feed" | "floors" | "model" | "flat" | "admin" | "bell" | "people"
 };
 
-function SidebarAccountCard({
-  isSuperAdmin,
-  accountLabel,
-  flatNumber,
-  pendingApproval,
-  active = false,
-}: {
-  readonly isSuperAdmin: boolean
-  readonly accountLabel: string | null
-  readonly flatNumber: string | null
-  readonly pendingApproval: boolean
-  readonly active?: boolean
-}) {
-  if (isSuperAdmin) {
-    return (
-      <Link
-        href="/account"
-        className={`relative mb-5 overflow-hidden rounded-2xl bg-gradient-to-br from-[rgba(201,164,92,0.22)] to-[rgba(255,255,255,0.04)] px-3.5 py-3.5 ring-1 ${
-          active
-            ? "ring-[#c9a45c]"
-            : "ring-[rgba(232,213,163,0.16)]"
-        }`}
-      >
-        <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#c9a45c] uppercase">
-          Super admin
-        </p>
-        <p className="mt-1 truncate text-sm font-semibold">
-          {accountLabel || "Account"}
-        </p>
-        <span className="mt-2 inline-block text-xs font-semibold text-[#e8d5a3]">
-          Admin home
-        </span>
-      </Link>
-    );
-  }
-
-  if (flatNumber) {
-    return (
-      <Link
-        href="/update"
-        className="relative mb-5 overflow-hidden rounded-2xl bg-gradient-to-br from-[rgba(201,164,92,0.22)] to-[rgba(255,255,255,0.04)] px-3.5 py-3.5 ring-1 ring-[rgba(232,213,163,0.16)] transition-transform hover:scale-[1.01]"
-      >
-        <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#c9a45c] uppercase">
-          Your flat
-        </p>
-        <div className="mt-1 flex items-end justify-between gap-2">
-          <p className="text-2xl font-semibold tracking-tight">{flatNumber}</p>
-          <span className="pb-0.5 text-xs font-semibold text-[#cbb98a]">
-            Manage →
-          </span>
-        </div>
-      </Link>
-    );
-  }
-
-  if (pendingApproval) {
-    return (
-      <div className="relative mb-5 rounded-2xl bg-[rgba(201,164,92,0.12)] px-3.5 py-3.5 ring-1 ring-[rgba(201,164,92,0.2)]">
-        <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#c9a45c] uppercase">
-          Access
-        </p>
-        <p className="mt-1 text-sm font-semibold">Waiting for approval</p>
-        <Link
-          href="/register"
-          className="mt-2 inline-block text-xs font-semibold text-[#e8d5a3] underline underline-offset-2"
-        >
-          View request
-        </Link>
-      </div>
-    );
-  }
-
-  return (
-    <Link
-      href="/register"
-      className="relative mb-5 rounded-2xl bg-[rgba(201,164,92,0.14)] px-3.5 py-3.5 text-sm font-semibold text-[#e8d5a3] ring-1 ring-[rgba(201,164,92,0.22)]"
-    >
-      Link your flat →
-    </Link>
-  );
-}
-
 function NavIcon({
   name,
   className = "size-4",
@@ -172,12 +90,138 @@ function NavIcon({
   }
 }
 
+function PanelSwitcher({
+  inAdmin,
+  adminHref,
+  pendingApprovals,
+  compact = false,
+}: {
+  readonly inAdmin: boolean
+  readonly adminHref: string
+  readonly pendingApprovals: number
+  readonly compact?: boolean
+}) {
+  const pill = (active: boolean) =>
+    `relative flex min-h-10 flex-1 items-center justify-center rounded-xl text-xs font-semibold ${
+      active
+        ? "bg-[#c9a45c] text-[#14241c]"
+        : compact
+          ? "text-[#3d5247]"
+          : "text-[#cbb98a] hover:text-[#f7f2e6]"
+    }`;
+
+  return (
+    <div
+      className={`grid grid-cols-2 gap-1 rounded-2xl p-1 ${
+        compact ? "bg-[rgba(27,58,47,0.08)]" : "mb-5 bg-black/25"
+      }`}
+      role="tablist"
+      aria-label="Workspace"
+    >
+      <Link href="/" className={pill(!inAdmin)} role="tab" aria-selected={!inAdmin}>
+        Owners
+      </Link>
+      <Link href={adminHref} className={pill(inAdmin)} role="tab" aria-selected={inAdmin}>
+        Admin
+        {pendingApprovals > 0 ? (
+          <span
+            className={`ml-1 grid min-w-4 place-items-center rounded-full px-1 text-[10px] font-bold ${
+              inAdmin ? "bg-[#14241c] text-[#e8d5a3]" : "bg-[#c9a45c] text-[#14241c]"
+            }`}
+          >
+            {pendingApprovals > 9 ? "9+" : pendingApprovals}
+          </span>
+        ) : null}
+      </Link>
+    </div>
+  );
+}
+
+function SidebarAccountCard({
+  inAdmin,
+  isSuperAdmin,
+  accountLabel,
+  flatNumber,
+  pendingApproval,
+}: {
+  readonly inAdmin: boolean
+  readonly isSuperAdmin: boolean
+  readonly accountLabel: string | null
+  readonly flatNumber: string | null
+  readonly pendingApproval: boolean
+}) {
+  if (inAdmin) {
+    return (
+      <div className="relative mb-5 overflow-hidden rounded-2xl bg-gradient-to-br from-[rgba(201,164,92,0.22)] to-[rgba(255,255,255,0.04)] px-3.5 py-3.5 ring-1 ring-[rgba(232,213,163,0.16)]">
+        <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#c9a45c] uppercase">
+          {isSuperAdmin ? "Super admin" : "Admin"}
+        </p>
+        <p className="mt-1 truncate text-sm font-semibold">
+          {accountLabel || "Account"}
+        </p>
+      </div>
+    );
+  }
+
+  if (flatNumber) {
+    return (
+      <Link
+        href="/"
+        className="relative mb-5 overflow-hidden rounded-2xl bg-gradient-to-br from-[rgba(201,164,92,0.22)] to-[rgba(255,255,255,0.04)] px-3.5 py-3.5 ring-1 ring-[rgba(232,213,163,0.16)]"
+      >
+        <p className="text-2xl font-semibold tracking-tight">{flatNumber}</p>
+        <span className="mt-1 block text-xs font-semibold text-[#cbb98a]">
+          Manage →
+        </span>
+      </Link>
+    );
+  }
+
+  if (pendingApproval) {
+    return (
+      <div className="relative mb-5 rounded-2xl bg-[rgba(201,164,92,0.12)] px-3.5 py-3.5 ring-1 ring-[rgba(201,164,92,0.2)]">
+        <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#c9a45c] uppercase">
+          Access
+        </p>
+        <p className="mt-1 text-sm font-semibold">Waiting for approval</p>
+        <Link
+          href="/register"
+          className="mt-2 inline-block text-xs font-semibold text-[#e8d5a3] underline underline-offset-2"
+        >
+          View request
+        </Link>
+      </div>
+    );
+  }
+
+  if (isSuperAdmin) {
+    return (
+      <div className="relative mb-5 rounded-2xl bg-[rgba(255,255,255,0.04)] px-3.5 py-3.5 ring-1 ring-[rgba(232,213,163,0.16)]">
+        <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#c9a45c] uppercase">
+          Viewing as
+        </p>
+        <p className="mt-1 truncate text-sm font-semibold">
+          {accountLabel || "Community"}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      href="/register"
+      className="relative mb-5 rounded-2xl bg-[rgba(201,164,92,0.14)] px-3.5 py-3.5 text-sm font-semibold text-[#e8d5a3] ring-1 ring-[rgba(201,164,92,0.22)]"
+    >
+      Link your flat →
+    </Link>
+  );
+}
+
 export function OwnersShell({
   children,
   isAdmin = false,
   isSuperAdmin = false,
   canEditBuilder = false,
-  showMyFlat = false,
   showPrivateCommunity = false,
   flatNumber = null,
   pendingApproval = false,
@@ -189,7 +233,6 @@ export function OwnersShell({
   isAdmin?: boolean
   isSuperAdmin?: boolean
   canEditBuilder?: boolean
-  showMyFlat?: boolean
   showPrivateCommunity?: boolean
   flatNumber?: string | null
   pendingApproval?: boolean
@@ -199,6 +242,9 @@ export function OwnersShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const canSwitch = isSuperAdmin || isAdmin || canEditBuilder;
+  const inAdmin = pathname.startsWith("/account");
+  const adminHref = isSuperAdmin || isAdmin ? "/account" : "/account/builder";
 
   async function logout() {
     const supabase = createClient();
@@ -207,8 +253,8 @@ export function OwnersShell({
     router.push("/");
   }
 
-  const explore: NavItem[] = [
-    { href: "/", label: "Dashboard", match: (p) => p === "/", icon: "home" },
+  const ownerNav: NavItem[] = [
+    { href: "/", label: "My home", match: (p) => p === "/", icon: "home" },
     {
       href: "/community",
       label: "Community",
@@ -217,30 +263,32 @@ export function OwnersShell({
     },
   ];
   if (showPrivateCommunity) {
-    explore.splice(
-      1,
-      0,
-      {
-        href: "/feed",
-        label: "Feed",
-        match: (p) => p.startsWith("/feed"),
-        icon: "feed",
-      },
-    );
-    explore.push({
+    ownerNav.splice(1, 0, {
+      href: "/feed",
+      label: "Feed",
+      match: (p) => p.startsWith("/feed"),
+      icon: "feed",
+    });
+    ownerNav.push({
       href: "/members",
-      label: "Members",
+      label: "Directory",
       match: (p) => p.startsWith("/members"),
       icon: "people",
     });
   }
+  ownerNav.push({
+    href: "/notifications",
+    label: "Alerts",
+    match: (p) => p.startsWith("/notifications"),
+    icon: "bell",
+  });
 
-  const account: NavItem[] = [];
+  const adminNav: NavItem[] = [];
   if (isSuperAdmin || isAdmin) {
-    account.push(
+    adminNav.push(
       {
         href: "/account",
-        label: "Admin",
+        label: "Approvals",
         match: (p) => p === "/account",
         icon: "admin",
       },
@@ -250,94 +298,38 @@ export function OwnersShell({
         match: (p) => p.startsWith("/account/owners"),
         icon: "flat",
       },
-    );
-  }
-  if (isSuperAdmin || isAdmin || canEditBuilder) {
-    account.push(
       {
-        href: "/account/builder",
-        label: "Builder",
-        match: (p) => p.startsWith("/account/builder"),
-        icon: "model",
+        href: "/account/roles",
+        label: "People",
+        match: (p) => p.startsWith("/account/roles"),
+        icon: "people",
       },
     );
   }
-  if (isSuperAdmin || isAdmin) {
-    account.push({
-      href: "/account/roles",
-      label: "People",
-      match: (p) => p.startsWith("/account/roles"),
-      icon: "people",
+  if (isSuperAdmin || isAdmin || canEditBuilder) {
+    adminNav.push({
+      href: "/account/builder",
+      label: "Builder",
+      match: (p) => p.startsWith("/account/builder"),
+      icon: "model",
     });
   }
 
-  const personal: NavItem[] = [
-    {
-      href: "/notifications",
-      label: "Notifications",
-      match: (p) => p.startsWith("/notifications"),
-      icon: "bell",
-    },
-  ];
+  const navItems = inAdmin ? adminNav : ownerNav;
+  const homeItem = ownerNav.find((item) => item.href === "/")!;
+  const communityItem = ownerNav.find((item) => item.href === "/community")!;
+  const feedItem = ownerNav.find((item) => item.href === "/feed");
+  const directoryItem = ownerNav.find((item) => item.href === "/members");
+  const alertsItem = ownerNav.find((item) => item.href === "/notifications")!;
 
-  if (showMyFlat) {
-    personal.push({
-      href: "/update",
-      label: "My flat",
-      match: (p) => p.startsWith("/update"),
-      icon: "flat",
-    });
-  }
-
-  const dashboardItem = explore.find((item) => item.href === "/")!;
-  const communityItem = explore.find((item) => item.href === "/community")!;
-  const feedItem = explore.find((item) => item.href === "/feed");
-  const membersItem = explore.find((item) => item.href === "/members");
-  const manageMobile = isSuperAdmin || isAdmin;
-  const mobileItems = manageMobile
-    ? [
-        {
-          href: "/account",
-          label: "Admin",
-          match: (p: string) => p === "/account",
-          icon: "admin" as const,
-        },
-        {
-          href: "/account/owners",
-          label: "Owners",
-          match: (p: string) => p.startsWith("/account/owners"),
-          icon: "flat" as const,
-        },
-        {
-          href: "/account/roles",
-          label: "People",
-          match: (p: string) => p.startsWith("/account/roles"),
-          icon: "people" as const,
-        },
-        dashboardItem,
-      ]
+  const mobileItems = inAdmin
+    ? adminNav.slice(0, 4)
     : [
-        dashboardItem,
-        communityItem,
+        homeItem,
         ...(feedItem ? [feedItem] : []),
-        ...(membersItem ? [membersItem] : []),
-        ...(showMyFlat
-          ? [
-              {
-                href: "/update",
-                label: "My flat",
-                match: (p: string) => p.startsWith("/update"),
-                icon: "flat" as const,
-              },
-            ]
-          : [
-              {
-                href: "/notifications",
-                label: "Alerts",
-                match: (p: string) => p.startsWith("/notifications"),
-                icon: "bell" as const,
-              },
-            ]),
+        communityItem,
+        ...(directoryItem ? [directoryItem] : []),
+        alertsItem,
       ];
 
   function sideLink(item: NavItem) {
@@ -385,21 +377,15 @@ export function OwnersShell({
     );
   }
 
-  function section(title: string, items: NavItem[]) {
-    if (!items.length) return null;
-    return (
-      <div className="mb-5">
-        <p className="mb-1.5 px-3 text-[0.65rem] font-semibold tracking-[0.16em] text-[#9a8a60] uppercase">
-          {title}
-        </p>
-        <div className="flex flex-col gap-0.5">{items.map(sideLink)}</div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden md:flex-row">
-      <aside className="relative z-30 hidden h-full w-[min(16.5rem,100%)] shrink-0 flex-col border-r border-[rgba(232,213,163,0.1)] bg-[#102018] px-3 py-4 text-[#f7f2e6] md:flex">
+      <aside
+        className={`relative z-30 hidden h-full w-[min(16.5rem,100%)] shrink-0 flex-col border-r px-3 py-4 text-[#f7f2e6] md:flex ${
+          inAdmin
+            ? "border-[rgba(201,164,92,0.16)] bg-[#0c1612]"
+            : "border-[rgba(232,213,163,0.1)] bg-[#102018]"
+        }`}
+      >
         <div
           className="pointer-events-none absolute inset-x-0 top-0 h-40 opacity-80"
           aria-hidden
@@ -409,7 +395,7 @@ export function OwnersShell({
           }}
         />
 
-        <Link href="/" className="relative mb-5 flex items-center gap-3 px-2">
+        <Link href={inAdmin ? adminHref : "/"} className="relative mb-4 flex items-center gap-3 px-2">
           <span className="grid h-10 w-10 place-items-center rounded-2xl bg-[#c9a45c] text-xs font-bold tracking-wide text-[#14241c] shadow-[0_8px_24px_rgba(0,0,0,0.25)]">
             RV
           </span>
@@ -418,23 +404,29 @@ export function OwnersShell({
               UDDIIPTA
             </strong>
             <span className="text-[0.68rem] font-medium tracking-[0.14em] text-[#b0a070] uppercase">
-              Owners portal
+              {inAdmin ? "Admin" : "Owners"}
             </span>
           </span>
         </Link>
 
+        {canSwitch ? (
+          <PanelSwitcher
+            inAdmin={inAdmin}
+            adminHref={adminHref}
+            pendingApprovals={pendingApprovals}
+          />
+        ) : null}
+
         <SidebarAccountCard
+          inAdmin={inAdmin}
           isSuperAdmin={isSuperAdmin}
           accountLabel={accountLabel}
           flatNumber={flatNumber}
           pendingApproval={pendingApproval}
-          active={pathname.startsWith("/account")}
         />
 
         <nav className="relative flex min-h-0 flex-1 flex-col overflow-y-auto pr-0.5">
-          {section(isSuperAdmin || isAdmin ? "Admin" : "Manage", account)}
-          {section("Explore", explore)}
-          {section("You", personal)}
+          <div className="flex flex-col gap-0.5">{navItems.map(sideLink)}</div>
         </nav>
 
         <div className="relative mt-2 border-t border-[rgba(232,213,163,0.1)] pt-3">
@@ -463,42 +455,54 @@ export function OwnersShell({
 
       <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <header
-          className="sticky top-0 z-20 flex shrink-0 items-center justify-between gap-3 border-b border-[rgba(27,58,47,0.1)] bg-[#efe8d8]/92 px-3 py-2 backdrop-blur-md md:hidden"
+          className="sticky top-0 z-20 shrink-0 border-b border-[rgba(27,58,47,0.1)] bg-[#efe8d8]/92 px-3 py-2 backdrop-blur-md md:hidden"
           style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}
         >
-          <Link href="/" className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#1b3a2f] text-[10px] font-bold text-[#e8d5a3]">
-              RV
-            </span>
-            <span className="text-sm font-semibold text-[#14241c]">
-              {flatNumber ? flatNumber : "UDDIIPTA"}
-            </span>
-          </Link>
-          <div className="flex items-center gap-1">
-            <Link
-              href="/notifications"
-              className="relative grid size-10 place-items-center rounded-full text-[#1b3a2f] hover:bg-[rgba(27,58,47,0.06)]"
-              aria-label={
-                unreadNotifications
-                  ? `${unreadNotifications} unread notifications`
-                  : "Notifications"
-              }
-            >
-              <NavIcon name="bell" className="size-5" />
-              {unreadNotifications > 0 ? (
-                <span className="absolute top-1.5 right-1.5 grid min-w-4 place-items-center rounded-full bg-[#c9a45c] px-1 text-[10px] font-bold text-[#14241c]">
-                  {unreadNotifications > 9 ? "9+" : unreadNotifications}
-                </span>
-              ) : null}
+          <div className="flex items-center justify-between gap-3">
+            <Link href={inAdmin ? adminHref : "/"} className="flex items-center gap-2">
+              <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#1b3a2f] text-[10px] font-bold text-[#e8d5a3]">
+                RV
+              </span>
+              <span className="text-sm font-semibold text-[#14241c]">
+                {inAdmin ? "Admin" : flatNumber ? flatNumber : "UDDIIPTA"}
+              </span>
             </Link>
-            <button
-              type="button"
-              onClick={logout}
-              className="min-h-10 rounded-full px-3 text-sm font-semibold text-[#3d5247]"
-            >
-              Sign out
-            </button>
+            <div className="flex items-center gap-1">
+              <Link
+                href="/notifications"
+                className="relative grid size-10 place-items-center rounded-full text-[#1b3a2f] hover:bg-[rgba(27,58,47,0.06)]"
+                aria-label={
+                  unreadNotifications
+                    ? `${unreadNotifications} unread notifications`
+                    : "Notifications"
+                }
+              >
+                <NavIcon name="bell" className="size-5" />
+                {unreadNotifications > 0 ? (
+                  <span className="absolute top-1.5 right-1.5 grid min-w-4 place-items-center rounded-full bg-[#c9a45c] px-1 text-[10px] font-bold text-[#14241c]">
+                    {unreadNotifications > 9 ? "9+" : unreadNotifications}
+                  </span>
+                ) : null}
+              </Link>
+              <button
+                type="button"
+                onClick={logout}
+                className="min-h-10 rounded-full px-3 text-sm font-semibold text-[#3d5247]"
+              >
+                Sign out
+              </button>
+            </div>
           </div>
+          {canSwitch ? (
+            <div className="mt-2">
+              <PanelSwitcher
+                inAdmin={inAdmin}
+                adminHref={adminHref}
+                pendingApprovals={pendingApprovals}
+                compact
+              />
+            </div>
+          ) : null}
         </header>
 
         <main className="relative min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-0">
@@ -521,9 +525,7 @@ export function OwnersShell({
                   key={item.href}
                   href={item.href}
                   className={`relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-[10px] font-semibold ${
-                    active
-                      ? "bg-[#1b3a2f] text-[#e8d5a3]"
-                      : "text-[#3d5247]"
+                    active ? "bg-[#1b3a2f] text-[#e8d5a3]" : "text-[#3d5247]"
                   }`}
                 >
                   <NavIcon name={item.icon} className="size-4" />

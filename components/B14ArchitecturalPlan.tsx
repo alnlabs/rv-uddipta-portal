@@ -141,11 +141,18 @@ function WetFixture({
 
 export function B14ArchitecturalPlan({
   framed = true,
+  homeLabel,
+  compact = false,
 }: {
   readonly framed?: boolean
+  readonly homeLabel?: string
+  readonly compact?: boolean
 }) {
+  const unitLabel = homeLabel ?? B14_META.unit;
   const vbW = u(B14_EXTENT.w + 16);
-  const vbH = u(B14_EXTENT.h + 16);
+  const vbH = u(B14_EXTENT.h + (compact ? 8 : 16));
+  const padX = compact ? -128 : -140;
+  const padY = compact ? -28 : -70;
   const walls = splitB14Walls();
   const rooms = [...B14_ROOMS].sort(
     (left, right) =>
@@ -155,21 +162,25 @@ export function B14ArchitecturalPlan({
 
   const drawing = (
     <svg
-      viewBox={`-140 -70 ${vbW} ${vbH}`}
+      viewBox={`${padX} ${padY} ${vbW} ${vbH}`}
       className="h-auto w-full"
       role="img"
-      aria-label="RV Uddiipta B14 typical 3BHK-E architectural base plan"
+      aria-label={`${unitLabel} apartment plan. North at top, east at right.`}
     >
-      <rect x={-140} y={-70} width={vbW} height={vbH} fill="#cfc7b8" />
-      <text x="-50" y="-52" fill="#7a5c22" fontSize="11" fontWeight="700" letterSpacing="1.6">
-        RV UDDIIPTA · B-BLOCK · SOUTH OF B15
-      </text>
-      <text x="-50" y="-34" fill="#14241c" fontSize="20" fontWeight="700">
-        {B14_META.unit} · {B14_META.type}
-      </text>
-      <text x="210" y="-34" fill="#3d5247" fontSize="11">
-        SBUA {B14_META.sbuaSft.toLocaleString()} sft
-      </text>
+      <rect x={padX} y={padY} width={vbW} height={vbH} fill="#cfc7b8" />
+      {compact ? null : (
+        <>
+          <text x="-50" y="-52" fill="#7a5c22" fontSize="11" fontWeight="700" letterSpacing="1.6">
+            RV UDDIIPTA · B-BLOCK · SOUTH OF B15
+          </text>
+          <text x="-50" y="-34" fill="#14241c" fontSize="20" fontWeight="700">
+            {unitLabel} · {B14_META.type}
+          </text>
+          <text x="210" y="-34" fill="#3d5247" fontSize="11">
+            SBUA {B14_META.sbuaSft.toLocaleString()} sft
+          </text>
+        </>
+      )}
       <text x={u(22)} y={-16} textAnchor="middle" fill="#c45a12" fontSize="12" fontWeight="700">
         NORTH
       </text>
@@ -364,9 +375,16 @@ export function B14ArchitecturalPlan({
         AC ledge
       </text>
 
-      <circle cx={u(2.6)} cy={u(20.8)} r="11" fill="#c0392b" />
-      <text x={u(2.6)} y={u(21.2)} textAnchor="middle" fill="#fff" fontSize="10" fontWeight="700">
-        B14
+      <circle cx={u(2.6)} cy={u(20.8)} r={unitLabel.length > 3 ? 13 : 11} fill="#c0392b" />
+      <text
+        x={u(2.6)}
+        y={u(21.2)}
+        textAnchor="middle"
+        fill="#fff"
+        fontSize={unitLabel.length > 3 ? 8 : 10}
+        fontWeight="700"
+      >
+        {unitLabel}
       </text>
 
       <NorthRose x={-118} y={u(7)} />
@@ -379,14 +397,23 @@ export function B14ArchitecturalPlan({
   if (!framed) return drawing;
 
   return (
-    <figure className="rounded-2xl bg-[#ebe6dc] p-3 ring-1 ring-[rgba(27,58,47,0.12)] md:p-5">
+    <figure className="rounded-2xl bg-[#ebe6dc] p-2 ring-1 ring-[rgba(27,58,47,0.12)] md:p-3">
       {drawing}
-      <figcaption className="mt-3 text-xs leading-5 text-[#3d5247]">
-        Typical <strong>B14</strong> (south of B15). North is the top of this drawing. 3BHK-E with
-        separate dining and puja — no store. Kitchen 10'-½" × 7'-9" sits under the 4' wash. Drawing
-        is 16' × 11". Bedroom 1 has a 4' east balcony; bedroom 3 has a 5' east balcony. Toilet 3
-        sits between the two south bedrooms. West corridor and AC ledge are outside B14. No
-        furniture. Apartment is not rotated or mirrored.
+      <figcaption className="mt-2 text-xs leading-5 text-[#3d5247]">
+        {compact ? (
+          <>
+            <strong>{unitLabel}</strong>
+            {" · North up · East right · West corridor"}
+          </>
+        ) : (
+          <>
+            Typical <strong>B14</strong> (south of B15). North is the top of this drawing. 3BHK-E with
+            separate dining and puja — no store. Kitchen 10'-½" × 7'-9" sits under the 4' wash. Drawing
+            is 16' × 11". Bedroom 1 has a 4' east balcony; bedroom 3 has a 5' east balcony. Toilet 3
+            sits between the two south bedrooms. West corridor and AC ledge are outside B14. No
+            furniture. Apartment is not rotated or mirrored.
+          </>
+        )}
       </figcaption>
     </figure>
   );

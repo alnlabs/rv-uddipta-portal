@@ -165,3 +165,7 @@ a,
 [role="tab"] {
   touch-action: manipulation;
 }
+
+button:not(:disabled) {
+  cursor: pointer;
+}

@@ -65,6 +65,56 @@ function periodLabel(renter: MemberRenter) {
   return null;
 }
 
+type Filter = "all" | "owners" | "tenants" | "family";
+
+type DirectoryPerson = {
+  id: string
+  name: string
+  photoUrl: string | null
+  flatNumber: string
+  wing: string
+  role: "Owner" | "Tenant" | "Family"
+  card: MemberCard
+};
+
+function peopleFromFlats(flats: MemberCard[]): DirectoryPerson[] {
+  const people: DirectoryPerson[] = [];
+  for (const flat of flats) {
+    people.push({
+      id: `owner-${flat.flatNumber}`,
+      name: flat.ownerName,
+      photoUrl: flat.ownerPhotoUrl,
+      flatNumber: flat.flatNumber,
+      wing: flat.wing,
+      role: "Owner",
+      card: flat,
+    });
+    if (flat.tenantName) {
+      people.push({
+        id: `tenant-${flat.flatNumber}-${flat.tenantName}`,
+        name: flat.tenantName,
+        photoUrl: null,
+        flatNumber: flat.flatNumber,
+        wing: flat.wing,
+        role: "Tenant",
+        card: flat,
+      });
+    }
+    for (const member of flat.members) {
+      people.push({
+        id: `family-${flat.flatNumber}-${member.name}`,
+        name: member.name,
+        photoUrl: member.photoUrl,
+        flatNumber: flat.flatNumber,
+        wing: flat.wing,
+        role: "Family",
+        card: flat,
+      });
+    }
+  }
+  return people.sort((a, b) => a.name.localeCompare(b.name));
+}
+
 export function MembersDirectory({
   flats,
   initialQuery = "",
@@ -73,7 +123,22 @@ export function MembersDirectory({
   initialQuery?: string
 }) {
   const [selected, setSelected] = useState<MemberCard | null>(null);
+  const [filter, setFilter] = useState<Filter>("all");
   const titleId = useId();
+  const people = peopleFromFlats(flats).filter((person) => {
+    if (filter === "owners") return person.role === "Owner";
+    if (filter === "tenants") return person.role === "Tenant";
+    if (filter === "family") return person.role === "Family";
+    return true;
+  });
+  const groups = new Map<string, DirectoryPerson[]>();
+  for (const person of people) {
+    const letter = (person.name[0] || "#").toUpperCase();
+    const list = groups.get(letter) ?? [];
+    list.push(person);
+    groups.set(letter, list);
+  }
+  const letters = [...groups.keys()].sort();
 
   useEffect(() => {
     if (!selected) return;
@@ -91,103 +156,80 @@ export function MembersDirectory({
 
   return (
     <>
-      <form className="mt-5 flex gap-2">
+      <form className="mt-6 flex gap-3 border-b border-[rgba(27,58,47,0.1)] pb-3">
         <input
           name="q"
           defaultValue={initialQuery}
-          placeholder="Search flat, owner, or member"
-          className="min-h-11 flex-1 rounded-xl border border-[rgba(27,58,47,0.14)] bg-[#fffcf5] px-3 text-sm"
+          placeholder="Search name or flat"
+          className="min-h-11 flex-1 border-0 bg-transparent px-0 text-base outline-none"
         />
-        <button
-          type="submit"
-          className="min-h-11 rounded-full bg-[#1b3a2f] px-4 text-sm font-semibold text-[#e8d5a3]"
-        >
+        <button type="submit" className="text-sm font-semibold text-[#1b3a2f]">
           Search
         </button>
       </form>
 
-      <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {flats.length === 0 ? (
-          <li className="rounded-2xl bg-[#fffcf5] px-4 py-8 text-center text-sm text-[#3d5247] ring-1 ring-[rgba(27,58,47,0.1)] sm:col-span-2 lg:col-span-3">
-            No members match that search.
-          </li>
-        ) : (
-          flats.map((flat) => (
-            <li key={flat.flatNumber}>
-              <button
-                type="button"
-                onClick={() => setSelected(flat)}
-                className="group flex h-full w-full flex-col rounded-2xl bg-[#fffcf5] p-4 text-left ring-1 ring-[rgba(27,58,47,0.1)] transition-shadow hover:shadow-[0_10px_28px_rgba(20,36,28,0.1)] hover:ring-[rgba(27,58,47,0.22)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1b3a2f]"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <ProfileAvatar
-                      name={flat.ownerName}
-                      photoUrl={flat.ownerPhotoUrl}
-                      size="md"
-                    />
-                    <div className="min-w-0">
-                      <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#7a5c22] uppercase">
-                        {flat.wing ? `Wing ${flat.wing}` : "Flat"} · Floor{" "}
-                        {flat.floor}
-                      </p>
-                      <h2 className="mt-0.5 text-xl font-semibold tracking-tight text-[#14241c]">
-                        {flat.flatNumber}
-                      </h2>
-                    </div>
-                  </div>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase ${saleOccupancyTone(flat.occupancyLabel)}`}
-                  >
-                    {flat.occupancyLabel}
-                  </span>
-                </div>
+      <div className="mt-4 flex flex-wrap gap-4 text-sm">
+        {(
+          [
+            ["all", "All"],
+            ["owners", "Owners"],
+            ["tenants", "Tenants"],
+            ["family", "Family"],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setFilter(id)}
+            className={
+              filter === id
+                ? "border-b-2 border-[#14241c] font-semibold text-[#14241c]"
+                : "text-[#3d5247]"
+            }
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
-                <p className="mt-3 text-sm font-semibold text-[#14241c]">
-                  {flat.ownerName}
-                </p>
-                {flat.ownerEmail ? (
-                  <p className="truncate text-xs text-[#3d5247]">{flat.ownerEmail}</p>
-                ) : null}
-                {flat.phoneMasked ? (
-                  <p className="text-xs tabular-nums text-[#3d5247]">
-                    {flat.phoneMasked}
-                  </p>
-                ) : null}
-                <p className="mt-1 text-xs text-[#3d5247]">
-                  {typeLabel(flat.type)}
-                  {flat.areaSqft
-                    ? ` · ${flat.areaSqft.toLocaleString()} sft`
-                    : ""}
-                </p>
-
-                {flat.members.length > 0 ? (
-                  <div className="mt-3 flex items-center gap-2">
-                    <div className="flex -space-x-2">
-                      {flat.members.slice(0, 4).map((member) => (
-                        <ProfileAvatar
-                          key={`${flat.flatNumber}-${member.name}`}
-                          name={member.name}
-                          photoUrl={member.photoUrl}
-                          size="sm"
-                          tone="member"
-                        />
-                      ))}
-                    </div>
-                    <p className="line-clamp-2 text-xs leading-snug text-[#2f5a48]">
-                      {flat.members.map((member) => member.name).join(", ")}
-                    </p>
-                  </div>
-                ) : null}
-
-                <span className="mt-4 inline-flex min-h-10 w-full items-center justify-center rounded-full bg-[#1b3a2f] px-4 text-sm font-semibold text-[#e8d5a3] transition-colors group-hover:bg-[#14241c]">
-                  Details
-                </span>
-              </button>
-            </li>
-          ))
-        )}
-      </ul>
+      {people.length === 0 ? (
+        <p className="mt-8 text-sm text-[#3d5247]">No residents match that search.</p>
+      ) : (
+        <div className="mt-6">
+          {letters.map((letter) => (
+            <section key={letter} className="mb-6">
+              <h2 className="mb-1 text-sm font-semibold text-[#7a5c22]">{letter}</h2>
+              <ul className="divide-y divide-[rgba(27,58,47,0.08)]">
+                {(groups.get(letter) ?? []).map((person) => (
+                  <li key={person.id}>
+                    <button
+                      type="button"
+                      onClick={() => setSelected(person.card)}
+                      className="flex w-full items-center gap-3 py-3 text-left"
+                    >
+                      <ProfileAvatar
+                        name={person.name}
+                        photoUrl={person.photoUrl}
+                        size="sm"
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-medium text-[#14241c]">
+                          {person.name}
+                        </span>
+                        <span className="block text-sm text-[#3d5247]">
+                          {person.flatNumber}
+                          {person.wing ? ` · Wing ${person.wing}` : ""} ·{" "}
+                          {person.role}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
 
       {selected ? (
         <div

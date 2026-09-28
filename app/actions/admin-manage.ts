@@ -30,6 +30,7 @@ function revalidateOwnerSurfaces() {
   revalidatePath("/community");
   revalidatePath("/members");
   revalidatePath("/model");
+  revalidatePath("/");
   revalidatePath("/update");
 }
 
