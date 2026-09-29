@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { FlatTextFacts, FlatViewSheet, toPlanInput } from "@/components/FlatViews";
 import {
   facingLabel,
@@ -56,14 +56,6 @@ export function FlatListing({
     }));
     return groups.filter((group) => group.flats.length > 0);
   }, [visible]);
-
-  const selectUnit = useCallback(
-    (flatNumber: string) => {
-      const next = flats.find((row) => row.flatNumber === flatNumber);
-      if (next) setOpen(next);
-    },
-    [flats],
-  );
 
   const openPlan = open
     ? toPlanInput({ ...open, floor })
@@ -253,7 +245,6 @@ export function FlatListing({
               : "Flat views"
           }
           onClose={() => setOpen(null)}
-          onSelectUnit={selectUnit}
           text={
             <div className="space-y-4">
               <FlatTextFacts flat={openPlan} />
