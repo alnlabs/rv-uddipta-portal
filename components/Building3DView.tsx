@@ -2199,7 +2199,7 @@ function FlatDetailCard({
             href="/"
             className="inline-flex min-h-10 w-full items-center justify-center rounded-full bg-[#c9a45c] px-4 text-sm font-semibold text-[#14241c]"
           >
-            Open my home
+            Open my flat
           </a>
         </div>
       ) : null}

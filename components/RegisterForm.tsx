@@ -27,18 +27,27 @@ export default function RegisterForm({
     <section className="page-gutter grid max-w-[1100px] place-items-start py-6 md:min-h-[70vh] md:place-items-center md:py-12">
       <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-[rgba(27,58,47,0.12)] bg-[#fffcf5]/95 shadow-xl">
         <div className="bg-[#14241c] px-5 py-5 text-[#f7f2e6] md:px-6">
-          <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">
-            New owner
-          </p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight">
-            Request access
+          <h1 className="text-3xl font-semibold tracking-tight">
+            Request your flat
           </h1>
           <p className="mt-2 text-sm text-[#d8c898]">
-            Signed in as {email}. An admin must approve before you see the board.
+            Signed in as {email}. After approval you land on Updates, and My
+            flat shows this apartment.
           </p>
         </div>
 
         <form action={action} className="flex flex-col gap-4 p-5 md:p-6">
+          <fieldset className="grid gap-2">
+            <legend className="text-sm font-semibold text-[#14241c]">I am</legend>
+            <label className="flex min-h-12 items-center gap-3 rounded-2xl border border-[rgba(27,58,47,0.12)] px-4 text-base">
+              <input type="radio" name="kind" value="owner" defaultChecked />
+              I am the owner
+            </label>
+            <label className="flex min-h-12 items-center gap-3 rounded-2xl border border-[rgba(27,58,47,0.12)] px-4 text-base">
+              <input type="radio" name="kind" value="family" />
+              I am family
+            </label>
+          </fieldset>
           <label className="flex flex-col gap-2 text-sm font-semibold text-[#14241c]">
             Mobile number
             <input
@@ -52,7 +61,7 @@ export default function RegisterForm({
             />
           </label>
           <label className="flex flex-col gap-2 text-sm font-semibold text-[#14241c]">
-            Owner name
+            Your name
             <input
               name="ownerName"
               type="text"

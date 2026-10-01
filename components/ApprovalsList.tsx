@@ -17,6 +17,7 @@ export type AdminRegistrationRequest = {
   phone: string
   status: "pending" | "approved" | "rejected"
   reject_reason: string | null
+  request_kind?: "owner" | "family" | null
 };
 
 type Override = {
@@ -83,11 +84,11 @@ export function ApprovalsList({
       {embedded ? (
         <>
           <h2 className="text-lg font-semibold tracking-tight text-[#14241c]">
-            Owner registrations
+            Waiting
           </h2>
           <p className="mt-1 text-sm text-[#3d5247]">
-            Approve to link a Google account to a brochure flat. Rejecting
-            needs a written reason.
+            Approve or reject. A family request can also be approved by that
+            flat’s owner.
           </p>
         </>
       ) : (
@@ -126,6 +127,16 @@ export function ApprovalsList({
                 </span>
               </div>
               <p className="mt-1">{row.owner_name}</p>
+              <p className="text-sm font-semibold text-[#14241c]">
+                {row.request_kind === "family" ? "Family" : "Owner"}
+              </p>
+              {row.request_kind === "family" ? (
+                <p className="text-sm text-[#3d5247]">
+                  The flat’s owner can also approve this.
+                </p>
+              ) : (
+                <p className="text-sm text-[#3d5247]">Only an admin can approve this.</p>
+              )}
               <p className="text-sm text-[#3d5247]">{row.email || maskPhone(row.phone)}</p>
               <p className="text-sm text-[#3d5247]">{maskPhone(row.phone)}</p>
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">

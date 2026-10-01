@@ -1,20 +1,21 @@
 import { redirect } from "next/navigation";
 import RegisterForm from "@/components/RegisterForm";
-import { isSuperAdmin } from "@/lib/admin";
+import { canManageAdmin, isCommunityRole } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
 
 export default async function RegisterPage() {
-  const { user, supabase } = await getAuthState();
+  const { user, profile, supabase } = await getAuthState();
 
-  if (!user) redirect("/login");
-  if (isSuperAdmin(user)) redirect("/account");
+  if (!user || !profile) redirect("/login");
+  if (canManageAdmin(profile.role, user)) redirect("/account");
+  if (isCommunityRole(profile.role)) redirect("/feed");
 
   const { data: flat } = await supabase
     .from("flats")
     .select("flat_number")
     .eq("user_id", user.id)
     .maybeSingle();
-  if (flat) redirect("/");
+  if (flat) redirect("/feed");
 
   const { data: pending } = await supabase
     .from("registration_requests")
@@ -34,8 +35,8 @@ export default async function RegisterPage() {
         </h1>
         <p className="mt-3 text-[#3d5247]">
           Signed in as {user.email}. Your request for flat{" "}
-          <strong>{pending.flat_number}</strong> is with an admin. You can use
-          the portal after they approve it.
+          <strong>{pending.flat_number}</strong> is with an admin. Once they
+          approve it, you land on the feed and My flat shows that apartment.
         </p>
       </section>
     );

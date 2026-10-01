@@ -35,8 +35,11 @@ export default async function NotificationsPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-semibold tracking-tight text-[#14241c] text-[clamp(2rem,5vw,3.25rem)] leading-[1.05]">
-            Notifications
+            My messages
           </h1>
+          <p className="mt-2 text-base text-[#3d5247]">
+            Replies and notices sent to you.
+          </p>
           <p className="mt-2 text-sm text-[#3d5247]">
             {unread ? `${unread} unread` : "You are up to date"}
           </p>

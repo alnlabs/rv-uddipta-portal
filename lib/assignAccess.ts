@@ -66,6 +66,32 @@ export async function applyPersonAccess(
     throw new Error("Unknown access type");
   }
 
+  const { data: currentProfile } = await admin
+    .from("profiles")
+    .select("role, flat_id")
+    .eq("user_id", input.user.id)
+    .maybeSingle();
+  if (
+    currentProfile?.role === "owner" &&
+    currentProfile.flat_id &&
+    (role !== "owner" || !input.flatNumber)
+  ) {
+    const { count } = await admin
+      .from("profiles")
+      .select("user_id", { count: "exact", head: true })
+      .eq("flat_id", currentProfile.flat_id)
+      .eq("role", "owner");
+    if ((count ?? 0) <= 1) {
+      throw new Error(
+        "This flat needs at least one owner. Add another owner before changing this person.",
+      );
+    }
+  }
+
+  if (role === "owner") {
+    if (!input.user.email) throw new Error("This person needs a verified email.");
+  }
+
   let flatId: number | null = null;
   if (input.flatNumber) {
     const { data: flat, error: flatError } = await admin
@@ -76,6 +102,42 @@ export async function applyPersonAccess(
     if (flatError) throw new Error(flatError.message);
     if (!flat) throw new Error(`Flat ${input.flatNumber} is not in the brochure.`);
     flatId = flat.id;
+    if (
+      currentProfile?.role === "owner" &&
+      currentProfile.flat_id &&
+      currentProfile.flat_id !== flatId
+    ) {
+      const { count: ownersLeft } = await admin
+        .from("profiles")
+        .select("user_id", { count: "exact", head: true })
+        .eq("flat_id", currentProfile.flat_id)
+        .eq("role", "owner");
+      if ((ownersLeft ?? 0) <= 1) {
+        throw new Error(
+          "This flat needs at least one owner. Add another owner before moving this person.",
+        );
+      }
+    }
+    if (role === "owner") {
+      const { data: home } = await admin
+        .from("flats")
+        .select("phone, email")
+        .eq("id", flat.id)
+        .maybeSingle();
+      if (!home?.phone || !(home.email || input.user.email)) {
+        throw new Error("Add an email and a phone on Flats before this person can be the owner.");
+      }
+    }
+    if (role === "co_owner") {
+      const { count } = await admin
+        .from("profiles")
+        .select("user_id", { count: "exact", head: true })
+        .eq("flat_id", flat.id)
+        .eq("role", "owner");
+      if ((count ?? 0) < 1) {
+        throw new Error("This flat needs an owner before you can add family.");
+      }
+    }
     if (
       role === "owner" &&
       flat.user_id &&

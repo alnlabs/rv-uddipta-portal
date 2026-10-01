@@ -55,6 +55,27 @@ function stripOwnerPii(flat: PublicFlat): PublicFlat {
   };
 }
 
+export async function loadBrochureBoard(): Promise<BoardPayload> {
+  const db = createAdminClient();
+  const { data: rows, error } = await db
+    .from("flats_brochure")
+    .select()
+    .order("floor")
+    .order("unit");
+  const flats = (rows ?? [])
+    .map((row) => mapPublicFlat(row))
+    .filter((flat): flat is PublicFlat => Boolean(flat))
+    .map(stripOwnerPii);
+  return {
+    flats,
+    membersByFlatId: {},
+    rentersByFlatId: {},
+    data: groupByFloor(flats),
+    error: error?.message ?? "",
+    includeOwners: false,
+  };
+}
+
 /** Load flats for dashboard/community/3D. Visitors get brochure + listing flags only. */
 export async function loadBoardPayload(
   user: User,

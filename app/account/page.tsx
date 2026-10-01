@@ -12,62 +12,35 @@ export default async function AccountApprovalsPage() {
 
   const admin = createAdminClient();
   const requestColumns =
-    "id, flat_number, floor, type, owner_name, email, phone, status, reject_reason";
+    "id, flat_number, floor, type, owner_name, email, phone, status, reject_reason, request_kind";
   const requestsWithEmail = await admin
     .from("registration_requests")
     .select(requestColumns)
     .order("created_at", { ascending: false });
   const requestsResult =
     requestsWithEmail.error &&
-    /column .*email.* does not exist/i.test(requestsWithEmail.error.message)
+    /column .* does not exist/i.test(requestsWithEmail.error.message)
       ? await admin
           .from("registration_requests")
           .select(
-            "id, flat_number, floor, type, owner_name, phone, status, reject_reason",
+            "id, flat_number, floor, type, owner_name, email, phone, status, reject_reason",
           )
           .order("created_at", { ascending: false })
       : requestsWithEmail;
 
-  const [
-    sold,
-    unsold,
-    named,
-    linked,
-    profiles,
-  ] = await Promise.all([
-    admin
-      .from("flats")
-      .select("*", { count: "exact", head: true })
-      .eq("sale_status", "sold"),
-    admin
-      .from("flats")
-      .select("*", { count: "exact", head: true })
-      .eq("sale_status", "unsold"),
-    admin
-      .from("flats")
-      .select("*", { count: "exact", head: true })
-      .not("owner_name", "is", null),
-    admin
-      .from("flats")
-      .select("*", { count: "exact", head: true })
-      .not("user_id", "is", null),
-    admin
-      .from("profiles")
-      .select("*", { count: "exact", head: true }),
-  ]);
+  const { data: flatRows } = await admin
+    .from("flats")
+    .select("owner_name, email, phone");
+  const flatsWithoutOwner = (flatRows ?? []).filter(
+    (flat) => !flat.owner_name || !flat.email || !flat.phone,
+  ).length;
 
   const rows = (requestsResult.data ?? []) as AdminRegistrationRequest[];
 
   return (
     <AdminHome
-      stats={{
-        pending: rows.filter((row) => row.status === "pending").length,
-        sold: sold.count ?? 0,
-        unsold: unsold.count ?? 0,
-        named: named.count ?? 0,
-        linked: linked.count ?? 0,
-        profiles: profiles.count ?? 0,
-      }}
+      waiting={rows.filter((row) => row.status === "pending").length}
+      flatsWithoutOwner={flatsWithoutOwner}
       requests={rows}
       loadError={requestsResult.error?.message ?? null}
     />

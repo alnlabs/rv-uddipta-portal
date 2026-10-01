@@ -70,8 +70,8 @@ export default async function MembersPage({
   return (
     <PageShell>
       <PageTitle
-        title="Directory"
-        lede="Residents of Uddiipta, grouped by name."
+        title="Neighbours"
+        lede="Who lives in which flat."
         action={<p className="text-sm text-[#3d5247]">{sold.length} homes</p>}
       />
       <MembersDirectory flats={sold} initialQuery={params.q || ""} />

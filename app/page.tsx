@@ -1,10 +1,12 @@
 import { DashboardHome } from "@/components/DashboardHome";
+import { FamilyApprovals } from "@/components/FamilyApprovals";
 import { PublicGate } from "@/components/PublicGate";
 import { loadBoardPayload } from "@/lib/boardData";
 import { mapFlatMember, mapFlatRenter, mapOwnedFlat } from "@/lib/flats";
 import { maskPhone } from "@/lib/phone";
 import { isCommunityRole } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
+import { createAdminClient } from "@/utils/supabase/admin";
 
 export default async function Page() {
   const { user, profile, supabase } = await getAuthState();
@@ -16,7 +18,7 @@ export default async function Page() {
   const { data: ownRow } = await supabase
     .from("flats")
     .select()
-    .eq("user_id", user.id)
+    .eq(profile.flatId ? "id" : "user_id", profile.flatId ?? user.id)
     .maybeSingle();
   const ownedFlat = mapOwnedFlat(ownRow);
 
@@ -65,7 +67,23 @@ export default async function Page() {
     flatNumber: ownedFlat?.flatNumber ?? null,
   }));
 
+  const familyWaiting =
+    profile.role === "owner" && ownedFlat
+      ? (
+          await createAdminClient()
+            .from("registration_requests")
+            .select("id, owner_name, phone")
+            .eq("flat_number", ownedFlat.flatNumber)
+            .eq("status", "pending")
+            .eq("request_kind", "family")
+        ).data ?? []
+      : [];
+
   return (
+    <>
+    {familyWaiting.length ? (
+      <FamilyApprovals requests={familyWaiting} />
+    ) : null}
     <DashboardHome
       flats={board.flats}
       includeOwners={board.includeOwners}
@@ -79,5 +97,6 @@ export default async function Page() {
       ownedFlat={ownedFlat}
       ownerPhoneMasked={ownedFlat ? maskPhone(ownedFlat.phone) : ""}
     />
+    </>
   );
 }

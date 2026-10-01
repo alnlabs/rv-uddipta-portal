@@ -60,7 +60,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         : supabase
             .from("flats")
             .select("flat_number")
-            .eq("user_id", user.id)
+            .eq(profile.flatId ? "id" : "user_id", profile.flatId ?? user.id)
             .maybeSingle(),
       supabase
         .from("notifications")

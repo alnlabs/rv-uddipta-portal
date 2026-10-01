@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { publishActivity } from "@/lib/activity";
 import { isSuperAdmin, isSuperAdminContact, SUPER_ADMIN_NO_FLAT } from "@/lib/admin";
-import { requireAdminUser } from "@/lib/session";
+import { getAuthState, requireAdminUser } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -44,10 +44,25 @@ export async function approveRegistration(requestId: number): Promise<ActionResu
       .maybeSingle();
     if (inventoryError) throw new Error(inventoryError.message);
     if (!inventory) throw new Error(`Flat ${request.flat_number} is not in the brochure inventory`);
-    if (inventory.user_id && inventory.user_id !== request.user_id) {
+    if (!request.phone) throw new Error("This person needs a phone number.");
+    if (!request.email) throw new Error("This person needs a verified email.");
+
+    const isFamily = request.request_kind === "family";
+    if (isFamily) {
+      const { data: home } = await admin
+        .from("flats")
+        .select("owner_name, email, phone, user_id")
+        .eq("id", inventory.id)
+        .maybeSingle();
+      const hasOwner = Boolean(home?.user_id || (home?.owner_name && home?.email && home?.phone));
+      if (!hasOwner) {
+        throw new Error("This flat needs an owner before family can be approved.");
+      }
+    } else if (inventory.user_id && inventory.user_id !== request.user_id) {
       throw new Error(`Flat ${request.flat_number} is already linked to another owner`);
     }
 
+    if (!isFamily) {
     const { error: upsertError } = await admin
       .from("flats")
       .update({
@@ -64,6 +79,7 @@ export async function approveRegistration(requestId: number): Promise<ActionResu
       })
       .eq("flat_number", request.flat_number);
     if (upsertError) throw new Error(upsertError.message);
+    }
 
     const { error: updateError } = await admin
       .from("registration_requests")
@@ -86,7 +102,7 @@ export async function approveRegistration(requestId: number): Promise<ActionResu
       });
       await admin.from("profiles").upsert({
         user_id: request.user_id,
-        role: "owner",
+        role: isFamily ? "co_owner" : "owner",
         flat_id: inventory.id,
         display_name: request.owner_name,
       });
@@ -108,6 +124,57 @@ export async function approveRegistration(requestId: number): Promise<ActionResu
     revalidatePath("/feed");
     revalidatePath("/members");
     revalidatePath("/community");
+    return { ok: true };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function approveFamilyAsOwner(requestId: number): Promise<ActionResult> {
+  try {
+    const auth = await getAuthState();
+    if (!auth.user || auth.profile.role !== "owner" || !auth.profile.flatId) {
+      throw new Error("Only the owner of this flat can approve family.");
+    }
+    const admin = createAdminClient();
+    const { data: request, error: loadError } = await admin
+      .from("registration_requests")
+      .select("*")
+      .eq("id", requestId)
+      .single();
+    if (loadError || !request) throw new Error("Request not found");
+    if (request.status !== "pending" || request.request_kind !== "family") {
+      throw new Error("This is not a family request waiting for approval.");
+    }
+    if (!request.phone || !request.email) {
+      throw new Error("This person needs a verified email and a phone.");
+    }
+    const { data: flat } = await admin
+      .from("flats")
+      .select("id")
+      .eq("flat_number", request.flat_number)
+      .maybeSingle();
+    if (!flat || flat.id !== auth.profile.flatId) {
+      throw new Error("You can approve family only for your own flat.");
+    }
+    if (!request.user_id) throw new Error("This request has no Google account.");
+
+    await admin.from("registration_requests").update({
+      status: "approved",
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: auth.user.id,
+    }).eq("id", requestId);
+
+    await admin.from("profiles").upsert({
+      user_id: request.user_id,
+      role: "co_owner",
+      flat_id: flat.id,
+      display_name: request.owner_name,
+    });
+
+    revalidatePath("/");
+    revalidatePath("/account");
+    revalidatePath("/feed");
     return { ok: true };
   } catch (error) {
     return fail(error);

@@ -216,7 +216,7 @@ export function DashboardHome({
       <PageShell wide>
         <p className="text-sm text-[#7a5c22]">{hello}</p>
         <h1 className="mt-2 font-semibold tracking-tight text-[#14241c] text-[clamp(2rem,5vw,3.25rem)] leading-[1.05]">
-          My home
+          My flat
         </h1>
         <p className="mt-3 max-w-xl text-[#3d5247]">
           {includeOwners
@@ -259,8 +259,9 @@ export function DashboardHome({
         <div className="min-w-0">
           <p className="text-sm text-[#7a5c22]">{hello}</p>
           <p className="mt-3 text-xs font-semibold tracking-[0.18em] text-[#7a5c22] uppercase">
-            My home
+            My flat
           </p>
+          <p className="mt-1 text-base text-[#3d5247]">Your apartment only.</p>
           <h1 className="mt-1 font-semibold tracking-tight text-[#14241c] text-[clamp(2.75rem,8vw,4.5rem)] leading-[0.92]">
             {myFlat.flatNumber}
           </h1>
@@ -712,12 +713,12 @@ export function DashboardHome({
           {summary.sold} occupied · {summary.unsold} available
         </p>
         <nav className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
-          <TextLink href="/community?view=3d">Explore site</TextLink>
-          <TextLink href={`/community?floor=${myFlat.floor}`}>
+          <TextLink href="/community?view=building">See the building</TextLink>
+          <TextLink href={`/community?view=floor&floor=${myFlat.floor}`}>
             Floor {myFlat.floor}
           </TextLink>
-          {includeOwners ? <TextLink href="/members">Directory</TextLink> : null}
-          {includeOwners ? <TextLink href="/feed">Community feed</TextLink> : null}
+          {includeOwners ? <TextLink href="/members">Neighbours</TextLink> : null}
+          {includeOwners ? <TextLink href="/feed">Updates</TextLink> : null}
         </nav>
       </section>
 

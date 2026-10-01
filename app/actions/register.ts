@@ -29,10 +29,14 @@ export async function registerOwner(
 
   const phone = normalizePhone(String(formData.get("phone") || ""));
   const ownerName = String(formData.get("ownerName") || "").trim();
+  const kind = String(formData.get("kind") || "owner") === "family" ? "family" : "owner";
   const unit = findInventoryFlat(String(formData.get("flatNumber") || ""));
 
+  if (!user.email) {
+    return { ok: false, message: "Your Google account needs an email." };
+  }
   if (!phone) return { ok: false, message: "Enter a valid 10-digit phone number." };
-  if (ownerName.length < 2) return { ok: false, message: "Owner name is too short." };
+  if (ownerName.length < 2) return { ok: false, message: "Your name is too short." };
   if (!unit) {
     return { ok: false, message: "Enter a brochure flat such as A101 or B1004." };
   }
@@ -50,11 +54,20 @@ export async function registerOwner(
 
   const { data: claimed } = await admin
     .from("flats")
-    .select("user_id")
+    .select("user_id, owner_name, email, phone")
     .eq("flat_number", unit.flatNumber)
     .maybeSingle();
-  if (claimed?.user_id) {
+  const flatHasOwner = Boolean(
+    claimed?.user_id || (claimed?.owner_name && claimed?.email && claimed?.phone),
+  );
+  if (kind === "owner" && claimed?.user_id) {
     return { ok: false, message: `Flat ${unit.flatNumber} is already linked to an owner.` };
+  }
+  if (kind === "family" && !flatHasOwner) {
+    return {
+      ok: false,
+      message: `Flat ${unit.flatNumber} needs an owner before family can join.`,
+    };
   }
 
   const { data: ownFlat } = await admin
@@ -79,14 +92,17 @@ export async function registerOwner(
     return { ok: false, message: "This account is already approved." };
   }
 
-  const { data: openFlat } = await admin
-    .from("registration_requests")
-    .select("id")
-    .eq("flat_number", unit.flatNumber)
-    .eq("status", "pending")
-    .maybeSingle();
-  if (openFlat) {
-    return { ok: false, message: `Flat ${unit.flatNumber} already has a pending request.` };
+  if (kind === "owner") {
+    const { data: openFlat } = await admin
+      .from("registration_requests")
+      .select("id")
+      .eq("flat_number", unit.flatNumber)
+      .eq("status", "pending")
+      .eq("request_kind", "owner")
+      .maybeSingle();
+    if (openFlat) {
+      return { ok: false, message: `Flat ${unit.flatNumber} already has a pending owner request.` };
+    }
   }
 
   await admin.auth.admin.updateUserById(user.id, {
@@ -109,6 +125,7 @@ export async function registerOwner(
     unit: unit.unit,
     type: unit.type,
     status: "pending",
+    request_kind: kind,
   });
 
   if (error) {

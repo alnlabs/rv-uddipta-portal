@@ -1,20 +1,17 @@
 import type { User } from "@supabase/supabase-js";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { isSuperAdmin } from "@/lib/admin";
+import { canManageAdmin, ensureProfile, isCommunityRole } from "@/lib/roles";
+import type { createClient } from "@/utils/supabase/server";
+
+type ServerClient = ReturnType<typeof createClient>;
 
 export async function postLoginPath(
-  supabase: SupabaseClient,
+  supabase: ServerClient,
   user: User | null,
 ) {
   if (!user) return "/login";
-  if (isSuperAdmin(user)) return "/account";
 
-  const { data: flat } = await supabase
-    .from("flats")
-    .select("flat_number")
-    .eq("user_id", user.id)
-    .maybeSingle();
-  if (flat) return "/";
-
-  return "/";
+  const profile = await ensureProfile(user, supabase);
+  if (canManageAdmin(profile.role, user)) return "/account";
+  if (isCommunityRole(profile.role)) return "/feed";
+  return "/register";
 }

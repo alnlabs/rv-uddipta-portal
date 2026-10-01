@@ -19,6 +19,7 @@ export type ProjectInfo = {
   greeneryFacingPercent: number
   nearby: { label: string; distance: string }[]
   amenities: string[]
+  launchDate: string
 };
 
 const FALLBACK: ProjectInfo = {
@@ -36,6 +37,7 @@ const FALLBACK: ProjectInfo = {
   greeneryFacingPercent: BUILDING.greeneryFacingPercent,
   nearby: [...BUILDING.nearby],
   amenities: [...BUILDING.amenities],
+  launchDate: "",
 };
 
 type AnyClient = ReturnType<typeof createClient> | ReturnType<typeof createAdminClient>;
@@ -61,5 +63,6 @@ export async function getProjectInfo(client?: AnyClient): Promise<ProjectInfo> {
     ),
     nearby: Array.isArray(data.nearby) ? data.nearby : FALLBACK.nearby,
     amenities: Array.isArray(data.amenities) ? data.amenities : FALLBACK.amenities,
+    launchDate: data.launch_date || FALLBACK.launchDate,
   };
 }

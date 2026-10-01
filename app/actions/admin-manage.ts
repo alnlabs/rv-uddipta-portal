@@ -90,6 +90,9 @@ export async function adminSaveFlat(formData: FormData) {
   }
 
   assertNotSuperAdminOwner(email, phone);
+  if (!ownerName || !email || !phone) {
+    throw new Error("This flat needs an owner with email and phone.");
+  }
 
   const patch = normalizeSaleFields({
     saleStatus: "sold",
@@ -142,6 +145,20 @@ export async function adminUnlinkFlatUser(
     if (loadError) throw new Error(loadError.message);
     if (!flat) throw new Error(`Flat ${flatNumber} is not in the brochure inventory`);
     if (!flat.user_id) throw new Error("No Google account is linked to this unit.");
+
+    const { count } = await admin
+      .from("profiles")
+      .select("user_id", { count: "exact", head: true })
+      .eq("flat_id", flat.id)
+      .eq("role", "owner");
+    const { data: linkedProfile } = await admin
+      .from("profiles")
+      .select("role")
+      .eq("user_id", flat.user_id)
+      .maybeSingle();
+    if (linkedProfile?.role === "owner" && (count ?? 0) <= 1) {
+      throw new Error("This flat needs at least one owner. Add another owner first.");
+    }
 
     const { error } = await admin
       .from("flats")
@@ -382,6 +399,7 @@ export async function adminSaveBuilder(formData: FormData) {
     name: String(formData.get("name") || "").trim(),
     developer: String(formData.get("developer") || "").trim(),
     tagline: String(formData.get("tagline") || "").trim(),
+    launch_date: String(formData.get("launchDate") || "").trim(),
     location: String(formData.get("location") || "").trim(),
     address: String(formData.get("address") || "").trim(),
     acres: Number(formData.get("acres") || 0),

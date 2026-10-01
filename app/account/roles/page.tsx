@@ -12,7 +12,12 @@ import {
 } from "@/lib/societyPeople";
 import { createAdminClient } from "@/utils/supabase/admin";
 
-export default async function AdminRolesPage() {
+export default async function AdminRolesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ flat?: string; as?: string }>
+}) {
+  const params = await searchParams;
   const { user, profile } = await getAuthState();
   if (!user) redirect("/login");
   if (!canManageAdmin(profile.role, user)) redirect("/account/builder");
@@ -88,19 +93,15 @@ export default async function AdminRolesPage() {
   return (
     <section>
       <h1 className="text-[clamp(2rem,4vw,2.75rem)] font-semibold tracking-tight text-[#14241c]">
-        People
+        Who can sign in
       </h1>
-      <p className="mt-2 max-w-2xl text-sm text-[#3d5247]">
-        Only people already registered in the portal, or already stored as
-        owners / registration requests. Random Google sign-ins are ignored. To
-        add a name to a flat without a login, use{" "}
-        <Link href="/account/owners" className="font-semibold text-[#2f5a48]">
-          Owners
-        </Link>
-        .
+      <p className="mt-2 max-w-2xl text-base text-[#3d5247]">
+        Owner, family, or admin. The super admin cannot be removed.
       </p>
 
       <RoleAssignForm
+        defaultFlat={params.flat || ""}
+        defaultRole={params.as === "family" ? "family" : "owner"}
         candidates={people
           .filter((person) => !person.locked)
           .map((person) => ({

@@ -18,8 +18,8 @@ export const ROLE_GUIDE: {
   },
   {
     value: "co_owner",
-    label: "Co-owner",
-    help: "Same access as the owner on that flat.",
+    label: "Family",
+    help: "Family on that flat. Sees the same home as the owner.",
   },
   {
     value: "tenant",
@@ -58,7 +58,7 @@ export function accessSummary(input: {
   const name = roleLabel(input.role);
   if (input.flatNumber) {
     if (input.role === "owner") return `Owner of ${input.flatNumber}`;
-    if (input.role === "co_owner") return `Co-owner of ${input.flatNumber}`;
+    if (input.role === "co_owner") return `Family of ${input.flatNumber}`;
     if (input.role === "tenant") return `Tenant in ${input.flatNumber}`;
     return `${name} · linked to ${input.flatNumber}`;
   }

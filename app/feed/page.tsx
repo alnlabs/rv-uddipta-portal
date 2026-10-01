@@ -1,120 +1,92 @@
 import { redirect } from "next/navigation";
 import { postBuilderUpdate } from "@/app/actions/activity";
+import { UpdatesBoard, type FeedPost } from "@/components/UpdatesBoard";
 import { isSuperAdmin } from "@/lib/admin";
-import { canEditBuilder, isCommunityRole } from "@/lib/roles";
+import { canEditBuilder, canManageAdmin, isCommunityRole } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
-
-function relativeTime(iso: string) {
-  const ms = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(ms / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
+import { createAdminClient } from "@/utils/supabase/admin";
 
 export default async function FeedPage() {
-  const { user, profile, supabase } = await getAuthState();
+  const { user, profile } = await getAuthState();
   if (!user) redirect("/login");
   const community = isCommunityRole(profile.role) || isSuperAdmin(user);
-  if (!community) redirect("/");
-  const canPost = canEditBuilder(profile.role, user);
+  if (!community) redirect("/register");
 
-  const { data: events, error } = await supabase
-    .from("activity_events")
-    .select("id, kind, title, body, visibility, created_at, flat_id, actor_user_id")
-    .order("created_at", { ascending: false })
-    .limit(80);
+  const admin = createAdminClient();
+  const [{ data: posts }, { data: replies }, { data: notices }] = await Promise.all([
+    admin
+      .from("member_posts")
+      .select("id, author_user_id, author_name, flat_number, body, created_at")
+      .order("created_at", { ascending: false })
+      .limit(40),
+    admin
+      .from("member_replies")
+      .select("id, post_id, author_user_id, author_name, flat_number, body")
+      .order("created_at", { ascending: true }),
+    admin
+      .from("activity_events")
+      .select("id, title, body, created_at, kind")
+      .eq("kind", "builder_update")
+      .order("created_at", { ascending: false })
+      .limit(10),
+  ]);
 
-  const flatIds = [
-    ...new Set(
-      (events ?? [])
-        .map((e) => e.flat_id as number | null)
-        .filter((id): id is number => id != null),
-    ),
-  ];
-  const flatLabels: Record<number, string> = {};
-  if (flatIds.length) {
-    const { data: flats } = await supabase
-      .from("flats")
-      .select("id, flat_number")
-      .in("id", flatIds);
-    for (const row of flats ?? []) {
-      flatLabels[row.id] = row.flat_number;
-    }
+  const repliesByPost = new Map<number, FeedPost["replies"]>();
+  for (const reply of replies ?? []) {
+    const list = repliesByPost.get(reply.post_id) ?? [];
+    list.push(reply);
+    repliesByPost.set(reply.post_id, list);
   }
 
+  const feedPosts: FeedPost[] = (posts ?? []).map((post) => ({
+    ...post,
+    replies: repliesByPost.get(post.id) ?? [],
+  }));
+
   return (
-    <section className="page-gutter max-w-5xl py-8 md:py-12">
-      <h1 className="font-semibold tracking-tight text-[#14241c] text-[clamp(2rem,5vw,3.25rem)] leading-[1.05]">
-        Feed
+    <section className="page-gutter max-w-3xl py-8 md:py-12">
+      <p className="text-sm font-semibold text-[#7a5c22]">Updates</p>
+      <h1 className="mt-2 font-semibold tracking-tight text-[#14241c] text-[clamp(2rem,5vw,3.25rem)] leading-[1.05]">
+        Updates
       </h1>
       <p className="mt-3 max-w-xl text-base text-[#3d5247]">
-        Updates from owners and the builder
-        {!community ? " (public events only)" : ""}.
+        News from the building. You can post, send a request, or send feedback.
       </p>
 
-      {canPost ? (
+      {canEditBuilder(profile.role, user) ? (
         <form
           action={postBuilderUpdate}
           className="mt-8 space-y-3 border-y border-[rgba(27,58,47,0.1)] py-6"
         >
-          <p className="text-sm font-semibold text-[#14241c]">Announcement</p>
+          <p className="text-sm font-semibold text-[#14241c]">Notice</p>
+          <p className="text-sm text-[#3d5247]">
+            A notice is from the admin or the builder. Members cannot post a notice.
+          </p>
           <input
             name="title"
             required
             minLength={3}
             placeholder="Title"
-            className="min-h-11 w-full border-b border-[rgba(27,58,47,0.14)] bg-transparent px-0 text-sm outline-none"
+            className="min-h-12 w-full border-b border-[rgba(27,58,47,0.14)] bg-transparent px-0 text-base outline-none"
           />
           <textarea
             name="body"
             rows={3}
-            placeholder="Optional details"
-            className="w-full border-b border-[rgba(27,58,47,0.14)] bg-transparent px-0 py-2 text-sm outline-none"
+            placeholder="Details"
+            className="w-full border-b border-[rgba(27,58,47,0.14)] bg-transparent px-0 py-2 text-base outline-none"
           />
-          <button
-            type="submit"
-            className="min-h-11 text-sm font-semibold text-[#1b3a2f]"
-          >
-            Post to feed
+          <button type="submit" className="min-h-12 text-base font-semibold text-[#1b3a2f]">
+            Post notice
           </button>
         </form>
       ) : null}
 
-      {error ? <p className="mt-4 text-[#8a2f2f]">{error.message}</p> : null}
-
-      <ul className="mt-8 divide-y divide-[rgba(27,58,47,0.08)]">
-        {(events ?? []).length === 0 ? (
-          <li className="py-8 text-sm text-[#3d5247]">
-            No updates yet. Listing and journey changes will appear here.
-          </li>
-        ) : (
-          (events ?? []).map((event) => (
-            <li key={event.id} className="py-4">
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h2 className="text-base font-semibold text-[#14241c]">
-                  {event.title}
-                </h2>
-                <time className="text-sm text-[#3d5247]">
-                  {relativeTime(event.created_at)}
-                </time>
-              </div>
-              <p className="mt-1 text-sm text-[#3d5247]">
-                {event.kind.replaceAll("_", " ")}
-                {event.flat_id && flatLabels[event.flat_id]
-                  ? ` · ${flatLabels[event.flat_id]}`
-                  : ""}
-              </p>
-              {event.body ? (
-                <p className="mt-2 text-sm text-[#3d5247]">{event.body}</p>
-              ) : null}
-            </li>
-          ))
-        )}
-      </ul>
+      <UpdatesBoard
+        posts={feedPosts}
+        notices={notices ?? []}
+        userId={user.id}
+        canModerate={canManageAdmin(profile.role, user)}
+      />
     </section>
   );
 }

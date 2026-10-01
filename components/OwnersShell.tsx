@@ -118,8 +118,8 @@ function PanelSwitcher({
       role="tablist"
       aria-label="Workspace"
     >
-      <Link href="/" className={pill(!inAdmin)} role="tab" aria-selected={!inAdmin}>
-        Owners
+      <Link href="/feed" className={pill(!inAdmin)} role="tab" aria-selected={!inAdmin}>
+        Members
       </Link>
       <Link href={adminHref} className={pill(inAdmin)} role="tab" aria-selected={inAdmin}>
         Admin
@@ -171,7 +171,7 @@ function SidebarAccountCard({
       >
         <p className="text-2xl font-semibold tracking-tight">{flatNumber}</p>
         <span className="mt-1 block text-xs font-semibold text-[#cbb98a]">
-          Manage →
+          My flat →
         </span>
       </Link>
     );
@@ -245,6 +245,7 @@ export function OwnersShell({
   const canSwitch = isSuperAdmin || isAdmin || canEditBuilder;
   const inAdmin = pathname.startsWith("/account");
   const adminHref = isSuperAdmin || isAdmin ? "/account" : "/account/builder";
+  const ownersHome = showPrivateCommunity ? "/feed" : "/";
 
   async function logout() {
     const supabase = createClient();
@@ -254,10 +255,10 @@ export function OwnersShell({
   }
 
   const ownerNav: NavItem[] = [
-    { href: "/", label: "My home", match: (p) => p === "/", icon: "home" },
+    { href: "/", label: "My flat", match: (p) => p === "/", icon: "flat" },
     {
       href: "/community",
-      label: "Community",
+      label: "Building",
       match: (p) => p.startsWith("/community"),
       icon: "floors",
     },
@@ -265,20 +266,20 @@ export function OwnersShell({
   if (showPrivateCommunity) {
     ownerNav.splice(1, 0, {
       href: "/feed",
-      label: "Feed",
+      label: "Updates",
       match: (p) => p.startsWith("/feed"),
       icon: "feed",
     });
     ownerNav.push({
       href: "/members",
-      label: "Directory",
+      label: "Neighbours",
       match: (p) => p.startsWith("/members"),
       icon: "people",
     });
   }
   ownerNav.push({
     href: "/notifications",
-    label: "Alerts",
+    label: "My messages",
     match: (p) => p.startsWith("/notifications"),
     icon: "bell",
   });
@@ -288,28 +289,36 @@ export function OwnersShell({
     adminNav.push(
       {
         href: "/account",
-        label: "Approvals",
+        label: "New members",
         match: (p) => p === "/account",
         icon: "admin",
       },
       {
         href: "/account/owners",
-        label: "Owners",
+        label: "Flats",
         match: (p) => p.startsWith("/account/owners"),
         icon: "flat",
       },
       {
         href: "/account/roles",
-        label: "People",
+        label: "Who can sign in",
         match: (p) => p.startsWith("/account/roles"),
         icon: "people",
       },
     );
   }
+  if (isSuperAdmin || isAdmin) {
+    adminNav.push({
+      href: "/account/requests",
+      label: "Requests",
+      match: (p) => p.startsWith("/account/requests"),
+      icon: "bell",
+    });
+  }
   if (isSuperAdmin || isAdmin || canEditBuilder) {
     adminNav.push({
       href: "/account/builder",
-      label: "Builder",
+      label: "Building details",
       match: (p) => p.startsWith("/account/builder"),
       icon: "model",
     });
@@ -323,7 +332,7 @@ export function OwnersShell({
   const alertsItem = ownerNav.find((item) => item.href === "/notifications")!;
 
   const mobileItems = inAdmin
-    ? adminNav.slice(0, 4)
+    ? adminNav
     : [
         homeItem,
         ...(feedItem ? [feedItem] : []),
@@ -395,7 +404,7 @@ export function OwnersShell({
           }}
         />
 
-        <Link href={inAdmin ? adminHref : "/"} className="relative mb-4 flex items-center gap-3 px-2">
+        <Link href={inAdmin ? adminHref : ownersHome} className="relative mb-4 flex items-center gap-3 px-2">
           <span className="grid h-10 w-10 place-items-center rounded-2xl bg-[#c9a45c] text-xs font-bold tracking-wide text-[#14241c] shadow-[0_8px_24px_rgba(0,0,0,0.25)]">
             RV
           </span>
@@ -404,7 +413,7 @@ export function OwnersShell({
               UDDIIPTA
             </strong>
             <span className="text-[0.68rem] font-medium tracking-[0.14em] text-[#b0a070] uppercase">
-              {inAdmin ? "Admin" : "Owners"}
+              {inAdmin ? "Admin" : "Members"}
             </span>
           </span>
         </Link>
@@ -459,7 +468,7 @@ export function OwnersShell({
           style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}
         >
           <div className="flex items-center justify-between gap-3">
-            <Link href={inAdmin ? adminHref : "/"} className="flex items-center gap-2">
+            <Link href={inAdmin ? adminHref : ownersHome} className="flex items-center gap-2">
               <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#1b3a2f] text-[10px] font-bold text-[#e8d5a3]">
                 RV
               </span>

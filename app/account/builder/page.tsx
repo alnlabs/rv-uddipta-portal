@@ -15,12 +15,12 @@ export default async function AdminBuilderPage() {
 
   return (
     <section>
-      <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">
-        {showAdminHome ? "Admin" : "Builder"}
-      </p>
-      <h2 className="mt-1 text-2xl font-semibold text-[#14241c]">Builder details</h2>
-      <p className="mt-1 text-sm text-[#3d5247]">
-        These facts appear on the public home page and signed-in dashboard.
+      <h1 className="text-[clamp(2rem,4vw,2.75rem)] font-semibold tracking-tight text-[#14241c]">
+        Building details
+      </h1>
+      <p className="mt-2 text-base text-[#3d5247]">
+        The words members see on Building.
+        {showAdminHome ? "" : " You can edit these. You cannot approve members."}
       </p>
 
       <form
@@ -32,6 +32,7 @@ export default async function AdminBuilderPage() {
             ["name", "Name", project.name],
             ["developer", "Developer", project.developer],
             ["tagline", "Tagline", project.tagline],
+            ["launchDate", "Launch date", project.launchDate],
             ["location", "Location", project.location],
             ["address", "Address", project.address],
             ["rera", "RERA", project.rera],

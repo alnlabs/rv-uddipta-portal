@@ -13,8 +13,12 @@ export type AssignCandidate = {
 
 export function RoleAssignForm({
   candidates,
+  defaultRole = "owner",
+  defaultFlat = "",
 }: {
   readonly candidates: AssignCandidate[]
+  readonly defaultRole?: string
+  readonly defaultFlat?: string
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -84,7 +88,7 @@ export function RoleAssignForm({
           Access
           <select
             name="role"
-            defaultValue="visitor"
+            defaultValue={defaultRole === "family" ? "co_owner" : defaultRole}
             className="mt-1 min-h-11 w-full rounded-xl border border-[rgba(232,213,163,0.2)] bg-[#fffcf5] px-3 font-normal text-[#14241c]"
           >
             {ROLE_GUIDE.map((item) => (
@@ -98,11 +102,12 @@ export function RoleAssignForm({
           Flat
           <input
             name="flatNumber"
+            defaultValue={defaultFlat}
             placeholder="A101"
             className="mt-1 min-h-11 w-full rounded-xl border border-[rgba(232,213,163,0.2)] bg-[#fffcf5] px-3 font-normal text-[#14241c]"
           />
           <span className="mt-1 block text-xs font-normal text-[#d0c090]">
-            Required for owner, co-owner, or tenant.
+            Required for owner or family.
           </span>
         </label>
         <label className="block text-sm font-semibold sm:col-span-2">

@@ -1,51 +1,31 @@
 import { ApprovalsList, type AdminRegistrationRequest } from "@/components/ApprovalsList";
-import { PageTitle } from "@/components/chrome";
-
-export type AdminHomeStats = {
-  pending: number
-  sold: number
-  unsold: number
-  named: number
-  linked: number
-  profiles: number
-};
 
 export function AdminHome({
-  stats,
+  waiting,
+  flatsWithoutOwner,
   requests,
   loadError,
 }: {
-  readonly stats: AdminHomeStats
+  readonly waiting: number
+  readonly flatsWithoutOwner: number
   readonly requests: AdminRegistrationRequest[]
   readonly loadError?: string | null
 }) {
   return (
     <section>
-      <PageTitle
-        kicker="Operations"
-        title="Approvals"
-        lede="Link Google accounts to brochure flats. Owners, people, and builder stay in the admin sidebar."
-      />
-
-      <dl className="mt-6 grid grid-cols-3 gap-x-4 gap-y-3 border-b border-[rgba(27,58,47,0.1)] pb-6 text-sm md:grid-cols-6">
-        {(
-          [
-            [stats.pending, "Waiting"],
-            [stats.sold, "Sold"],
-            [stats.unsold, "Unsold"],
-            [stats.named, "Named"],
-            [stats.linked, "Linked"],
-            [stats.profiles, "Accounts"],
-          ] as const
-        ).map(([value, label]) => (
-          <div key={label}>
-            <dt className="text-[#3d5247]">{label}</dt>
-            <dd className="mt-0.5 text-xl font-semibold text-[#14241c]">{value}</dd>
-          </div>
-        ))}
-      </dl>
-
-      <div id="approvals" className="mt-8 scroll-mt-24">
+      <h1 className="text-[clamp(2rem,4vw,2.75rem)] font-semibold tracking-tight text-[#14241c]">
+        New members
+      </h1>
+      <p className="mt-2 text-base text-[#3d5247]">People waiting for you to approve.</p>
+      <p className="mt-4 text-base text-[#14241c]">
+        {waiting} {waiting === 1 ? "person is" : "people are"} waiting.
+      </p>
+      <p className="mt-1 text-base text-[#14241c]">
+        {flatsWithoutOwner}{" "}
+        {flatsWithoutOwner === 1 ? "flat still has" : "flats still have"} no owner with email
+        and phone.
+      </p>
+      <div className="mt-8">
         {loadError ? <p className="mb-4 text-[#8a2f2f]">{loadError}</p> : null}
         <ApprovalsList requests={requests} embedded />
       </div>

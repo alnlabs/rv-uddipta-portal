@@ -6,7 +6,7 @@ import { canManageAdmin } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
 
-const LIST_COLUMNS = "id, flat_number, owner_name, email, floor, unit";
+const LIST_COLUMNS = "id, flat_number, owner_name, email, phone, floor, unit";
 const LIST_COLUMNS_NO_EMAIL = "id, flat_number, owner_name, floor, unit";
 const DETAIL_COLUMNS =
   "id, flat_number, wing, floor, type, owner_name, email, phone, sale_status, occupancy, tenant_name, tenant_phone, open_for_rent, open_for_resale, user_id";
@@ -18,6 +18,7 @@ type OwnerListRow = {
   flat_number: string
   owner_name: string | null
   email?: string | null
+  phone?: string | null
   floor: number
   unit: number
 };
@@ -156,15 +157,10 @@ export default async function AdminOwnersPage({
 
   return (
     <section>
-      <h2 className="text-[clamp(2rem,4vw,2.75rem)] font-semibold tracking-tight text-[#14241c]">
-        Owners
-      </h2>
-      <p className="mt-1 text-sm text-[#3d5247]">
-        {flats.length} flat{flats.length === 1 ? "" : "s"}
-        {term ? " matching this search" : " in the brochure"}. Update owner,
-        occupancy, tenant, and listing flags. Clearing a unit uses
-        type-to-confirm and never deletes inventory.
-      </p>
+      <h1 className="text-[clamp(2rem,4vw,2.75rem)] font-semibold tracking-tight text-[#14241c]">
+        Flats
+      </h1>
+      <p className="mt-2 text-base text-[#3d5247]">Each apartment and its owner.</p>
 
       <form className="mt-4 flex gap-2">
         <input
@@ -195,7 +191,9 @@ export default async function AdminOwnersPage({
               >
                 <strong>{flat.flat_number}</strong>
                 <span className="mt-0.5 block truncate text-xs opacity-80">
-                  {flat.owner_name || "Unsold"}
+                  {!flat.owner_name || !flat.email || !flat.phone
+                    ? "Needs an owner with email and phone."
+                    : flat.owner_name}
                 </span>
                 {flat.email ? (
                   <span className="mt-0.5 block truncate text-xs opacity-70">
@@ -215,6 +213,20 @@ export default async function AdminOwnersPage({
           >
             <input type="hidden" name="flatNumber" value={editing.flat_number} />
             <h3 className="text-xl font-semibold">{editing.flat_number}</h3>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href={`/account/roles?flat=${editing.flat_number}&as=owner`}
+                className="min-h-11 rounded-full bg-[#1b3a2f] px-4 py-2 text-sm font-semibold text-[#e8d5a3]"
+              >
+                Add owner
+              </Link>
+              <Link
+                href={`/account/roles?flat=${editing.flat_number}&as=family`}
+                className="min-h-11 rounded-full px-4 py-2 text-sm font-semibold text-[#14241c] ring-1 ring-[rgba(27,58,47,0.16)]"
+              >
+                Add family
+              </Link>
+            </div>
             <p className="text-sm text-[#3d5247]">
               Wing {editing.wing} · Floor {editing.floor} · {editing.type}
               {editing.user_id ? " · Linked Google account" : ""}

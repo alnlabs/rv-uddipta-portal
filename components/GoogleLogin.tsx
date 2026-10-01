@@ -35,9 +35,9 @@ export default function GoogleLogin({ error }: { error?: string }) {
           Sign in with Google
         </h1>
         <p className="mt-3 text-[#3d5247]">
-          Use your Google account. Brochure flats, amenities, and sizes are
-          already on the home page. An admin must approve you before you can
-          see owner information.
+          Sign in with Google, then request your flat. After an admin approves
+          you, the portal opens on the community feed. My flat shows your
+          apartment.
         </p>
         <Link href="/" className="mt-2 inline-block text-sm font-semibold text-[#2f5a48]">
           View public project details
