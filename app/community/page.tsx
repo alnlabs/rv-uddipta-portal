@@ -1,24 +1,17 @@
 import { Suspense } from "react";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { ModelFlat } from "@/components/Building3DView";
 import { HomeBoard } from "@/components/HomeBoard";
 import { loadBoardPayload } from "@/lib/boardData";
 import { possessionLabel, saleOccupancyLabel } from "@/lib/flatDisplay";
 import { INVENTORY } from "@/lib/inventory";
-import { ensureProfile, isCommunityRole } from "@/lib/roles";
-import { createClient } from "@/utils/supabase/server";
+import { isCommunityRole } from "@/lib/roles";
+import { getAuthState } from "@/lib/session";
 
 export default async function CommunityPage() {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, profile, supabase } = await getAuthState();
 
   if (!user) redirect("/login");
-
-  const profile = await ensureProfile(user, supabase);
   const board = await loadBoardPayload(user, supabase, profile.role);
   const showOwners = board.includeOwners || isCommunityRole(profile.role);
 

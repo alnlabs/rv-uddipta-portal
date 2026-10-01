@@ -1,22 +1,15 @@
-import { cookies } from "next/headers";
 import { DashboardHome } from "@/components/DashboardHome";
 import { PublicGate } from "@/components/PublicGate";
 import { loadBoardPayload } from "@/lib/boardData";
 import { mapFlatMember, mapFlatRenter, mapOwnedFlat } from "@/lib/flats";
 import { maskPhone } from "@/lib/phone";
-import { ensureProfile, isCommunityRole } from "@/lib/roles";
-import { createClient } from "@/utils/supabase/server";
+import { isCommunityRole } from "@/lib/roles";
+import { getAuthState } from "@/lib/session";
 
 export default async function Page() {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, profile, supabase } = await getAuthState();
 
   if (!user) return <PublicGate />;
-
-  const profile = await ensureProfile(user, supabase);
   const board = await loadBoardPayload(user, supabase, profile.role);
   const community = isCommunityRole(profile.role);
 

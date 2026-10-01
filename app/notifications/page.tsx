@@ -1,11 +1,10 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import {
   markAllNotificationsRead,
   markNotificationRead,
 } from "@/app/actions/activity";
-import { createClient } from "@/utils/supabase/server";
+import { getAuthState } from "@/lib/session";
 
 function relativeTime(iso: string) {
   const ms = Date.now() - new Date(iso).getTime();
@@ -19,11 +18,7 @@ function relativeTime(iso: string) {
 }
 
 export default async function NotificationsPage() {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, supabase } = await getAuthState();
   if (!user) redirect("/login");
 
   const { data: rows, error } = await supabase

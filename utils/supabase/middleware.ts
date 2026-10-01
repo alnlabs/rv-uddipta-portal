@@ -5,6 +5,13 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
 export async function updateSession(request: NextRequest) {
+  const hasSession = request.cookies
+    .getAll()
+    .some((cookie) => cookie.name.includes("-auth-token"));
+  if (!hasSession) {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({
     request: {
       headers: request.headers,

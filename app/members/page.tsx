@@ -1,25 +1,18 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { PageShell, PageTitle } from "@/components/chrome";
 import { MembersDirectory } from "@/components/MembersDirectory";
 import { loadBoardPayload } from "@/lib/boardData";
 import { possessionLabel, saleOccupancyLabel } from "@/lib/flatDisplay";
-import { ensureProfile, isCommunityRole } from "@/lib/roles";
-import { createClient } from "@/utils/supabase/server";
+import { isCommunityRole } from "@/lib/roles";
+import { getAuthState } from "@/lib/session";
 
 export default async function MembersPage({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string }>
 }) {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, profile, supabase } = await getAuthState();
   if (!user) redirect("/login");
-
-  const profile = await ensureProfile(user, supabase);
   const community = isCommunityRole(profile.role);
   const board = await loadBoardPayload(user, supabase, profile.role);
   const params = await searchParams;
