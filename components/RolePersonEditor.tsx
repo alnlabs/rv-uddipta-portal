@@ -22,7 +22,7 @@ export function RolePersonEditor({ person }: { readonly person: RolePerson }) {
   const [pending, startTransition] = useTransition();
 
   return (
-    <li className="rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.12)]">
+    <div className="rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.12)]">
       <p className="text-base font-semibold text-[#14241c]">
         {person.displayName || person.email || "Unnamed account"}
         {person.locked ? (
@@ -57,19 +57,11 @@ export function RolePersonEditor({ person }: { readonly person: RolePerson }) {
         }}
       >
         <input type="hidden" name="userId" value={person.userId} />
-        {person.locked ? (
-          <>
-            <input type="hidden" name="role" value="admin" />
-            <input type="hidden" name="flatNumber" value="" />
-          </>
-        ) : null}
-
         <label className="block text-sm font-semibold text-[#14241c]">
           Access
           <select
-            name={person.locked ? undefined : "role"}
-            defaultValue={person.locked ? "admin" : person.role}
-            disabled={person.locked}
+            name="role"
+            defaultValue={person.role}
             className="mt-1 min-h-11 w-full rounded-xl border border-[rgba(27,58,47,0.12)] px-3 text-sm font-normal text-[#14241c] disabled:opacity-60"
           >
             {ROLE_GUIDE.map((item) => (
@@ -83,16 +75,13 @@ export function RolePersonEditor({ person }: { readonly person: RolePerson }) {
         <label className="block text-sm font-semibold text-[#14241c]">
           Flat
           <input
-            name={person.locked ? undefined : "flatNumber"}
-            defaultValue={person.locked ? "" : person.flatNumber || ""}
+            name="flatNumber"
+            defaultValue={person.flatNumber || ""}
             placeholder="A101"
-            disabled={person.locked}
-            className="mt-1 min-h-11 w-full rounded-xl border border-[rgba(27,58,47,0.12)] px-3 text-sm font-normal text-[#14241c] disabled:opacity-60"
+            className="mt-1 min-h-11 w-full rounded-xl border border-[rgba(27,58,47,0.12)] px-3 text-base font-normal text-[#14241c]"
           />
-          <span className="mt-1 block text-xs font-normal text-[#3d5247]">
-            {person.locked
-              ? "Super admin cannot own a society flat."
-              : "Required for owner, co-owner, or tenant."}
+          <span className="mt-1 block text-sm font-normal text-[#3d5247]">
+            Needed for owner or family.
           </span>
         </label>
 
@@ -121,9 +110,12 @@ export function RolePersonEditor({ person }: { readonly person: RolePerson }) {
         </button>
       </form>
 
-      {person.locked ? null : (
+      <details className="mt-4">
+        <summary className="cursor-pointer text-base font-semibold text-[#8a2f2f]">
+          Remove this person
+        </summary>
         <ProfileDangerZone userId={person.userId} email={person.email} />
-      )}
-    </li>
+      </details>
+    </div>
   );
 }

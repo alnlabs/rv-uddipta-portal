@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { RoleAssignForm } from "@/components/RoleAssignForm";
 import { RolePersonEditor } from "@/components/RolePersonEditor";
 import { isSuperAdmin } from "@/lib/admin";
-import { ROLE_GUIDE, roleLabel } from "@/lib/roleLabels";
+import { accessSummary } from "@/lib/roleLabels";
 import { canManageAdmin } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
 import {
@@ -15,7 +15,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 export default async function AdminRolesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ flat?: string; as?: string }>
+  searchParams: Promise<{ flat?: string; as?: string; person?: string }>
 }) {
   const params = await searchParams;
   const { user, profile } = await getAuthState();
@@ -85,19 +85,14 @@ export default async function AdminRolesPage({
       ),
   );
 
-  const roleCounts = new Map<string, number>();
-  for (const person of people) {
-    roleCounts.set(person.role, (roleCounts.get(person.role) ?? 0) + 1);
-  }
+  const openPerson = people.find((person) => person.userId === params.person) ?? null;
 
   return (
-    <section>
+    <section className="max-w-2xl">
       <h1 className="text-[clamp(2rem,4vw,2.75rem)] font-semibold tracking-tight text-[#14241c]">
         Who can sign in
       </h1>
-      <p className="mt-2 max-w-2xl text-base text-[#3d5247]">
-        Owner, family, or admin. The super admin cannot be removed.
-      </p>
+      <p className="mt-2 text-lg text-[#3d5247]">Owner, family, or admin.</p>
 
       <RoleAssignForm
         defaultFlat={params.flat || ""}
@@ -106,97 +101,63 @@ export default async function AdminRolesPage({
           .filter((person) => !person.locked)
           .map((person) => ({
             userId: person.userId,
-            label:
-              person.displayName ||
-              person.email ||
-              person.userId.slice(0, 8),
+            label: person.displayName || person.email || "Signed-in person",
             flatNumber: person.flatNumber,
           }))}
       />
 
-      <div className="mt-6 rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.12)]">
-        <h2 className="text-sm font-semibold text-[#14241c]">What each access means</h2>
-        <dl className="mt-3 grid gap-3 sm:grid-cols-2">
-          {ROLE_GUIDE.map((item) => (
-            <div key={item.value}>
-              <dt className="text-sm font-semibold text-[#14241c]">{item.label}</dt>
-              <dd className="mt-0.5 text-sm text-[#3d5247]">{item.help}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
-
-      {people.length ? (
-        <ul className="mt-4 flex flex-wrap gap-2">
-          {[...roleCounts.entries()]
-            .sort(([a], [b]) => roleLabel(a).localeCompare(roleLabel(b)))
-            .map(([role, count]) => (
-              <li
-                key={role}
-                className="rounded-full bg-[#fffcf5] px-3 py-1 text-xs font-semibold text-[#1b3a2f] ring-1 ring-[rgba(27,58,47,0.12)]"
-              >
-                {count} {roleLabel(role)}
-                {count === 1 ? "" : "s"}
-              </li>
-            ))}
-        </ul>
-      ) : null}
-
-      <h2 className="mt-8 text-lg font-semibold text-[#14241c]">
-        In the portal
-      </h2>
+      <h2 className="mt-8 text-xl font-semibold text-[#14241c]">People</h2>
       {people.length === 0 ? (
-        <p className="mt-3 rounded-2xl bg-[#fffcf5] p-4 text-sm text-[#3d5247] ring-1 ring-[rgba(27,58,47,0.12)]">
-          No registered portal users or matching owner records have signed in
-          yet.
-        </p>
+        <p className="mt-3 text-base text-[#3d5247]">No one has signed in yet.</p>
       ) : (
-        <ul className="mt-4 space-y-4">
+        <ul className="mt-3 divide-y divide-[rgba(27,58,47,0.1)]">
           {people.map((person) => (
-            <RolePersonEditor key={person.userId} person={person} />
+            <li key={person.userId} className="py-3">
+              <p className="text-lg font-semibold text-[#14241c]">
+                {person.displayName || person.email || "Signed-in person"}
+              </p>
+              <p className="text-base text-[#3d5247]">
+                {person.locked ? "Cannot be removed. No flat." : accessSummary(person)}
+              </p>
+              {person.locked ? null : (
+                <Link
+                  href={`/account/roles?person=${person.userId}`}
+                  className="mt-1 inline-flex min-h-11 items-center text-base font-semibold text-[#1b3a2f]"
+                >
+                  {openPerson?.userId === person.userId ? "Editing" : "Change"}
+                </Link>
+              )}
+            </li>
           ))}
         </ul>
       )}
 
+      {openPerson && !openPerson.locked ? (
+        <div className="mt-4">
+          <RolePersonEditor person={openPerson} />
+        </div>
+      ) : null}
+
       {unsignedOwners.length ? (
-        <div className="mt-8 rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.12)]">
-          <h2 className="text-lg font-semibold text-[#14241c]">
-            In the database, not signed in
-          </h2>
-          <p className="mt-1 text-sm text-[#3d5247]">
-            {unsignedOwners.length} brochure owner
-            {unsignedOwners.length === 1 ? "" : "s"} have no Google login yet.
-            They appear here for reference. Assign access only after they
-            register.
+        <div className="mt-10">
+          <h2 className="text-xl font-semibold text-[#14241c]">Not signed in yet</h2>
+          <p className="mt-1 text-base text-[#3d5247]">
+            These owners are on a flat, but they have not signed in.
           </p>
-          <ul className="mt-3 divide-y divide-[rgba(27,58,47,0.08)]">
-            {unsignedOwners.slice(0, 12).map((owner) => (
-              <li
-                key={owner.flatNumber}
-                className="flex flex-wrap items-baseline justify-between gap-2 py-2 text-sm"
-              >
-                <span className="font-semibold text-[#14241c]">
-                  {owner.flatNumber}
-                </span>
+          <ul className="mt-3 divide-y divide-[rgba(27,58,47,0.1)]">
+            {unsignedOwners.slice(0, 8).map((owner) => (
+              <li key={owner.flatNumber} className="flex justify-between gap-3 py-2 text-base">
+                <span className="font-semibold text-[#14241c]">{owner.flatNumber}</span>
                 <span className="text-[#3d5247]">{owner.ownerName}</span>
               </li>
             ))}
           </ul>
-          {unsignedOwners.length > 12 ? (
-            <Link
-              href="/account/owners"
-              className="mt-3 inline-flex min-h-10 items-center text-sm font-semibold text-[#2f5a48]"
-            >
-              See all on Owners
-            </Link>
-          ) : (
-            <Link
-              href="/account/owners"
-              className="mt-3 inline-flex min-h-10 items-center text-sm font-semibold text-[#2f5a48]"
-            >
-              Open Owners
-            </Link>
-          )}
+          <Link
+            href="/account/owners"
+            className="mt-2 inline-flex min-h-11 items-center text-base font-semibold text-[#1b3a2f]"
+          >
+            Open Flats
+          </Link>
         </div>
       ) : null}
     </section>

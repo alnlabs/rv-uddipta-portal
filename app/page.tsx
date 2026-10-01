@@ -1,9 +1,11 @@
+import { redirect } from "next/navigation";
 import { DashboardHome } from "@/components/DashboardHome";
 import { FamilyApprovals } from "@/components/FamilyApprovals";
 import { PublicGate } from "@/components/PublicGate";
 import { loadBoardPayload } from "@/lib/boardData";
 import { mapFlatMember, mapFlatRenter, mapOwnedFlat } from "@/lib/flats";
 import { maskPhone } from "@/lib/phone";
+import { isSuperAdmin } from "@/lib/admin";
 import { isCommunityRole } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
@@ -12,6 +14,7 @@ export default async function Page() {
   const { user, profile, supabase } = await getAuthState();
 
   if (!user) return <PublicGate />;
+  if (isSuperAdmin(user)) redirect("/feed");
   const board = await loadBoardPayload(user, supabase, profile.role);
   const community = isCommunityRole(profile.role);
 

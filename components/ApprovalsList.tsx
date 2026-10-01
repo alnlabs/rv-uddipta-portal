@@ -27,10 +27,8 @@ type Override = {
 
 export function ApprovalsList({
   requests,
-  embedded = false,
 }: {
   readonly requests: AdminRegistrationRequest[]
-  readonly embedded?: boolean
 }) {
   const [error, setError] = useState<string | null>(null);
   const [overrides, setOverrides] = useState<Record<number, Override>>({});
@@ -81,36 +79,13 @@ export function ApprovalsList({
 
   return (
     <section>
-      {embedded ? (
-        <>
-          <h2 className="text-lg font-semibold tracking-tight text-[#14241c]">
-            Waiting
-          </h2>
-          <p className="mt-1 text-sm text-[#3d5247]">
-            Approve or reject. A family request can also be approved by that
-            flat’s owner.
-          </p>
-        </>
-      ) : (
-        <>
-          <h2 className="text-2xl font-semibold text-[#14241c]">
-            Owner registrations
-          </h2>
-          <p className="mt-1 text-sm text-[#3d5247]">
-            Approve a request to link that Google account to a brochure flat.
-            Rejecting needs a written reason.
-          </p>
-        </>
-      )}
+      {error ? <p className="text-[#8a2f2f]">{error}</p> : null}
 
-      {error ? <p className="mt-4 text-[#8a2f2f]">{error}</p> : null}
-
-      <h3 className="mt-6 text-lg font-semibold">Pending</h3>
       {waiting.length === 0 ? (
         <div className="mt-3 rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.12)]">
-          <p className="font-medium text-[#14241c]">No one is waiting</p>
-          <p className="mt-1 text-sm text-[#3d5247]">
-            New Google sign-ups that claim a vacant flat will show up here.
+          <p className="text-lg font-semibold text-[#14241c]">No one is waiting</p>
+          <p className="mt-1 text-base text-[#3d5247]">
+            When someone asks to join a flat, they show up here.
           </p>
         </div>
       ) : (
@@ -137,8 +112,8 @@ export function ApprovalsList({
               ) : (
                 <p className="text-sm text-[#3d5247]">Only an admin can approve this.</p>
               )}
-              <p className="text-sm text-[#3d5247]">{row.email || maskPhone(row.phone)}</p>
-              <p className="text-sm text-[#3d5247]">{maskPhone(row.phone)}</p>
+              <p className="text-base text-[#3d5247]">{row.email}</p>
+              <p className="text-base text-[#3d5247]">{maskPhone(row.phone)}</p>
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                 <button
                   type="button"
@@ -184,18 +159,20 @@ export function ApprovalsList({
       )}
 
       {reviewed.length > 0 ? (
-        <>
-          <h3 className="mt-10 text-lg font-semibold">Reviewed</h3>
-          <ul className="mt-4 divide-y divide-[rgba(27,58,47,0.14)]">
+        <details className="mt-8">
+          <summary className="cursor-pointer text-base font-semibold text-[#14241c]">
+            Already decided ({reviewed.length})
+          </summary>
+          <ul className="mt-3 divide-y divide-[rgba(27,58,47,0.1)]">
             {reviewed.map((row) => (
-              <li key={row.id} className="py-3">
-                <strong>Flat {row.flat_number}</strong> · {row.owner_name} ·{" "}
-                <span className="capitalize">{row.status}</span>
+              <li key={row.id} className="py-3 text-base text-[#3d5247]">
+                <strong className="text-[#14241c]">{row.flat_number}</strong> · {row.owner_name} ·{" "}
+                {row.status === "approved" ? "Approved" : "Rejected"}
                 {row.reject_reason ? ` — ${row.reject_reason}` : ""}
               </li>
             ))}
           </ul>
-        </>
+        </details>
       ) : null}
     </section>
   );

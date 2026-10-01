@@ -24,7 +24,7 @@ export default async function RequestsPage({
     .limit(80);
 
   return (
-    <section>
+    <section className="max-w-2xl">
       <h1 className="text-[clamp(2rem,4vw,2.75rem)] font-semibold tracking-tight text-[#14241c]">
         Requests
       </h1>

@@ -153,8 +153,8 @@ function SidebarAccountCard({
   if (inAdmin) {
     return (
       <div className="relative mb-5 overflow-hidden rounded-2xl bg-gradient-to-br from-[rgba(201,164,92,0.22)] to-[rgba(255,255,255,0.04)] px-3.5 py-3.5 ring-1 ring-[rgba(232,213,163,0.16)]">
-        <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#c9a45c] uppercase">
-          {isSuperAdmin ? "Super admin" : "Admin"}
+        <p className="text-sm font-semibold text-[#c9a45c]">
+          {isSuperAdmin ? "Cannot be removed" : "Admin"}
         </p>
         <p className="mt-1 truncate text-sm font-semibold">
           {accountLabel || "Account"}
@@ -254,15 +254,16 @@ export function OwnersShell({
     router.push("/");
   }
 
-  const ownerNav: NavItem[] = [
-    { href: "/", label: "My flat", match: (p) => p === "/", icon: "flat" },
-    {
-      href: "/community",
-      label: "Building",
-      match: (p) => p.startsWith("/community"),
-      icon: "floors",
-    },
-  ];
+  const ownerNav: NavItem[] = [];
+  if (!isSuperAdmin) {
+    ownerNav.push({ href: "/", label: "My flat", match: (p) => p === "/", icon: "flat" });
+  }
+  ownerNav.push({
+    href: "/community",
+    label: "Building",
+    match: (p) => p.startsWith("/community"),
+    icon: "floors",
+  });
   if (showPrivateCommunity) {
     ownerNav.splice(1, 0, {
       href: "/feed",
@@ -325,7 +326,7 @@ export function OwnersShell({
   }
 
   const navItems = inAdmin ? adminNav : ownerNav;
-  const homeItem = ownerNav.find((item) => item.href === "/")!;
+  const homeItem = ownerNav.find((item) => item.href === "/");
   const communityItem = ownerNav.find((item) => item.href === "/community")!;
   const feedItem = ownerNav.find((item) => item.href === "/feed");
   const directoryItem = ownerNav.find((item) => item.href === "/members");
@@ -334,7 +335,7 @@ export function OwnersShell({
   const mobileItems = inAdmin
     ? adminNav
     : [
-        homeItem,
+        ...(homeItem ? [homeItem] : []),
         ...(feedItem ? [feedItem] : []),
         communityItem,
         ...(directoryItem ? [directoryItem] : []),
@@ -519,11 +520,11 @@ export function OwnersShell({
         </main>
 
         <nav
-          className="fixed inset-x-0 bottom-0 z-30 border-t border-[rgba(27,58,47,0.1)] bg-[#efe8d8]/96 px-1.5 pt-1.5 backdrop-blur-md md:hidden"
+          className="fixed inset-x-0 bottom-0 z-30 border-t border-[rgba(27,58,47,0.1)] bg-[#efe8d8]/96 backdrop-blur-md md:hidden"
           style={{ paddingBottom: "max(0.55rem, env(safe-area-inset-bottom))" }}
           aria-label="Primary"
         >
-          <div className="flex gap-0.5">
+          <div className={`flex gap-1 px-2 py-2 ${inAdmin ? "overflow-x-auto" : ""}`}>
             {mobileItems.map((item) => {
               const active = item.match(pathname);
               const showBadge =
@@ -533,14 +534,22 @@ export function OwnersShell({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-[10px] font-semibold ${
-                    active ? "bg-[#1b3a2f] text-[#e8d5a3]" : "text-[#3d5247]"
-                  }`}
+                  className={`relative flex min-h-12 items-center justify-center rounded-xl font-semibold ${
+                    inAdmin
+                      ? "shrink-0 px-3 text-sm"
+                      : "min-w-0 flex-1 flex-col gap-0.5 px-1 text-[10px]"
+                  } ${active ? "bg-[#1b3a2f] text-[#e8d5a3]" : "text-[#3d5247]"}`}
                 >
-                  <NavIcon name={item.icon} className="size-4" />
-                  <span className="truncate">{item.label}</span>
+                  {inAdmin ? null : <NavIcon name={item.icon} className="size-4" />}
+                  <span className={inAdmin ? "whitespace-nowrap" : "truncate"}>
+                    {item.label}
+                  </span>
                   {showBadge ? (
-                    <span className="absolute top-1.5 right-[28%] size-1.5 rounded-full bg-[#c9a45c]" />
+                    <span
+                      className={`ml-1 size-2 rounded-full bg-[#c9a45c] ${
+                        inAdmin ? "" : "absolute top-1.5 right-[28%]"
+                      }`}
+                    />
                   ) : null}
                 </Link>
               );

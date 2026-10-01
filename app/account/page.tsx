@@ -28,19 +28,10 @@ export default async function AccountApprovalsPage() {
           .order("created_at", { ascending: false })
       : requestsWithEmail;
 
-  const { data: flatRows } = await admin
-    .from("flats")
-    .select("owner_name, email, phone");
-  const flatsWithoutOwner = (flatRows ?? []).filter(
-    (flat) => !flat.owner_name || !flat.email || !flat.phone,
-  ).length;
-
   const rows = (requestsResult.data ?? []) as AdminRegistrationRequest[];
 
   return (
     <AdminHome
-      waiting={rows.filter((row) => row.status === "pending").length}
-      flatsWithoutOwner={flatsWithoutOwner}
       requests={rows}
       loadError={requestsResult.error?.message ?? null}
     />

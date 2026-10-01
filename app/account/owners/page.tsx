@@ -6,8 +6,8 @@ import { canManageAdmin } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
 
-const LIST_COLUMNS = "id, flat_number, owner_name, email, phone, floor, unit";
-const LIST_COLUMNS_NO_EMAIL = "id, flat_number, owner_name, floor, unit";
+const LIST_COLUMNS = "id, flat_number, owner_name, email, phone, floor, unit, sale_status";
+const LIST_COLUMNS_NO_EMAIL = "id, flat_number, owner_name, floor, unit, sale_status";
 const DETAIL_COLUMNS =
   "id, flat_number, wing, floor, type, owner_name, email, phone, sale_status, occupancy, tenant_name, tenant_phone, open_for_rent, open_for_resale, user_id";
 const DETAIL_COLUMNS_NO_EMAIL =
@@ -19,6 +19,7 @@ type OwnerListRow = {
   owner_name: string | null
   email?: string | null
   phone?: string | null
+  sale_status?: string | null
   floor: number
   unit: number
 };
@@ -121,20 +122,13 @@ export default async function AdminOwnersPage({
     throw new Error(`Could not load flat: ${selectedError.message}`);
   }
   const flats = (secondPass[0].data ?? []) as OwnerListRow[];
-
-  let editing = (secondPass[1].data ?? null) as OwnerDetailRow | null;
-  if (!editing && flats[0]) {
-    const columns = useEmail ? DETAIL_COLUMNS : DETAIL_COLUMNS_NO_EMAIL;
-    const { data, error } = await admin
-      .from("flats")
-      .select(columns)
-      .eq("flat_number", flats[0].flat_number)
-      .maybeSingle();
-    if (error) {
-      throw new Error(`Could not load flat: ${error.message}`);
-    }
-    editing = data as OwnerDetailRow | null;
-  }
+  const editing = (secondPass[1].data ?? null) as OwnerDetailRow | null;
+  const needsOwner = flats.filter(
+    (flat) =>
+      flat.sale_status === "sold" &&
+      (!flat.owner_name || !flat.email || !flat.phone),
+  );
+  const rows = term ? flats : needsOwner;
 
   const qParam = q ? `&q=${encodeURIComponent(q)}` : "";
 
@@ -160,7 +154,12 @@ export default async function AdminOwnersPage({
       <h1 className="text-[clamp(2rem,4vw,2.75rem)] font-semibold tracking-tight text-[#14241c]">
         Flats
       </h1>
-      <p className="mt-2 text-base text-[#3d5247]">Each apartment and its owner.</p>
+      <p className="mt-2 text-lg text-[#3d5247]">Each apartment and its owner.</p>
+      <p className="mt-2 text-base text-[#14241c]">
+        {needsOwner.length === 0
+          ? "Every sold flat has an owner with email and phone."
+          : `${needsOwner.length} sold ${needsOwner.length === 1 ? "flat needs" : "flats need"} an owner with email and phone.`}
+      </p>
 
       <form className="mt-4 flex gap-2">
         <input
@@ -179,7 +178,12 @@ export default async function AdminOwnersPage({
 
       <div className="mt-6 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
         <ul className="max-h-[min(28rem,calc(100dvh-12rem))] overflow-auto rounded-2xl border border-[rgba(27,58,47,0.12)] bg-[#fffcf5]">
-          {flats.map((flat) => (
+          {rows.length === 0 ? (
+            <li className="px-3 py-4 text-base text-[#3d5247]">
+              {term ? "No flats match." : "Nothing to fix."}
+            </li>
+          ) : null}
+          {rows.map((flat) => (
             <li key={flat.id}>
               <Link
                 href={`/account/owners?flat=${flat.flat_number}${qParam}`}
@@ -259,26 +263,31 @@ export default async function AdminOwnersPage({
               />
             </label>
             ) : null}
+            <details className="rounded-xl bg-white/70 p-3">
+              <summary className="cursor-pointer text-base font-semibold">
+                More about this flat
+              </summary>
+              <div className="mt-3 space-y-3">
             <label className="block text-sm font-semibold">
-              Sale
+              Sold or not
               <select
                 name="saleStatus"
                 defaultValue={editing.sale_status || "unsold"}
                 className="mt-1 min-h-11 w-full rounded-xl border border-[rgba(27,58,47,0.12)] px-3 font-normal"
               >
                 <option value="sold">Sold</option>
-                <option value="unsold">Unsold</option>
+                <option value="unsold">Not sold</option>
               </select>
             </label>
             <label className="block text-sm font-semibold">
-              Occupancy
+              Who stays here
               <select
                 name="occupancy"
                 defaultValue={editing.occupancy || "owner_stay"}
                 className="mt-1 min-h-11 w-full rounded-xl border border-[rgba(27,58,47,0.12)] px-3 font-normal"
               >
-                <option value="owner_stay">Owner stay</option>
-                <option value="rented">Rented</option>
+                <option value="owner_stay">The owner</option>
+                <option value="rented">A tenant</option>
               </select>
             </label>
             <label className="block text-sm font-semibold">
@@ -297,7 +306,7 @@ export default async function AdminOwnersPage({
                 className="mt-1 min-h-11 w-full rounded-xl border border-[rgba(27,58,47,0.12)] px-3 font-normal"
               />
             </label>
-            <label className="flex items-center gap-2 text-sm font-semibold">
+            <label className="flex min-h-11 items-center gap-2 text-base font-semibold">
               <input
                 type="checkbox"
                 name="openForRent"
@@ -305,7 +314,7 @@ export default async function AdminOwnersPage({
               />
               Open for rent
             </label>
-            <label className="flex items-center gap-2 text-sm font-semibold">
+            <label className="flex min-h-11 items-center gap-2 text-base font-semibold">
               <input
                 type="checkbox"
                 name="openForResale"
@@ -313,15 +322,21 @@ export default async function AdminOwnersPage({
               />
               Open for resale
             </label>
+              </div>
+            </details>
             <div className="flex flex-wrap gap-2 pt-2">
               <button
                 type="submit"
                 className="min-h-11 rounded-full bg-[#c9a45c] px-5 text-sm font-semibold text-[#14241c]"
               >
-                Save flat
+                Save
               </button>
             </div>
           </form>
+          <details className="mt-4">
+            <summary className="cursor-pointer text-base font-semibold text-[#8a2f2f]">
+              Clear this flat
+            </summary>
           <OwnerDangerZone
             flatNumber={editing.flat_number}
             hasLinkedUser={Boolean(editing.user_id)}
@@ -329,9 +344,10 @@ export default async function AdminOwnersPage({
             memberCount={memberCount}
             renterCount={renterCount}
           />
+          </details>
           </div>
         ) : (
-          <p className="text-[#3d5247]">No flats match.</p>
+          <p className="text-lg text-[#3d5247]">Choose a flat.</p>
         )}
       </div>
     </section>

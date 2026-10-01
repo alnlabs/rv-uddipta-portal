@@ -25,18 +25,19 @@ export default async function AdminBuilderPage() {
 
       <form
         action={adminSaveBuilder}
-        className="mt-6 grid max-w-2xl gap-3 rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.12)]"
+        className="mt-6 grid max-w-2xl gap-4"
       >
+        <div className="grid gap-3 rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.12)]">
+          <h2 className="text-lg font-semibold text-[#14241c]">What members read</h2>
         {(
           [
             ["name", "Name", project.name],
-            ["developer", "Developer", project.developer],
-            ["tagline", "Tagline", project.tagline],
+            ["tagline", "One line about the building", project.tagline],
             ["launchDate", "Launch date", project.launchDate],
-            ["location", "Location", project.location],
+            ["developer", "Builder", project.developer],
+            ["location", "Place", project.location],
             ["address", "Address", project.address],
             ["rera", "RERA", project.rera],
-            ["igbc", "IGBC", project.igbc],
           ] as const
         ).map(([name, label, value]) => (
           <label key={name} className="block text-sm font-semibold">
@@ -48,7 +49,13 @@ export default async function AdminBuilderPage() {
             />
           </label>
         ))}
-        <div className="grid grid-cols-2 gap-3">
+        </div>
+        <details className="rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.12)]">
+          <summary className="cursor-pointer text-lg font-semibold text-[#14241c]">
+            Extra numbers
+          </summary>
+          <input type="hidden" name="igbc" value={project.igbc} />
+        <div className="mt-3 grid grid-cols-2 gap-3">
           {(
             [
               ["acres", "Acres", project.acres],
@@ -74,8 +81,9 @@ export default async function AdminBuilderPage() {
             </label>
           ))}
         </div>
-        <label className="block text-sm font-semibold">
-          Nearby (one per line: Label | distance)
+        </details>
+        <label className="block rounded-2xl bg-[#fffcf5] p-4 text-sm font-semibold ring-1 ring-[rgba(27,58,47,0.12)]">
+          Nearby places. One line each: place | how far
           <textarea
             name="nearby"
             rows={4}
@@ -85,8 +93,8 @@ export default async function AdminBuilderPage() {
             className="mt-1 w-full rounded-xl border border-[rgba(27,58,47,0.12)] px-3 py-2 font-normal"
           />
         </label>
-        <label className="block text-sm font-semibold">
-          Amenities (one per line)
+        <label className="block rounded-2xl bg-[#fffcf5] p-4 text-sm font-semibold ring-1 ring-[rgba(27,58,47,0.12)]">
+          Amenities, one on each line. They show as Play, Exercise, Gather, and Safety.
           <textarea
             name="amenities"
             rows={8}
@@ -98,7 +106,7 @@ export default async function AdminBuilderPage() {
           type="submit"
           className="min-h-11 w-fit rounded-full bg-[#c9a45c] px-5 text-sm font-semibold text-[#14241c]"
         >
-          Save builder details
+          Save
         </button>
       </form>
     </section>

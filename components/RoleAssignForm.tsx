@@ -27,11 +27,10 @@ export function RoleAssignForm({
 
   if (!candidates.length) {
     return (
-      <div className="mt-6 rounded-2xl bg-[#14241c] p-4 text-[#f7f2e6] md:p-5">
-        <h2 className="text-lg font-semibold tracking-tight">Assign access</h2>
-        <p className="mt-1 text-sm text-[#d0c090]">
-          Nobody from the owner list or portal registrations has signed in yet.
-          After they register, they will appear here.
+      <div className="mt-6 rounded-2xl bg-[#fffcf5] p-4 text-[#14241c] ring-1 ring-[rgba(27,58,47,0.12)]">
+        <h2 className="text-lg font-semibold">Add owner or family</h2>
+        <p className="mt-1 text-base text-[#3d5247]">
+          They need to sign in first. Then you can add them here.
         </p>
       </div>
     );
@@ -39,7 +38,7 @@ export function RoleAssignForm({
 
   return (
     <form
-      className="mt-6 rounded-2xl bg-[#14241c] p-4 text-[#f7f2e6] md:p-5"
+      className="mt-6 rounded-2xl bg-[#fffcf5] p-4 text-[#14241c] ring-1 ring-[rgba(27,58,47,0.12)]"
       onSubmit={(event) => {
         event.preventDefault();
         setError(null);
@@ -58,10 +57,9 @@ export function RoleAssignForm({
         });
       }}
     >
-      <h2 className="text-lg font-semibold tracking-tight">Assign access</h2>
-      <p className="mt-1 text-sm text-[#d0c090]">
-        Only people already in the portal or in the owners / registration
-        records.
+      <h2 className="text-lg font-semibold">Add owner or family</h2>
+      <p className="mt-1 text-base text-[#3d5247]">
+        Choose a person who has already signed in.
       </p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -91,7 +89,9 @@ export function RoleAssignForm({
             defaultValue={defaultRole === "family" ? "co_owner" : defaultRole}
             className="mt-1 min-h-11 w-full rounded-xl border border-[rgba(232,213,163,0.2)] bg-[#fffcf5] px-3 font-normal text-[#14241c]"
           >
-            {ROLE_GUIDE.map((item) => (
+            {ROLE_GUIDE.filter((item) =>
+              item.value === "owner" || item.value === "co_owner" || item.value === "admin",
+            ).map((item) => (
               <option key={item.value} value={item.value}>
                 {item.label}
               </option>
@@ -106,8 +106,8 @@ export function RoleAssignForm({
             placeholder="A101"
             className="mt-1 min-h-11 w-full rounded-xl border border-[rgba(232,213,163,0.2)] bg-[#fffcf5] px-3 font-normal text-[#14241c]"
           />
-          <span className="mt-1 block text-xs font-normal text-[#d0c090]">
-            Required for owner or family.
+          <span className="mt-1 block text-sm font-normal text-[#3d5247]">
+            Needed for owner or family.
           </span>
         </label>
         <label className="block text-sm font-semibold sm:col-span-2">
@@ -120,15 +120,15 @@ export function RoleAssignForm({
         </label>
       </div>
 
-      {error ? <p className="mt-3 text-sm text-[#ffc9c2]">{error}</p> : null}
-      {notice ? <p className="mt-3 text-sm text-[#e8d5a3]">{notice}</p> : null}
+      {error ? <p className="mt-3 text-base text-[#8a2f2f]">{error}</p> : null}
+      {notice ? <p className="mt-3 text-base text-[#1b3a2f]">{notice}</p> : null}
 
       <button
         type="submit"
         disabled={pending}
-        className="mt-4 min-h-11 rounded-full bg-[#c9a45c] px-5 text-sm font-semibold text-[#14241c] disabled:opacity-60"
+        className="mt-4 min-h-12 rounded-full bg-[#c9a45c] px-5 text-base font-semibold text-[#14241c] disabled:opacity-60"
       >
-        {pending ? "Saving…" : "Assign access"}
+        {pending ? "Saving…" : "Save"}
       </button>
     </form>
   );
