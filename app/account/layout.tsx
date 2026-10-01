@@ -15,6 +15,6 @@ export default async function AccountLayout({
   if (!admin && !builder) redirect("/");
 
   return (
-    <div className="page-gutter max-w-[1100px] py-6 md:py-10">{children}</div>
+    <div className="page-gutter w-full py-5 md:py-8">{children}</div>
   );
 }

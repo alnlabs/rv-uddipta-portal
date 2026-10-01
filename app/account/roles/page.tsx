@@ -88,7 +88,7 @@ export default async function AdminRolesPage({
   const openPerson = people.find((person) => person.userId === params.person) ?? null;
 
   return (
-    <section className="max-w-2xl">
+    <section className="mx-auto max-w-3xl">
       <h1 className="text-[clamp(2rem,4vw,2.75rem)] font-semibold tracking-tight text-[#14241c]">
         Who can sign in
       </h1>

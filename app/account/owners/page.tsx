@@ -176,8 +176,8 @@ export default async function AdminOwnersPage({
         </button>
       </form>
 
-      <div className="mt-6 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
-        <ul className="max-h-[min(28rem,calc(100dvh-12rem))] overflow-auto rounded-2xl border border-[rgba(27,58,47,0.12)] bg-[#fffcf5]">
+      <div className="mt-6 grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)]">
+        <ul className="max-h-[min(36rem,calc(100dvh-14rem))] overflow-auto rounded-2xl border border-[rgba(27,58,47,0.12)] bg-[#fffcf5]">
           {rows.length === 0 ? (
             <li className="px-3 py-4 text-base text-[#3d5247]">
               {term ? "No flats match." : "Nothing to fix."}
@@ -187,20 +187,20 @@ export default async function AdminOwnersPage({
             <li key={flat.id}>
               <Link
                 href={`/account/owners?flat=${flat.flat_number}${qParam}`}
-                className={`block border-b border-[rgba(27,58,47,0.06)] px-3 py-2 text-sm ${
+                className={`block min-h-14 border-b border-[rgba(27,58,47,0.06)] px-4 py-3 text-base ${
                   editing?.flat_number === flat.flat_number
                     ? "bg-[#1b3a2f] text-[#e8d5a3]"
                     : "hover:bg-[rgba(27,58,47,0.04)]"
                 }`}
               >
-                <strong>{flat.flat_number}</strong>
-                <span className="mt-0.5 block truncate text-xs opacity-80">
+                <strong className="text-lg">{flat.flat_number}</strong>
+                <span className="mt-0.5 block truncate text-base opacity-80">
                   {!flat.owner_name || !flat.email || !flat.phone
                     ? "Needs an owner with email and phone."
                     : flat.owner_name}
                 </span>
                 {flat.email ? (
-                  <span className="mt-0.5 block truncate text-xs opacity-70">
+                  <span className="mt-0.5 block truncate text-sm opacity-70">
                     {flat.email}
                   </span>
                 ) : null}
@@ -210,7 +210,7 @@ export default async function AdminOwnersPage({
         </ul>
 
         {editing ? (
-          <div className="min-w-0 rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.12)]">
+          <div className="min-w-0 max-w-xl rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.12)]">
           <form
             action={adminSaveFlat}
             className="space-y-3"
@@ -347,7 +347,12 @@ export default async function AdminOwnersPage({
           </details>
           </div>
         ) : (
-          <p className="text-lg text-[#3d5247]">Choose a flat.</p>
+          <div className="rounded-2xl bg-[#fffcf5] p-6 ring-1 ring-[rgba(27,58,47,0.12)]">
+            <p className="text-lg font-semibold text-[#14241c]">Choose a flat</p>
+            <p className="mt-1 text-base text-[#3d5247]">
+              Pick one from the list. Search if you already know the number.
+            </p>
+          </div>
         )}
       </div>
     </section>

@@ -14,7 +14,7 @@ export default async function AdminBuilderPage() {
   const showAdminHome = canManageAdmin(profile.role, user);
 
   return (
-    <section>
+    <section className="mx-auto max-w-3xl">
       <h1 className="text-[clamp(2rem,4vw,2.75rem)] font-semibold tracking-tight text-[#14241c]">
         Building details
       </h1>

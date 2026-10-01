@@ -196,14 +196,18 @@ function SidebarAccountCard({
 
   if (isSuperAdmin) {
     return (
-      <div className="relative mb-5 rounded-2xl bg-[rgba(255,255,255,0.04)] px-3.5 py-3.5 ring-1 ring-[rgba(232,213,163,0.16)]">
-        <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#c9a45c] uppercase">
-          Viewing as
-        </p>
+      <Link
+        href="/account"
+        className="relative mb-5 block rounded-2xl bg-[rgba(255,255,255,0.04)] px-3.5 py-3.5 ring-1 ring-[rgba(232,213,163,0.16)]"
+      >
+        <p className="text-sm font-semibold text-[#c9a45c]">Admin</p>
         <p className="mt-1 truncate text-sm font-semibold">
-          {accountLabel || "Community"}
+          {accountLabel || "Account"}
         </p>
-      </div>
+        <span className="mt-1 block text-xs font-semibold text-[#cbb98a]">
+          Back to admin
+        </span>
+      </Link>
     );
   }
 
@@ -341,6 +345,78 @@ export function OwnersShell({
         ...(directoryItem ? [directoryItem] : []),
         alertsItem,
       ];
+
+  if (inAdmin) {
+    return (
+      <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#efe8d8]">
+        <header className="shrink-0 border-b border-[rgba(27,58,47,0.12)] bg-[#fffcf5]">
+          <div
+            className="flex items-center justify-between gap-3 px-4 py-3"
+            style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
+          >
+            <div className="min-w-0">
+              <p className="text-lg font-semibold text-[#14241c]">Admin</p>
+              <p className="truncate text-base text-[#3d5247]">
+                {accountLabel || "Account"}
+                {isSuperAdmin ? " · This account stays. No flat." : ""}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <Link
+                href="/feed"
+                className="hidden min-h-11 items-center rounded-full px-3 text-base font-semibold text-[#1b3a2f] sm:inline-flex"
+              >
+                See members
+              </Link>
+              <button
+                type="button"
+                onClick={logout}
+                className="min-h-11 rounded-full bg-[#1b3a2f] px-4 text-base font-semibold text-[#e8d5a3]"
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+          <nav
+            className="flex gap-2 overflow-x-auto px-4 pb-3"
+            aria-label="Admin"
+          >
+            {adminNav.map((item) => {
+              const active = item.match(pathname);
+              const badgeCount = item.href === "/account" ? pendingApprovals : 0;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`inline-flex min-h-12 shrink-0 items-center gap-2 rounded-xl px-4 text-base font-semibold ${
+                    active
+                      ? "bg-[#1b3a2f] text-[#e8d5a3]"
+                      : "bg-[rgba(27,58,47,0.06)] text-[#14241c]"
+                  }`}
+                >
+                  {item.label}
+                  {badgeCount > 0 ? (
+                    <span className="grid min-w-5 place-items-center rounded-full bg-[#c9a45c] px-1.5 text-sm font-bold text-[#14241c]">
+                      {badgeCount > 9 ? "9+" : badgeCount}
+                    </span>
+                  ) : null}
+                </Link>
+              );
+            })}
+            <Link
+              href="/feed"
+              className="inline-flex min-h-12 shrink-0 items-center rounded-xl px-4 text-base font-semibold text-[#1b3a2f] sm:hidden"
+            >
+              See members
+            </Link>
+          </nav>
+        </header>
+        <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain">
+          {children}
+        </main>
+      </div>
+    );
+  }
 
   function sideLink(item: NavItem) {
     const active = item.match(pathname);

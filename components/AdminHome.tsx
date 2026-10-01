@@ -8,7 +8,7 @@ export function AdminHome({
   readonly loadError?: string | null
 }) {
   return (
-    <section className="max-w-2xl">
+    <section className="mx-auto max-w-3xl">
       <h1 className="text-[clamp(2rem,4vw,2.75rem)] font-semibold tracking-tight text-[#14241c]">
         New members
       </h1>
