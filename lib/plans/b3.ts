@@ -119,7 +119,8 @@ export const B3_ROOMS: B3Room[] = [
 ];
 
 export const B3_DOORS: B3Door[] = [
-  { id: "entry", wall: "e", x: 30.25, y: 16.2, length: 3.2, swing: "ccw", entrance: true },
+  // North of the staircase lobby (bedroom-1 mid at y=6.5); clear of the stair core.
+  { id: "entry", wall: "e", x: 30.25, y: 1.8, length: 3.2, swing: "ccw", entrance: true },
   { id: "wash", wall: "w", x: X0, y: 3.2, length: 2.4, swing: "cw" },
   { id: "kitchen", wall: "s", x: 7.0, y: 13, length: 2.6, swing: "cw" },
   { id: "puja", wall: "e", x: 7.5, y: 8.4, length: 2.2, swing: "ccw" },

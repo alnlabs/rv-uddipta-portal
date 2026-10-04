@@ -36,18 +36,31 @@ const GAP_AB = 4.6;
 const GAP_COURT = 6.4;
 const GAP_CAB_A7 = 1.9;
 const CAB_WIDTH = 1.02;
+/** Extra length for B1/B3/B5/B6; also widens the B wing / site. */
+const BW_LEN = 0.72;
+/**
+ * Corridor-side staircase lobby carved from B3 only (brochure stair core).
+ * B3 keeps the same east face as B1/B5; width shrinks on the corridor side.
+ */
+const B3_STAIR_DEPTH = 1.2;
+/** Corridor-side staircase lobby depth for A4 / A8 brochure stair cores. */
+const A_STAIR_DEPTH = 1.15;
+/** Extra flat depth on A8's south side toward A9 / AS1·n. */
+const A8_SOUTH_EXTRA = 0.55;
 
 const X = {
   A_W: 0,
   A_E: BAY,
-  B_W: BAY + UNIT + GAP_AB,
-  B_W2: BAY + UNIT + GAP_AB + BAY,
-  B_EW: BAY + UNIT + GAP_AB + BAY + UNIT + GAP_COURT,
-  B_EE: BAY + UNIT + GAP_AB + BAY + UNIT + GAP_COURT + BAY,
+  B_W: BAY + UNIT + GAP_AB + BW_LEN,
+  B_W2: BAY + UNIT + GAP_AB + BW_LEN + BAY,
+  B_EW: BAY + UNIT + GAP_AB + BW_LEN + BAY + UNIT + GAP_COURT,
+  B_EE: BAY + UNIT + GAP_AB + BW_LEN + BAY + UNIT + GAP_COURT + BAY,
 } as const;
 
 const X_B8 = (X.B_W2 + X.B_EW) / 2;
 const B12_WEST = 0.72;
+/** Extra setback so B12 stands clear of the BE aisle. */
+const B12_CORRIDOR_GAP = 1.2;
 
 const Z = {
   0: 0,
@@ -57,29 +70,45 @@ const Z = {
   4: -BAY * 3 - UNIT - GAP_CAB_A7 - CAB_WIDTH,
 } as const;
 
+/**
+ * AS1·n / cAB north — A7 south − GAP_CAB_A7.
+ * A8's south face is aligned to this plane.
+ */
+const AS1_NORTH = Z[3] - UNIT / 2 - GAP_CAB_A7;
+
 export const UNIT_FOOTPRINT: Record<string, [number, number]> = {
   A1: [X.A_W, Z[0]],
   A2: [X.A_E, Z[0]],
   A3: [X.A_E, Z[1]],
-  A4: [X.A_W, Z[1]],
+  // Corridor-side stair lobby carve (same depth as A8).
+  A4: [X.A_W - A_STAIR_DEPTH / 2, Z[1]],
   A5: [X.A_E, Z[2]],
   A6: [X.A_W, Z[2]],
   A7: [X.A_E, Z[3]],
-  A8: [X.A_W, Z[3]],
+  // East face insets for the corridor-side stair lobby (A8 north / brochure core).
+  // South face flush with AS1·n; depth grows north from that plane.
+  A8: [
+    X.A_W - A_STAIR_DEPTH / 2,
+    AS1_NORTH + (UNIT + A8_SOUTH_EXTRA) / 2,
+  ],
   A9: [X.A_W, Z[4]],
   A10: [X.A_E, Z[4]],
-  B1: [X.B_W, Z[0]],
+  B1: [X.B_W - BW_LEN / 2, Z[0]],
   B2: [X.B_W2, Z[0]],
-  B3: [X.B_W, Z[1]],
+  // East face stays on the B1/B5 line; corridor-side stair lobby takes B3_STAIR_DEPTH.
+  B3: [
+    X.B_W - BW_LEN / 2 - B3_STAIR_DEPTH / 2,
+    Z[1],
+  ],
   B4: [X.B_W2, Z[1]],
-  B5: [X.B_W, Z[2]],
-  B6: [X.B_W, Z[3]],
+  B5: [X.B_W - BW_LEN / 2, Z[2]],
+  B6: [X.B_W - BW_LEN / 2, Z[3]],
   B7: [X.B_W2, Z[3]],
   B8: [X_B8, Z[3]],
   B9: [X.B_EW, Z[3]],
   B10: [X.B_EW - B12_WEST / 2, Z[0]],
   B11: [X.B_EE, Z[0]],
-  B12: [X.B_EW - B12_WEST, Z[1]],
+  B12: [X.B_EW - B12_CORRIDOR_GAP, Z[1]],
   B13: [X.B_EE, Z[1]],
   B14: [X.B_EE, Z[2]],
   B15: [X.B_EE, Z[3]],
@@ -104,6 +133,12 @@ export function buildingTopY() {
 }
 
 const UNIT_PLAN: Record<string, [number, number]> = {
+  A4: [UNIT - A_STAIR_DEPTH, UNIT],
+  A8: [UNIT - A_STAIR_DEPTH, UNIT + A8_SOUTH_EXTRA],
+  B1: [UNIT + BW_LEN, UNIT],
+  B3: [UNIT + BW_LEN - B3_STAIR_DEPTH, UNIT],
+  B5: [UNIT + BW_LEN, UNIT],
+  B6: [UNIT + BW_LEN, UNIT],
   B10: [UNIT + B12_WEST, UNIT],
 };
 
@@ -260,8 +295,11 @@ function aisleExtendNorth(
 function gapEW(id: string, left: string, right: string): Corridor {
   const [ax, az] = UNIT_FOOTPRINT[left];
   const [bx, bz] = UNIT_FOOTPRINT[right];
-  const west = Math.min(ax, bx) + UNIT / 2;
-  const east = Math.max(ax, bx) - UNIT / 2;
+  // Real half-widths — lengthened flats (B5) must not be penetrated by the gap.
+  const eastId = ax <= bx ? left : right;
+  const westId = ax <= bx ? right : left;
+  const west = UNIT_FOOTPRINT[eastId][0] + halfX(eastId);
+  const east = UNIT_FOOTPRINT[westId][0] - halfX(westId);
   return {
     id,
     x: (west + east) / 2,
@@ -276,7 +314,8 @@ function aToBFromGap(
   bLeft: string,
   bRight: string,
 ): Corridor[] {
-  const west = aisleX("A8", "A7");
+  // Use uncarved A-aisle faces so A8's stair lobby does not widen cAB.
+  const west = aisleX("A1", "A2");
   const east = aisleX(bLeft, bRight);
   const widthB = aisleWidth(bLeft, bRight);
   const a7North = UNIT_FOOTPRINT[aSouth][1] - UNIT / 2;
@@ -341,7 +380,8 @@ function westFromCorridorToUnit(
   const [tx, tz] = UNIT_FOOTPRINT[target];
   const west = tx + halfX(target);
   const east = from.x - from.size[0] / 2 + 0.08;
-  const width = from.size[0];
+  // Narrower than the main aisle. This link is the BE4 spur into B12.
+  const width = from.size[0] * 0.62;
   const south = tz + halfZ(target);
   const north = south - width;
   return {
@@ -378,16 +418,561 @@ function joinCorridorNEToUnitSW(
 
 const cB5 = gapEW("cB5", "B5", "B14");
 const cBe = aisleRun("cBe", "B10", "B11", "B12", "B13");
+const cBeN = aisleExtendNorth("cBeN", "B12", "B13", "B15", "B9", "B15");
+
+/**
+ * Lift in the slot between B12's southwest corner and BE5.
+ * The BE5 face stops on the outside of the corridor wall, and the door
+ * sits in that wall so both faces are one plane. Clear of B12sw.
+ */
+export const LIFT_BE5 = (() => {
+  const swX = UNIT_FOOTPRINT.B12[0] + halfX("B12");
+  const southZ = UNIT_FOOTPRINT.B12[1] - halfZ("B12");
+  const baySouth = UNIT_FOOTPRINT.B14[1] + halfZ("B14");
+  const deckEast = cBeN.x - cBeN.size[0] / 2;
+  const northGap = 0.12;
+  const z0 = baySouth;
+  const z1 = southZ - northGap;
+  const opening = (z1 - z0) * 0.62;
+  const mid = (z0 + z1) / 2;
+  const shaft = 0.51;
+  const face = opening + 0.06;
+  return {
+    id: "lift-be5",
+    x0: Math.max(swX + 0.14, deckEast - WALL_T - shaft),
+    x1: deckEast - WALL_T,
+    z0: mid - face / 2,
+    z1: mid + face / 2,
+    wallFace: deckEast,
+    opening,
+  };
+})();
+
+/**
+ * U stair north of the lift. Its south edge is the lift's north face.
+ * A flat entrance landing sits between the corridor and the first riser.
+ * The corridor opening is only that landing, so BE5/BE6 stay clear of treads.
+ */
+export const STAIR_U = (() => {
+  const spurSouth = UNIT_FOOTPRINT.B12[1] + halfZ("B12") - cBe.size[0] * 0.62;
+  const baySouth = UNIT_FOOTPRINT.B13[1] - halfZ("B13");
+  const be5North = baySouth + ((spurSouth - baySouth) / 3) * 2;
+  const well = 0.04;
+  const x0 = LIFT_BE5.x0;
+  const wallFace = LIFT_BE5.wallFace;
+  const wallInner = wallFace - WALL_T;
+  const flight = (wallInner - x0 - well) / 2;
+  const zSouth = LIFT_BE5.z1 + WALL_T;
+  const zRun1 = be5North - flight;
+  const count = 8;
+  const rise = FLOOR_HEIGHT / 16;
+  const entry = Math.max(0.3, zRun1 - zSouth - count * rise);
+  return {
+    x0,
+    x1: wallFace,
+    z0: LIFT_BE5.z1 - 0.012,
+    z1: be5North,
+    flight,
+    wallInner,
+    zRun1,
+    entryZ0: zSouth,
+    entryZ1: zSouth + entry,
+    corridorZ0: zSouth,
+    corridorZ1: zSouth + entry,
+  };
+})();
 const cB58 = northFromCorridor("cB58", cB5, "B8", "B7", "B8", "right");
 const cB59 = northFromCorridor("cB59", cB5, "B9", "B8", "B9", "right");
 
+/**
+ * U stair on the north side of BN7, opposite B8.
+ * The well stays put. Flight 1 keeps the east side of that well and runs
+ * north; flight 2 is the parallel return on the west side. A flat landing
+ * at the far end turns 180°. No tread enters the corridor.
+ */
+export const STAIR_BN7 = (() => {
+  const bayEast = cB58.x + cB58.size[0] / 2;
+  const bayWest = cB59.x - cB59.size[0] / 2;
+  const deckSouth = cB5.z - cB5.size[1] / 2;
+  const deckNorth = cB5.z + cB5.size[1] / 2;
+  const b8North = UNIT_FOOTPRINT.B8[1] + unitPlanSize("B8")[1] / 2;
+  const wallT = 0.07;
+  const x0 = bayEast;
+  const x1 = Math.round((bayEast + (bayWest - bayEast) / 3) * 100) / 100;
+  const flightX0 = x0 + wallT * 2 + 0.002;
+  const flightX1 = x1;
+  const depth = deckSouth - (b8North + 0.05);
+  const zStop = deckNorth + depth;
+  const prevMid = (deckNorth + zStop) / 2;
+  const prevWalk = deckNorth + (prevMid - deckNorth) * 0.62;
+  const prevLand = prevMid + 0.01;
+  const prevLower = zStop - 0.16;
+  const oldTreads = 31;
+  const oldGoing = (prevLower - prevLand) / oldTreads;
+  const treads = 15;
+  const rise = FLOOR_HEIGHT / 48;
+  const perFlight = treads + 1;
+  const going = (oldGoing * oldTreads) / treads;
+  const flightRun = going * treads;
+  const gap = 0.1;
+  const flightW = (flightX1 - flightX0 - gap) / 2;
+  const clear = 0.34;
+  const near = 0.22;
+  const zWalk = deckNorth + clear;
+  const zTread0 = zWalk + near;
+  const zTread1 = zTread0 + flightRun;
+  return {
+    x0,
+    x1,
+    deckNorth,
+    flightX0,
+    flightX1,
+    flight1X0: flightX0,
+    flight1X1: flightX0 + flightW,
+    flight2X0: flightX1 - flightW,
+    flight2X1: flightX1,
+    zWalk,
+    zTread0,
+    zTread1,
+    zStop,
+    rise,
+    perFlight,
+    treads,
+    going,
+    wallT,
+  };
+})();
+
+/**
+ * U stair in the corridor-side lobby directly in front of B3 (brochure core).
+ * West face closed to the aisle. Opens south toward B5 via the BN6 approach.
+ * No lift here. Riser is half of STAIR_U (FLOOR_HEIGHT/32).
+ */
+export const STAIR_B3 = (() => {
+  const [cx, cz] = UNIT_FOOTPRINT.B3;
+  const [w, d] = unitPlanSize("B3");
+  const aptWest = cx + w / 2;
+  /** Main aisle east face (BN6·e). Stair door opens onto this plane. */
+  const aisleEast = aptWest + B3_STAIR_DEPTH;
+  // Brochure plan: bedroom-1 mid at y=6.5, living mid at y=19 on the 25' east wall.
+  // Slight N/S pad lengthens the run; keep clear of the flat door to the north.
+  const zNorth = cz + d / 2;
+  const zBedMid = zNorth - (6.5 / 25) * d;
+  const zLivMid = zNorth - (19 / 25) * d;
+  const zPadS = 0.12;
+  const zPadN = 0.06;
+  const z0 = Math.min(zBedMid, zLivMid) - zPadS;
+  const z1 = Math.max(zBedMid, zLivMid) + zPadN;
+  const wallT = WALL_T;
+  const well = 0.04;
+  const x0 = aptWest;
+  const x1 = aisleEast;
+  const wallInner = x1 - wallT;
+  const flight = (wallInner - x0 - well) / 2;
+  const rise = FLOOR_HEIGHT / 32;
+  const perFlight = Math.round(FLOOR_HEIGHT / 2 / rise);
+  const entry = 0.28;
+  const land = 0.3;
+  // Closed on the west (aisle). Opens south toward B5 / BN6 approach.
+  const zEntry0 = z0 + wallT;
+  const zEntry1 = zEntry0 + entry;
+  const zLand1 = z1 - wallT;
+  const zLand0 = zLand1 - land;
+  const zRun1 = zLand0;
+  const going = (zRun1 - zEntry1) / perFlight;
+  // South door: leave short wall returns on both sides of the opening.
+  const returnW = wallT + 0.04;
+  const doorX0 = x0 + returnW;
+  const doorX1 = x1 - returnW;
+  return {
+    x0,
+    x1,
+    aisleEast,
+    z0,
+    z1,
+    zBedMid,
+    zLivMid,
+    wallT,
+    wallInner,
+    flight,
+    flight1X0: wallInner - flight,
+    flight1X1: wallInner,
+    flight2X0: x0,
+    flight2X1: x0 + flight,
+    zEntry0,
+    zEntry1,
+    zRun1,
+    zLand0,
+    zLand1,
+    doorX0,
+    doorX1,
+    rise,
+    perFlight,
+    going,
+  };
+})();
+
+/**
+ * B3 flat entrance — north of the staircase, on B3's corridor-facing wall.
+ * Door runs along Z (parallel to the corridor-side stair wall). Clear of all
+ * stair treads, landings, and enclosure walls; opens toward the lobby/corridor.
+ */
+export const B3_ENTRANCE = (() => {
+  const [cx, cz] = UNIT_FOOTPRINT.B3;
+  const [w, d] = unitPlanSize("B3");
+  const wallFace = cx + w / 2;
+  const zUnitNorth = cz + d / 2;
+  const clear = 0.12;
+  const opening = 0.36;
+  const z0 = STAIR_B3.z1 + clear;
+  const z1 = Math.min(zUnitNorth - 0.04, z0 + opening);
+  const pathX0 = wallFace;
+  const pathX1 = STAIR_B3.aisleEast;
+  return {
+    id: "b3-entrance",
+    wallFace,
+    z0,
+    z1,
+    opening: z1 - z0,
+    doorDir: 1 as const,
+    pathX0,
+    pathX1,
+  };
+})();
+
+/**
+ * North fill only (above the B3 door path). South of the stair is corridor
+ * spur cB3n from BN6·e — not apartment mass.
+ */
+export const B3_CORRIDOR_FILLS = (() => {
+  const [cx, cz] = UNIT_FOOTPRINT.B3;
+  const [w, d] = unitPlanSize("B3");
+  const x0 = cx + w / 2;
+  const x1 = STAIR_B3.aisleEast;
+  const zUnitNorth = cz + d / 2;
+  return [
+    {
+      id: "b3-fill-north",
+      x0,
+      x1,
+      z0: B3_ENTRANCE.z1,
+      z1: zUnitNorth,
+    },
+  ] as const;
+})();
+
+/**
+ * Corridor extended from BN6·e toward B3: aisle → B3 setback → stair south.
+ * Stays north of B5's north face so it does not enter B5.
+ */
+export const B3_STAIR_APPROACH = (() => {
+  const [cx, cz] = UNIT_FOOTPRINT.B3;
+  const [w, d] = unitPlanSize("B3");
+  const x0 = cx + w / 2;
+  const x1 = STAIR_B3.aisleEast;
+  const b5North = UNIT_FOOTPRINT.B5[1] + halfZ("B5");
+  const seam = 0.02;
+  return {
+    x0,
+    x1,
+    z0: b5North,
+    z1: STAIR_B3.z0 - seam,
+  };
+})();
+
+/**
+ * Lift at the BW7 / BN5 corner, east of BN3.
+ * Flush with the west-aisle east wall, clear of B4.
+ * Door opens into BN3.
+ */
+export const LIFT_BN5 = (() => {
+  const wallFace = UNIT_FOOTPRINT.B4[0] - halfX("B4");
+  const bn3Z0 = cB5.z + cB5.size[1] / 2;
+  const bn3Z1 = UNIT_FOOTPRINT.B5[1] + halfZ("B5");
+  const shaft = 0.51;
+  const span = bn3Z1 - bn3Z0;
+  const opening = span * 0.72;
+  const face = Math.min(opening + 0.06, span - 0.02);
+  const mid = (bn3Z0 + bn3Z1) / 2;
+  const x0 = wallFace + WALL_T;
+  const x1 = x0 + shaft;
+  return {
+    id: "lift-bn5",
+    x0,
+    x1,
+    z0: mid - face / 2,
+    z1: mid + face / 2,
+    wallFace,
+    opening,
+    doorDir: 1 as const,
+    doorZ0: mid - opening / 2,
+    doorZ1: mid + opening / 2,
+  };
+})();
+
+/**
+ * Entrance path only: B3 door → main corridor, north of the staircase.
+ * Does not cover the stair well (that was putting the walk on the treads).
+ */
+const cB3s: Corridor = {
+  id: "cB3s",
+  x: (B3_ENTRANCE.pathX0 + B3_ENTRANCE.pathX1) / 2,
+  z: (B3_ENTRANCE.z0 + B3_ENTRANCE.z1) / 2,
+  size: [B3_ENTRANCE.pathX1 - B3_ENTRANCE.pathX0, B3_ENTRANCE.z1 - B3_ENTRANCE.z0],
+};
+
+/** BN6·e → B3 setback → stair south (corridor lobby approach). */
+const cB3n: Corridor = {
+  id: "cB3n",
+  x: (B3_STAIR_APPROACH.x0 + B3_STAIR_APPROACH.x1) / 2,
+  z: (B3_STAIR_APPROACH.z0 + B3_STAIR_APPROACH.z1) / 2,
+  size: [
+    B3_STAIR_APPROACH.x1 - B3_STAIR_APPROACH.x0,
+    B3_STAIR_APPROACH.z1 - B3_STAIR_APPROACH.z0,
+  ],
+};
+
+const cA = aisleRun("cA", "A1", "A2", "A9", "A10", "face", "center");
+const [cAB, cABj] = aToBFromGap("A7", "A10", "B6", "B7");
+
+/**
+ * Southbound U-stair in an A-wing corridor-side lobby (brochure core).
+ * Runs south toward `towardId`. `gapSouth` clears the neighbor (0 = touch).
+ * `z1` overrides the north end of the well (default: flat center + 0.12).
+ */
+function southboundAStair(
+  unitId: string,
+  towardId: string,
+  opts: { gapSouth?: number; z1?: number } = {},
+) {
+  const gapSouth = opts.gapSouth ?? 0.3;
+  const [cx, cz] = UNIT_FOOTPRINT[unitId];
+  const [w] = unitPlanSize(unitId);
+  const aptEast = cx + w / 2;
+  const aisleEast = aptEast + A_STAIR_DEPTH;
+  const towardNorth = UNIT_FOOTPRINT[towardId][1] + halfZ(towardId);
+  const wallT = WALL_T;
+  const well = 0.04;
+  const x0 = aptEast;
+  const x1 = aisleEast;
+  const wallInner = x1 - wallT;
+  const flight = (wallInner - x0 - well) / 2;
+  const z0 = towardNorth + gapSouth;
+  const z1 = opts.z1 ?? cz + 0.12;
+  const rise = FLOOR_HEIGHT / 32;
+  const perFlight = Math.round(FLOOR_HEIGHT / 2 / rise);
+  const entry = 0.45;
+  const land = 0.26;
+  const zEntry1 = z1 - wallT;
+  const zEntry0 = zEntry1 - entry;
+  const zLand0 = z0 + wallT;
+  const zLand1 = zLand0 + land;
+  const zRun1 = zLand1;
+  const going = Math.max((zEntry0 - zRun1) / perFlight, 0.04);
+  return {
+    x0,
+    x1,
+    aisleEast,
+    z0,
+    z1,
+    wallT,
+    wallInner,
+    flight,
+    flight1X0: wallInner - flight,
+    flight1X1: wallInner,
+    flight2X0: x0,
+    flight2X1: x0 + flight,
+    zEntry0,
+    zEntry1,
+    zRun1,
+    zLand0,
+    zLand1,
+    rise,
+    perFlight,
+    going,
+    southbound: true as const,
+  };
+}
+
+function aWingEntrance(
+  id: string,
+  unitId: string,
+  stair: { z1: number },
+) {
+  const [cx] = UNIT_FOOTPRINT[unitId];
+  const [w] = unitPlanSize(unitId);
+  const wallFace = cx + w / 2;
+  const opening = 0.4;
+  const clear = 0.14;
+  const z0 = stair.z1 + clear;
+  const z1 = z0 + opening;
+  const aisleEast = wallFace + A_STAIR_DEPTH;
+  return {
+    id,
+    wallFace,
+    z0,
+    z1,
+    opening: z1 - z0,
+    doorDir: 1 as const,
+    pathX0: wallFace,
+    pathX1: aisleEast,
+  };
+}
+
+function entranceSpur(id: string, entrance: {
+  pathX0: number
+  pathX1: number
+  z0: number
+  z1: number
+}): Corridor {
+  return {
+    id,
+    x: (entrance.pathX0 + entrance.pathX1) / 2,
+    z: (entrance.z0 + entrance.z1) / 2,
+    size: [entrance.pathX1 - entrance.pathX0, entrance.z1 - entrance.z0],
+  };
+}
+
+/** A8 corridor-side U-stair — south toward A9 with a clear gap. */
+export const STAIR_A8 = southboundAStair("A8", "A9");
+
+/**
+ * A4 flat entrance — on the corridor wall at A4's north edge.
+ * Path runs into cA; lift + stair sit south of this door.
+ */
+export const A4_ENTRANCE = (() => {
+  const [cx, cz] = UNIT_FOOTPRINT.A4;
+  const [w, d] = unitPlanSize("A4");
+  const wallFace = cx + w / 2;
+  const zUnitNorth = cz + d / 2;
+  const opening = 0.4;
+  const z1 = zUnitNorth - 0.04;
+  const z0 = z1 - opening;
+  const aisleEast = wallFace + A_STAIR_DEPTH;
+  return {
+    id: "a4-entrance",
+    wallFace,
+    z0,
+    z1,
+    opening: z1 - z0,
+    doorDir: 1 as const,
+    pathX0: wallFace,
+    pathX1: aisleEast,
+  };
+})();
+
+/**
+ * Lift in the A4 lobby between the north flat door and the stair.
+ * West face insets clear of the cA east wall (avoids z-fight / flashing).
+ * Door is on the south face toward the stairs.
+ */
+export const LIFT_A4 = (() => {
+  const x0 = A4_ENTRANCE.wallFace;
+  // Stop short of the aisle / cA wall plane (same pattern as LIFT_BE5).
+  const x1 = A4_ENTRANCE.pathX1 - WALL_T;
+  const shaft = 0.64;
+  const clearN = 0.06;
+  const z1 = A4_ENTRANCE.z0 - clearN;
+  const z0 = z1 - shaft;
+  const opening = Math.min((x1 - x0) * 0.72, x1 - x0 - 0.08);
+  const mid = (x0 + x1) / 2;
+  return {
+    id: "lift-a4",
+    x0,
+    x1,
+    z0,
+    z1,
+    /** South face — door opens toward the stair. */
+    wallFace: z0,
+    opening,
+    doorDir: -1 as const,
+    doorAxis: "z" as const,
+    doorX0: mid - opening / 2,
+    doorX1: mid + opening / 2,
+  };
+})();
+
+/**
+ * A4 corridor-side U-stair — south end touches A6; north end flush with
+ * LIFT_A4's south (door) face — no gap between lift and stair.
+ */
+export const STAIR_A4 = southboundAStair("A4", "A6", {
+  gapSouth: 0,
+  z1: LIFT_A4.z0,
+});
+
+/** A8 flat entrance — north of STAIR_A8, path into cA. */
+export const A8_ENTRANCE = aWingEntrance("a8-entrance", "A8", STAIR_A8);
+
+/** Entrance spur: A4 door → cA (N/S side walls; ends open). */
+const cA4s = entranceSpur("cA4s", A4_ENTRANCE);
+
+/** Entrance spur: A8 door → cA (N/S side walls; ends open). */
+const cA8s = entranceSpur("cA8s", A8_ENTRANCE);
+
+/**
+ * A4 lobby north of the stair is LIFT_A4 (not fill mass).
+ * North of STAIR_A8 stays empty. Walkable link is the entrance spur path only.
+ */
+export const A4_CORRIDOR_FILLS: readonly {
+  id: string
+  x0: number
+  x1: number
+  z0: number
+  z1: number
+}[] = [];
+
+export const A8_CORRIDOR_FILLS: readonly {
+  id: string
+  x0: number
+  x1: number
+  z0: number
+  z1: number
+}[] = [];
+
+/**
+ * Lift at the AS1·n / AW8·w outer corner (A9–A10 / A7 south pocket).
+ * North of AS1 and west of the A aisle — not on the corridor deck.
+ * Door opens east into cA.
+ */
+export const LIFT_AS1 = (() => {
+  const wallFace = cA.x + cA.size[0] / 2; // AW8·w / aisle west face
+  const as1North = cAB.z + cAB.size[1] / 2; // AS1·n
+  const a7South = UNIT_FOOTPRINT.A7[1] - halfZ("A7");
+  const shaft = 0.51;
+  const pocket = Math.max(a7South - as1North - 0.02, shaft);
+  const depth = Math.min(0.64, pocket);
+  const opening = depth * 0.72;
+  const face = Math.min(opening + 0.06, depth);
+  const z0 = as1North;
+  const z1 = z0 + face;
+  const mid = (z0 + z1) / 2;
+  return {
+    id: "lift-as1",
+    x0: wallFace,
+    x1: wallFace + shaft,
+    z0,
+    z1,
+    wallFace,
+    opening,
+    doorDir: -1 as const,
+    doorZ0: mid - opening / 2,
+    doorZ1: mid + opening / 2,
+  };
+})();
+
 export const CORRIDORS: Corridor[] = [
-  aisleRun("cA", "A1", "A2", "A9", "A10", "face", "center"),
+  cA,
+  cA4s,
+  cA8s,
   aisleRun("cBw", "B1", "B2", "B6", "B7", "center"),
+  cB3s,
+  cB3n,
   cBe,
   westFromCorridorToUnit("cBe12", cBe, "B12"),
-  aisleExtendNorth("cBeN", "B12", "B13", "B15", "B9", "B15"),
-  ...aToBFromGap("A7", "A10", "B6", "B7"),
+  cBeN,
+  cAB,
+  cABj,
   cB5,
   cB58,
   joinCorridorNEToUnitSW("cB58j", cB58, "B8"),
@@ -491,10 +1076,14 @@ export const CORRIDOR_WALLS: { x: number; z: number; size: [number, number] }[] 
 
   CORRIDORS.forEach((corridor, index) => {
     const self = boxes[index];
+    // Short E–W spurs that still need N–S side walls.
     const eastWest =
-      corridor.size[0] >= corridor.size[1] ||
-      corridor.id === "cB58j" ||
-      corridor.id === "cB59j";
+      (corridor.size[0] >= corridor.size[1] ||
+        corridor.id === "cBe12" ||
+        corridor.id === "cB58j" ||
+        corridor.id === "cB59j") &&
+      corridor.id !== "cB3n" &&
+      corridor.id !== "cB3s";
 
     if (eastWest) {
       for (const side of [-1, 1]) {
@@ -506,6 +1095,9 @@ export const CORRIDOR_WALLS: { x: number; z: number; size: [number, number] }[] 
         if (!fillA7Gap) {
           cuts.push(...apartmentFaceCutsX(z, corridor.z, self.x0, self.x1));
         }
+        if (corridor.id === "cB5" && side === 1) {
+          cuts.push([STAIR_BN7.x0, STAIR_BN7.x1]);
+        }
         for (const [x0, x1] of subtractSpan([self.x0, self.x1], cuts)) {
           walls.push({ x: (x0 + x1) / 2, z, size: [x1 - x0, WALL_T] });
         }
@@ -514,14 +1106,49 @@ export const CORRIDOR_WALLS: { x: number; z: number; size: [number, number] }[] 
     }
 
     for (const side of [-1, 1]) {
-      const x = corridor.x + side * (corridor.size[0] / 2 + WALL_T / 2);
+      // Lobby spur apt-face: inset wall inside the deck (avoid z-fight with flat).
+      const insetApt = corridor.id === "cB3n" && side === -1;
+      const x = insetApt
+        ? corridor.x - corridor.size[0] / 2 + WALL_T / 2
+        : corridor.x + side * (corridor.size[0] / 2 + WALL_T / 2);
       const cuts = [
         ...joinCuts("z", self, x - WALL_T / 2, x + WALL_T / 2, index),
       ];
       const keepNorthWest =
         (corridor.id === "cB58" || corridor.id === "cB59") && side === -1;
-      if (!keepNorthWest) {
+      // Lobby spurs: skip apt-face cut so the lining wall is not flush-removed.
+      if (!keepNorthWest && corridor.id !== "cB3n") {
         cuts.push(...apartmentFaceCutsZ(x, corridor.x, self.z0, self.z1));
+      }
+      if ((corridor.id === "cBe" || corridor.id === "cBeN") && side === -1) {
+        cuts.push([STAIR_U.corridorZ0, STAIR_U.corridorZ1]);
+      }
+      if (corridor.id === "cBeN" && side === -1) {
+        const mid = (LIFT_BE5.z0 + LIFT_BE5.z1) / 2;
+        const half = LIFT_BE5.opening / 2;
+        cuts.push([mid - half, mid + half]);
+      }
+      if (corridor.id === "cBw" && side === 1) {
+        cuts.push([LIFT_BN5.doorZ0, LIFT_BN5.doorZ1]);
+      }
+      // B3 flat door only — stair opens south to B5, not west into the aisle.
+      if (corridor.id === "cBw" && side === -1) {
+        cuts.push([B3_ENTRANCE.z0, B3_ENTRANCE.z1]);
+      }
+      // A8/AS1 lift door into the west face of cA (A7 side).
+      if (corridor.id === "cA" && side === 1) {
+        cuts.push([LIFT_AS1.doorZ0, LIFT_AS1.doorZ1]);
+      }
+      // A4 / A8 flat door + stair entry into the east face of cA.
+      if (corridor.id === "cA" && side === -1) {
+        cuts.push([A4_ENTRANCE.z0, A4_ENTRANCE.z1]);
+        cuts.push([STAIR_A4.zEntry0, STAIR_A4.zEntry1]);
+        cuts.push([A8_ENTRANCE.z0, A8_ENTRANCE.z1]);
+        cuts.push([STAIR_A8.zEntry0, STAIR_A8.zEntry1]);
+      }
+      if (corridor.id === "cB3s") {
+        // Door path deck only — staircase / flat walls own the enclosure.
+        cuts.push([self.z0, self.z1]);
       }
       for (const [z0, z1] of subtractSpan([self.z0, self.z1], cuts)) {
         walls.push({ x, z: (z0 + z1) / 2, size: [WALL_T, z1 - z0] });
@@ -746,13 +1373,13 @@ export function corridorEndMarks(corridor: { id: string; size: [number, number] 
   const alongZ = corridor.size[1] >= corridor.size[0];
   return alongZ
     ? [
-        { abbr: "nEnd", t: -1 },
-        { abbr: "sEnd", t: 1 },
-      ]
+      { abbr: "nEnd", t: -1 },
+      { abbr: "sEnd", t: 1 },
+    ]
     : [
-        { abbr: "wEnd", t: -1 },
-        { abbr: "eEnd", t: 1 },
-      ];
+      { abbr: "wEnd", t: -1 },
+      { abbr: "eEnd", t: 1 },
+    ];
 }
 
 export function corridorEndPosition(
@@ -887,6 +1514,11 @@ export const CAMERA_UP: [number, number, number] = [0, 1, 0];
 /** Compound footprint (centered on building), plus extra east-side yard. */
 const COMPOUND_LW = 37.5;
 const COMPOUND_LD = 24.5;
+/**
+ * Site / compound center ignoring BW_LEN so the gate wall, drive paving,
+ * lawn grid, and L# IDs stay on the original base layout while B flats grow.
+ */
+const cxSite = (X.A_W + X.B_EE - BW_LEN) / 2;
 /** Extra yard on screen-south / world-north (seating & kids play side). */
 const NORTH_YARD_EXTRA = 2.4;
 /** Push east wall outward from apartments (gate end). */
@@ -898,7 +1530,7 @@ const LAWN_CELL = 1.25;
 
 export const SITE = {
   plot: {
-    position: [cx, 0.02, cz] as [number, number, number],
+    position: [cxSite, 0.02, cz] as [number, number, number],
     size: [28.4, 16.4] as [number, number],
   },
   compound: (() => {
@@ -909,9 +1541,9 @@ export const SITE = {
     const y = h / 2;
     const hx = lw / 2;
     const hz = ld / 2;
-    const westGate = cx - hx - EAST_GATE_EXTRA; // more interior space on east / gate side
+    const westGate = cxSite - hx - EAST_GATE_EXTRA; // more interior space on east / gate side
     const westWide = westGate - EAST_SOUTH_EXTRA; // still wider at CWeEndS
-    const east = cx + hx;
+    const east = cxSite + hx;
     const north = cz - hz - NORTH_YARD_EXTRA; // more space south of seating / kids play
     const south = cz + hz;
     const gateS = south - 0.15;
@@ -1098,7 +1730,12 @@ export const SITE = {
     };
   })(),
   courtAB: {
-    position: [(X.A_E + X.B_W) / 2, 0.05, (Z[2] + Z[3]) / 2] as [number, number, number],
+    position: [
+      (UNIT_FOOTPRINT.A2[0] + halfX("A2") + UNIT_FOOTPRINT.B1[0] - halfX("B1")) /
+        2,
+      0.05,
+      (Z[2] + Z[3]) / 2,
+    ] as [number, number, number],
     size: [GAP_AB * 0.82, 4.6] as [number, number],
   },
   courtB: {
@@ -1107,31 +1744,27 @@ export const SITE = {
   },
   clubhouse: (() => {
     const chY = 1.55 + STILT_HEIGHT;
+    const aEast = UNIT_FOOTPRINT.A2[0] + halfX("A2");
+    const bEast = UNIT_FOOTPRINT.B1[0] - halfX("B1");
+    const aWest = UNIT_FOOTPRINT.A2[0] - halfX("A2");
+    const bWest = UNIT_FOOTPRINT.B1[0] + halfX("B1");
+    const gapMid = (aEast + bEast) / 2;
+    const gapW = bEast - aEast;
+    const zMid = (Z[0] + Z[1]) / 2;
     return {
-      position: [
-        (X.A_E + X.B_W) / 2,
-        chY,
-        (Z[0] + Z[1]) / 2,
-      ] as [number, number, number],
-      size: [X.B_W - X.A_E + UNIT, 3.1, BAY + UNIT] as [
-        number,
-        number,
-        number,
-      ],
+      position: [(aWest + bWest) / 2, chY, zMid] as [number, number, number],
+      size: [bWest - aWest, 3.1, BAY + UNIT] as [number, number, number],
       court: {
-        position: [
-          (X.A_E + X.B_W) / 2,
-          chY,
-          (Z[0] + Z[1]) / 2,
-        ] as [number, number, number],
-        size: [GAP_AB - 0.04, 3.1, BAY + UNIT] as [number, number, number],
+        position: [gapMid, chY, zMid] as [number, number, number],
+        size: [gapW - 0.04, 3.1, BAY + UNIT] as [number, number, number],
       },
       stacks: ["A2", "A3", "B1", "B3"].map((id) => {
         const [x, z] = UNIT_FOOTPRINT[id];
+        const [w, d] = unitPlanSize(id);
         return {
           id,
           position: [x, chY, z] as [number, number, number],
-          size: [UNIT, 3.1, UNIT] as [number, number, number],
+          size: [w, 3.1, d] as [number, number, number],
         };
       }),
     };
@@ -1371,16 +2004,16 @@ export const LAWN_PARTS = (() => {
         continue;
       }
       const id = `L${index}`;
-      const cx = (ring[0][0] + ring[1][0]) / 2;
-      const cz = (ring[0][1] + ring[2][1]) / 2;
+      const cellX = (ring[0][0] + ring[1][0]) / 2;
+      const cellZ = (ring[0][1] + ring[2][1]) / 2;
       // Keep label clearly inside the wall face.
-      const labelZ = Math.max(cz, compoundNorthFace(cx) + 0.35);
+      const labelZ = Math.max(cellZ, compoundNorthFace(cellX) + 0.35);
       parts.push({
         id,
         label: id,
         color: colors[index % colors.length],
         ring,
-        position: [cx, y, labelZ],
+        position: [cellX, y, labelZ],
       });
       index += 1;
     }
@@ -1388,19 +2021,20 @@ export const LAWN_PARTS = (() => {
 
   // Open checkered paving between compound wall and apartments (plot / drive).
   // Labels only — do not paint lawn mesh over checkers.
-  // Use real unit footprints (not the full AABB) so the open yard on the
-  // wall side of B / courtyards still gets L# labels.
+  // Use real unit footprints so longer B flats do not leave false open-yard cells.
   {
-    const half = UNIT / 2;
-    const footprints = Object.values(UNIT_FOOTPRINT);
+    const footprints = Object.entries(UNIT_FOOTPRINT).map(([id, [ux, uz]]) => {
+      const [w, d] = unitPlanSize(id);
+      return { ux, uz, hx: w / 2, hz: d / 2 };
+    });
     const underApt = (x: number, z: number) => {
       const pad = 0.2;
-      return footprints.some(([ux, uz]) => {
+      return footprints.some(({ ux, uz, hx, hz }) => {
         return (
-          x >= ux - half - pad &&
-          x <= ux + half + pad &&
-          z >= uz - half - pad &&
-          z <= uz + half + pad
+          x >= ux - hx - pad &&
+          x <= ux + hx + pad &&
+          z >= uz - hz - pad &&
+          z <= uz + hz + pad
         );
       });
     };
@@ -1447,12 +2081,12 @@ export const LAWN_LABEL_GROUP_OPTIONS: {
   key: LawnLabelGroup;
   label: string;
 }[] = [
-  { key: "n", label: "L# north" },
-  { key: "e", label: "L# east" },
-  { key: "w", label: "L# west" },
-  { key: "s", label: "L# south" },
-  { key: "yard", label: "L# yard" },
-];
+    { key: "n", label: "L# north" },
+    { key: "e", label: "L# east" },
+    { key: "w", label: "L# west" },
+    { key: "s", label: "L# south" },
+    { key: "yard", label: "L# yard" },
+  ];
 
 export const LAWN_PARTS_BY_GROUP = (() => {
   const { westWide, east, north, south } = SITE.compound.bounds;
@@ -2339,15 +2973,18 @@ export function isClubhousePodiumFlat(
   floor: number,
 ) {
   if (floor > CLUBHOUSE_PODIUM_FLOORS) return false;
-  const [x, z] = UNIT_FOOTPRINT[`${wing}${unit}`] ?? [Number.NaN, Number.NaN];
+  const id = `${wing}${unit}`;
+  const [x, z] = UNIT_FOOTPRINT[id] ?? [Number.NaN, Number.NaN];
+  const [w, d] = unitPlanSize(id);
   const [cx, , cz] = SITE.clubhouse.position;
   const [sx, , sz] = SITE.clubhouse.size;
-  const pad = UNIT / 2 - 0.04;
+  const padX = w / 2 - 0.04;
+  const padZ = d / 2 - 0.04;
   return (
-    x - pad >= cx - sx / 2 &&
-    x + pad <= cx + sx / 2 &&
-    z - pad >= cz - sz / 2 &&
-    z + pad <= cz + sz / 2
+    x - padX >= cx - sx / 2 &&
+    x + padX <= cx + sx / 2 &&
+    z - padZ >= cz - sz / 2 &&
+    z + padZ <= cz + sz / 2
   );
 }
 

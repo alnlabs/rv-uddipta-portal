@@ -130,7 +130,8 @@ export const A4_ROOMS: A4Room[] = [
 ];
 
 export const A4_DOORS: A4Door[] = [
-  { id: "entry", wall: "e", x: 32.75, y: 13.1, length: 3.2, swing: "ccw", entrance: true },
+  // North-edge entrance (corridor face); stairs sit in the south half toward A6.
+  { id: "entry", wall: "e", x: 32.75, y: 1.6, length: 3.2, swing: "ccw", entrance: true },
   { id: "kitchen", wall: "e", x: 13, y: 8.1, length: 2.5, swing: "cw" },
   { id: "utility", wall: "w", x: X0, y: 3.8, length: 2.4, swing: "cw" },
   { id: "bed-1", wall: "e", x: 16, y: 18.6, length: 2.8, swing: "cw" },

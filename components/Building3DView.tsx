@@ -32,7 +32,12 @@ import {
   type BufferGeometry,
   type Group,
 } from "three";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
+import { CorridorSegmentLayer, type CorridorLabelReport } from "@/components/CorridorSegmentLayer";
+import { DebugLabelLayer, DebugLayerPanel } from "@/components/DebugLabelLayer";
+import { FloorMeasureGrid } from "@/components/FloorMeasureGrid";
+import { buildDebugLabels, DEBUG_LAYER_OPTIONS, type DebugLayer } from "@/lib/debugLabel";
 import { CompassHud, CompassSync } from "@/components/ViewCompass";
 import {
   CARDINAL_LABEL,
@@ -49,6 +54,21 @@ import {
   COMPOUND_ID,
   CORRIDORS,
   CORRIDOR_WALLS,
+  A4_CORRIDOR_FILLS,
+  A4_ENTRANCE,
+  A8_CORRIDOR_FILLS,
+  A8_ENTRANCE,
+  B3_CORRIDOR_FILLS,
+  B3_ENTRANCE,
+  LIFT_A4,
+  LIFT_AS1,
+  LIFT_BE5,
+  LIFT_BN5,
+  STAIR_A4,
+  STAIR_A8,
+  STAIR_B3,
+  STAIR_BN7,
+  STAIR_U,
   FACE_MARKS,
   FLOOR_COUNT,
   FLOOR_HEIGHT,
@@ -58,11 +78,7 @@ import {
   SITE_AREA_LABEL_TEXT,
   AMENITY_LABEL_IDS,
   AMENITY_LEGEND,
-  AMENITY_NUMBER_BY_ID,
   LAWN_PARTS,
-  LAWN_PARTS_BY_GROUP,
-  LAWN_LABEL_GROUP_OPTIONS,
-  type LawnLabelGroup,
   SITE_MARK_LABEL_IDS,
   PARK_WIDTH,
   TRACK_WIDTH,
@@ -82,14 +98,11 @@ import {
   compoundGatePosition,
   COMPOUND_GATE,
   compoundMarkPosition,
-  corridorDebugMarks,
-  corridorEndMarks,
-  corridorEndPosition,
-  corridorMarkPosition,
   debugMarkPosition,
   groundLabelY,
   isClubhousePodiumFlat,
   labelPosition,
+  UNIT_SIZE,
   unitBoxSize,
   unitPosition,
 } from "@/lib/layout3d";
@@ -100,11 +113,6 @@ type LabelKey =
   | "corridors"
   | "compound"
   | "siteMarks"
-  | "lawnN"
-  | "lawnE"
-  | "lawnW"
-  | "lawnS"
-  | "lawnYard"
   | "amenities"
   | "clubhouse"
   | "gate"
@@ -112,25 +120,17 @@ type LabelKey =
 
 type LabelVisibility = Record<LabelKey, boolean>;
 
-const LAWN_GROUP_KEY: Record<LawnLabelGroup, LabelKey> = {
-  n: "lawnN",
-  e: "lawnE",
-  w: "lawnW",
-  s: "lawnS",
-  yard: "lawnYard",
-};
+const AMENITY_NAME_BY_ID: Record<string, string> = Object.fromEntries(
+  AMENITY_LEGEND.flatMap((entry) => entry.ids.map((id) => [id, entry.label])),
+);
 
 const LABEL_OPTIONS: { key: LabelKey; label: string }[] = [
   { key: "myFlat", label: "My flat" },
-  { key: "amenities", label: "Amenities" },
-  { key: "units", label: "Units" },
+  { key: "units", label: "Flats" },
   { key: "corridors", label: "Corridors" },
+  { key: "amenities", label: "Amenities" },
   { key: "compound", label: "Compound" },
   { key: "siteMarks", label: "Site marks" },
-  ...LAWN_LABEL_GROUP_OPTIONS.map((option) => ({
-    key: LAWN_GROUP_KEY[option.key],
-    label: option.label,
-  })),
   { key: "clubhouse", label: "Clubhouse" },
   { key: "gate", label: "Gate" },
   { key: "faces", label: "Face marks" },
@@ -143,15 +143,10 @@ const PROD_LABEL_KEYS = new Set<LabelKey>(["myFlat", "amenities"]);
 
 const DEFAULT_LABELS: LabelVisibility = {
   myFlat: true,
-  units: false,
-  corridors: false,
+  units: IS_DEV,
+  corridors: IS_DEV,
   compound: false,
   siteMarks: false,
-  lawnN: false,
-  lawnE: false,
-  lawnW: false,
-  lawnS: false,
-  lawnYard: false,
   amenities: false,
   clubhouse: false,
   gate: false,
@@ -166,14 +161,9 @@ const DEV_ONLY_LABEL_KEYS = new Set<LabelKey>(
 );
 
 const HEAVY_LABEL =
-  "block rounded-md bg-[#0d1a14] px-2 py-1 text-[12px] leading-none font-black tracking-wide text-[#f7f2e6] shadow-[0_1px_4px_rgba(0,0,0,0.45)] ring-1 ring-[rgba(232,213,163,0.4)]";
+  "pointer-events-none block rounded-md bg-[#0d1a14] px-2 py-1 text-[12px] leading-none font-black tracking-wide text-[#f7f2e6] shadow-[0_1px_4px_rgba(0,0,0,0.45)] ring-1 ring-[rgba(232,213,163,0.4)] select-none";
 const HEAVY_LABEL_SM =
-  "block rounded bg-[#0d1a14] px-1.5 py-0.5 text-[10px] leading-none font-extrabold tracking-wide text-[#e8d5a3] shadow-[0_1px_3px_rgba(0,0,0,0.4)] ring-1 ring-[rgba(232,213,163,0.35)]";
-const DEBUG_LAWN_LABEL =
-  "block rounded bg-[#0d1a14] px-1 py-0.5 text-[8px] leading-none font-bold text-[#e8d5a3] shadow-[0_1px_2px_rgba(0,0,0,0.35)] ring-1 ring-[rgba(232,213,163,0.3)]";
-const AMENITY_NUMBER_LABEL =
-  "grid size-7 place-items-center rounded-full bg-[#0d1a14] text-[13px] leading-none font-black text-[#f7f2e6] shadow-[0_2px_6px_rgba(0,0,0,0.45)] ring-2 ring-[rgba(232,213,163,0.55)]";
-
+  "pointer-events-none block rounded bg-[#0d1a14] px-1.5 py-0.5 text-[10px] leading-none font-extrabold tracking-wide text-[#e8d5a3] shadow-[0_1px_3px_rgba(0,0,0,0.4)] ring-1 ring-[rgba(232,213,163,0.35)] select-none";
 export type ModelFlat = {
   flatNumber: string
   wing: string
@@ -332,9 +322,16 @@ function isBought(flat: ModelFlat) {
 /** Keep 3D HTML labels under the HUD and the flat popup. */
 function SceneHtml({
   zIndexRange: _zIndexRange,
+  style,
   ...props
 }: ComponentProps<typeof Html>) {
-  return <Html {...props} zIndexRange={[8, 0]} />;
+  return (
+    <Html
+      {...props}
+      zIndexRange={[8, 0]}
+      style={{ pointerEvents: "none", userSelect: "none", ...style }}
+    />
+  );
 }
 
 function colorFor(
@@ -455,19 +452,32 @@ function UnitMesh({
         }
         geometry={geometry}
         renderOrder={faded ? 0 : mine ? 3 : bought ? 2 : 1}
-        onClick={(event) => {
-          event.stopPropagation();
-          onSelect(flat);
-        }}
-        onPointerOver={(event) => {
-          event.stopPropagation();
-          setHovered(true);
-          document.body.style.cursor = "pointer";
-        }}
-        onPointerOut={() => {
-          setHovered(false);
-          document.body.style.cursor = "auto";
-        }}
+        raycast={faded ? () => null : undefined}
+        onClick={
+          faded
+            ? undefined
+            : (event) => {
+                event.stopPropagation();
+                onSelect(flat);
+              }
+        }
+        onPointerOver={
+          faded
+            ? undefined
+            : (event) => {
+                event.stopPropagation();
+                setHovered(true);
+                document.body.style.cursor = "pointer";
+              }
+        }
+        onPointerOut={
+          faded
+            ? undefined
+            : () => {
+                setHovered(false);
+                document.body.style.cursor = "auto";
+              }
+        }
       >
         <meshStandardMaterial
           color={colorFor(flat, selected, hovered, dimmed, mine, onFocusFloor)}
@@ -1702,21 +1712,6 @@ function GroundLabels({
         </SceneHtml>
       ) : null}
 
-      {LAWN_LABEL_GROUP_OPTIONS.map((group) =>
-        labels[LAWN_GROUP_KEY[group.key]]
-          ? LAWN_PARTS_BY_GROUP[group.key].map((part) => (
-              <SceneHtml
-                key={`gf-lawn-${part.id}`}
-                position={part.position}
-                center
-                style={{ pointerEvents: "none", transform: "translate(-50%, -50%)" }}
-              >
-                <span className={DEBUG_LAWN_LABEL}>{part.label}</span>
-              </SceneHtml>
-            ))
-          : null,
-      )}
-
       {labels.siteMarks
         ? SITE_AREA_LABELS.filter((area) => SITE_MARK_LABEL_IDS.has(area.id)).map(
             (area) => (
@@ -1737,8 +1732,8 @@ function GroundLabels({
       {labels.amenities
         ? SITE_AREA_LABELS.filter((area) => AMENITY_LABEL_IDS.has(area.id)).map(
             (area) => {
-              const n = AMENITY_NUMBER_BY_ID[area.id];
-              if (n == null) return null;
+              const name = AMENITY_NAME_BY_ID[area.id];
+              if (!name) return null;
               return (
                 <SceneHtml
                   key={`gf-amenity-${area.id}`}
@@ -1749,9 +1744,7 @@ function GroundLabels({
                     transform: "translate(-50%, -50%)",
                   }}
                 >
-                  <span className={AMENITY_NUMBER_LABEL} aria-label={`Amenity ${n}`}>
-                    {n}
-                  </span>
+                  <span className={HEAVY_LABEL}>{name}</span>
                 </SceneHtml>
               );
             },
@@ -1801,45 +1794,6 @@ function GroundLabels({
           ))}
         </>
       ) : null}
-
-      {labels.corridors
-        ? CORRIDORS.flatMap((corridor) => [
-            <SceneHtml
-              key={`fl-${corridor.id}`}
-              position={corridorMarkPosition(corridor, 0, floorFocus)}
-              center
-              style={{ pointerEvents: "none", transform: "translate(-50%, -50%)" }}
-            >
-              <span className={HEAVY_LABEL}>{corridor.id}</span>
-            </SceneHtml>,
-            ...corridorDebugMarks(corridor).map((mark) => (
-              <SceneHtml
-                key={`fl-${corridor.id}-${mark.abbr}`}
-                position={corridorMarkPosition(corridor, mark.t, floorFocus)}
-                center
-                style={{ pointerEvents: "none", transform: "translate(-50%, -50%)" }}
-              >
-                <span className={HEAVY_LABEL_SM}>
-                  {corridor.id}
-                  {mark.abbr}
-                </span>
-              </SceneHtml>
-            )),
-            ...corridorEndMarks(corridor).map((mark) => (
-              <SceneHtml
-                key={`fl-${corridor.id}-end-${mark.abbr}`}
-                position={corridorEndPosition(corridor, mark, floorFocus)}
-                center
-                style={{ pointerEvents: "none", transform: "translate(-50%, -50%)" }}
-              >
-                <span className={HEAVY_LABEL_SM}>
-                  {corridor.id}
-                  {mark.abbr}
-                </span>
-              </SceneHtml>
-            )),
-          ])
-        : null}
 
       {labels.faces ? (
         <>
@@ -1905,6 +1859,7 @@ function Corridors({ focusFloor }: { focusFloor: number }) {
             scale={[corridor.size[0], height, corridor.size[1]]}
             geometry={geometry}
             renderOrder={dimmed ? 0 : 1}
+            onClick={(event) => event.stopPropagation()}
           >
             <meshStandardMaterial
               color={dimmed ? "#8b908e" : "#c8cccf"}
@@ -1923,6 +1878,7 @@ function Corridors({ focusFloor }: { focusFloor: number }) {
             scale={[wall.size[0], wallH, wall.size[1]]}
             geometry={geometry}
             renderOrder={dimmed ? 0 : 1}
+            onClick={(event) => event.stopPropagation()}
           >
             <meshStandardMaterial
               color={dimmed ? "#6f7472" : "#8d9391"}
@@ -1937,6 +1893,1001 @@ function Corridors({ focusFloor }: { focusFloor: number }) {
         return [...decks, ...walls];
       })}
     </>
+  );
+}
+
+function LiftShaft({
+  focusFloor,
+  x0,
+  x1,
+  z0,
+  z1,
+  wallFace,
+  opening,
+  doorAxis,
+  doorDir = -1,
+}: {
+  focusFloor: number
+  x0: number
+  x1: number
+  z0: number
+  z1: number
+  wallFace: number
+  opening: number
+  doorAxis: "x" | "z"
+  doorDir?: -1 | 1
+}) {
+  const cx = (x0 + x1) / 2;
+  const cz = (z0 + z1) / 2;
+  const top = buildingTopY();
+  const doorH = 0.72;
+  const frameT = 0.012;
+  const doorT = 0.03;
+  const stop = (event: { stopPropagation: () => void }) => event.stopPropagation();
+  const along = (offset: number) => wallFace + doorDir * offset;
+
+  return (
+    <group>
+      <mesh position={[cx, top / 2, cz]} onClick={stop}>
+        <boxGeometry args={[x1 - x0, top, z1 - z0]} />
+        <meshStandardMaterial color="#5c6563" roughness={0.84} metalness={0.04} />
+      </mesh>
+      {Array.from({ length: FLOOR_COUNT }, (_, index) => index + 1).map((floor) => {
+        const dimmed = focusFloor !== 0 && floor !== focusFloor;
+        const doorY = floorBaseY(floor) + 0.2 + doorH / 2;
+        const framePos =
+          doorAxis === "x"
+            ? ([along(frameT / 2), doorY, cz] as const)
+            : ([cx, doorY, along(frameT / 2)] as const);
+        const leafPos =
+          doorAxis === "x"
+            ? ([along(frameT + doorT / 2), doorY, cz] as const)
+            : ([cx, doorY, along(frameT + doorT / 2)] as const);
+        const frameSize =
+          doorAxis === "x"
+            ? ([frameT, doorH + 0.035, opening] as const)
+            : ([opening, doorH + 0.035, frameT] as const);
+        const leafSize =
+          doorAxis === "x"
+            ? ([doorT, doorH, opening - 0.04] as const)
+            : ([opening - 0.04, doorH, doorT] as const);
+        return (
+          <group key={`lift-door-${floor}`}>
+            <mesh position={[...framePos]} onClick={stop}>
+              <boxGeometry args={[...frameSize]} />
+              <meshStandardMaterial
+                color="#c9a45c"
+                transparent={dimmed}
+                opacity={dimmed ? 0.35 : 1}
+                roughness={0.38}
+                metalness={0.5}
+              />
+            </mesh>
+            <mesh position={[...leafPos]} onClick={stop}>
+              <boxGeometry args={[...leafSize]} />
+              <meshStandardMaterial
+                color={dimmed ? "#3a403e" : "#1e2623"}
+                transparent={dimmed}
+                opacity={dimmed ? 0.35 : 1}
+                roughness={0.42}
+                metalness={0.4}
+              />
+            </mesh>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+function LiftAtBE5({ focusFloor }: { focusFloor: number }) {
+  const { x0, x1, z0, z1, wallFace, opening } = LIFT_BE5;
+  return (
+    <LiftShaft
+      focusFloor={focusFloor}
+      x0={x0}
+      x1={x1}
+      z0={z0}
+      z1={z1}
+      wallFace={wallFace}
+      opening={opening}
+      doorAxis="x"
+      doorDir={-1}
+    />
+  );
+}
+
+function LiftAtBN5({ focusFloor }: { focusFloor: number }) {
+  const { x0, x1, z0, z1, wallFace, opening, doorDir } = LIFT_BN5;
+  return (
+    <LiftShaft
+      focusFloor={focusFloor}
+      x0={x0}
+      x1={x1}
+      z0={z0}
+      z1={z1}
+      wallFace={wallFace}
+      opening={opening}
+      doorAxis="x"
+      doorDir={doorDir}
+    />
+  );
+}
+
+function LiftAtAS1({ focusFloor }: { focusFloor: number }) {
+  const { x0, x1, z0, z1, wallFace, opening, doorDir } = LIFT_AS1;
+  return (
+    <LiftShaft
+      focusFloor={focusFloor}
+      x0={x0}
+      x1={x1}
+      z0={z0}
+      z1={z1}
+      wallFace={wallFace}
+      opening={opening}
+      doorAxis="x"
+      doorDir={doorDir}
+    />
+  );
+}
+
+/** A4 lobby lift — between north flat door and stair; door faces the stair. */
+function LiftAtA4({ focusFloor }: { focusFloor: number }) {
+  const { x0, x1, z0, z1, wallFace, opening, doorDir, doorAxis } = LIFT_A4;
+  return (
+    <LiftShaft
+      focusFloor={focusFloor}
+      x0={x0}
+      x1={x1}
+      z0={z0}
+      z1={z1}
+      wallFace={wallFace}
+      opening={opening}
+      doorAxis={doorAxis}
+      doorDir={doorDir}
+    />
+  );
+}
+
+/** Restore B3 mass on the corridor face outside the stair notch / door path. */
+function B3CorridorFills({ focusFloor }: { focusFloor: number }) {
+  const stop = (event: { stopPropagation: () => void }) => event.stopPropagation();
+  return (
+    <group name="b3-corridor-fills">
+      {Array.from({ length: FLOOR_COUNT }, (_, index) => index + 1).flatMap((floor) => {
+        const dimmed = focusFloor !== 0 && floor !== focusFloor;
+        const y = floorBaseY(floor) + UNIT_SIZE[1] / 2;
+        return B3_CORRIDOR_FILLS.map((fill) => (
+          <mesh
+            key={`${fill.id}-${floor}`}
+            name={fill.id}
+            position={[
+              (fill.x0 + fill.x1) / 2,
+              y,
+              (fill.z0 + fill.z1) / 2,
+            ]}
+            onClick={stop}
+          >
+            <boxGeometry
+              args={[fill.x1 - fill.x0, UNIT_SIZE[1], fill.z1 - fill.z0]}
+            />
+            <meshStandardMaterial
+              color={dimmed ? "#8d8882" : "#c5bbb0"}
+              transparent={dimmed}
+              opacity={dimmed ? 0.28 : 1}
+              roughness={0.62}
+              metalness={0.06}
+            />
+          </mesh>
+        ));
+      })}
+    </group>
+  );
+}
+
+/** Restore A-wing mass on the corridor face (A4 / A8 fills are empty by design). */
+function AWingCorridorFills({
+  focusFloor,
+  fills,
+  name,
+}: {
+  focusFloor: number
+  fills: readonly { id: string; x0: number; x1: number; z0: number; z1: number }[]
+  name: string
+}) {
+  const stop = (event: { stopPropagation: () => void }) => event.stopPropagation();
+  return (
+    <group name={name}>
+      {Array.from({ length: FLOOR_COUNT }, (_, index) => index + 1).flatMap((floor) => {
+        const dimmed = focusFloor !== 0 && floor !== focusFloor;
+        const y = floorBaseY(floor) + UNIT_SIZE[1] / 2;
+        return fills.map((fill) => (
+          <mesh
+            key={`${fill.id}-${floor}`}
+            name={fill.id}
+            position={[
+              (fill.x0 + fill.x1) / 2,
+              y,
+              (fill.z0 + fill.z1) / 2,
+            ]}
+            onClick={stop}
+          >
+            <boxGeometry
+              args={[fill.x1 - fill.x0, UNIT_SIZE[1], fill.z1 - fill.z0]}
+            />
+            <meshStandardMaterial
+              color={dimmed ? "#8d8882" : "#c5bbb0"}
+              transparent={dimmed}
+              opacity={dimmed ? 0.28 : 1}
+              roughness={0.62}
+              metalness={0.06}
+            />
+          </mesh>
+        ));
+      })}
+    </group>
+  );
+}
+
+/** B3 flat door + flat walk to the corridor — north of STAIR_B3, never on treads. */
+function B3EntranceDoor({ focusFloor }: { focusFloor: number }) {
+  const { wallFace, z0, z1, opening, doorDir, pathX0, pathX1 } = B3_ENTRANCE;
+  const cz = (z0 + z1) / 2;
+  const doorH = 0.72;
+  const frameT = 0.012;
+  const doorT = 0.03;
+  const deck = 0.2;
+  const pathH = 0.04;
+  const stop = (event: { stopPropagation: () => void }) => event.stopPropagation();
+  const along = (offset: number) => wallFace + doorDir * offset;
+
+  return (
+    <group name="b3-entrance">
+      {Array.from({ length: FLOOR_COUNT }, (_, index) => index + 1).map((floor) => {
+        const dimmed = focusFloor !== 0 && floor !== focusFloor;
+        const base = floorBaseY(floor) + deck;
+        const doorY = floorBaseY(floor) + 0.2 + doorH / 2;
+        return (
+          <group key={`b3-entrance-${floor}`}>
+            {/* Door → corridor path (north of stair only). */}
+            <mesh
+              name="b3-entrance-path"
+              position={[(pathX0 + pathX1) / 2, base - pathH / 2, cz]}
+              onClick={stop}
+            >
+              <boxGeometry args={[pathX1 - pathX0, pathH, z1 - z0]} />
+              <meshStandardMaterial
+                color={dimmed ? "#8d8882" : "#c8cccf"}
+                transparent={dimmed}
+                opacity={dimmed ? 0.28 : 1}
+                roughness={0.82}
+                metalness={0.02}
+              />
+            </mesh>
+            <mesh position={[along(frameT / 2), doorY, cz]} onClick={stop}>
+              <boxGeometry args={[frameT, doorH + 0.035, opening]} />
+              <meshStandardMaterial
+                color="#c9a45c"
+                transparent={dimmed}
+                opacity={dimmed ? 0.35 : 1}
+                roughness={0.38}
+                metalness={0.5}
+              />
+            </mesh>
+            <mesh position={[along(frameT + doorT / 2), doorY, cz]} onClick={stop}>
+              <boxGeometry args={[doorT, doorH, opening - 0.04]} />
+              <meshStandardMaterial
+                color={dimmed ? "#5c3d18" : "#4a3014"}
+                transparent={dimmed}
+                opacity={dimmed ? 0.35 : 1}
+                roughness={0.55}
+                metalness={0.08}
+              />
+            </mesh>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+/** A4 / A8 flat door + walk to cA — north of the stair; empty lobby stays open. */
+function AWingEntranceDoor({
+  focusFloor,
+  entrance,
+  name,
+}: {
+  focusFloor: number
+  entrance: typeof A8_ENTRANCE
+  name: string
+}) {
+  const { wallFace, z0, z1, opening, doorDir, pathX0, pathX1 } = entrance;
+  const cz = (z0 + z1) / 2;
+  const doorH = 0.72;
+  const frameT = 0.012;
+  const doorT = 0.03;
+  const deck = 0.2;
+  const pathH = 0.04;
+  const stop = (event: { stopPropagation: () => void }) => event.stopPropagation();
+  const along = (offset: number) => wallFace + doorDir * offset;
+
+  return (
+    <group name={name}>
+      {Array.from({ length: FLOOR_COUNT }, (_, index) => index + 1).map((floor) => {
+        const dimmed = focusFloor !== 0 && floor !== focusFloor;
+        const base = floorBaseY(floor) + deck;
+        const doorY = floorBaseY(floor) + 0.2 + doorH / 2;
+        return (
+          <group key={`${name}-${floor}`}>
+            <mesh
+              name={`${name}-path`}
+              position={[(pathX0 + pathX1) / 2, base - pathH / 2, cz]}
+              onClick={stop}
+            >
+              <boxGeometry args={[pathX1 - pathX0, pathH, z1 - z0]} />
+              <meshStandardMaterial
+                color={dimmed ? "#8d8882" : "#c8cccf"}
+                transparent={dimmed}
+                opacity={dimmed ? 0.28 : 1}
+                roughness={0.82}
+                metalness={0.02}
+              />
+            </mesh>
+            <mesh position={[along(frameT / 2), doorY, cz]} onClick={stop}>
+              <boxGeometry args={[frameT, doorH + 0.035, opening]} />
+              <meshStandardMaterial
+                color="#c9a45c"
+                transparent={dimmed}
+                opacity={dimmed ? 0.35 : 1}
+                roughness={0.38}
+                metalness={0.5}
+              />
+            </mesh>
+            <mesh position={[along(frameT + doorT / 2), doorY, cz]} onClick={stop}>
+              <boxGeometry args={[doorT, doorH, opening - 0.04]} />
+              <meshStandardMaterial
+                color={dimmed ? "#5c3d18" : "#4a3014"}
+                transparent={dimmed}
+                opacity={dimmed ? 0.35 : 1}
+                roughness={0.55}
+                metalness={0.08}
+              />
+            </mesh>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+function placedBox(xa: number, xb: number, ya: number, yb: number, za: number, zb: number) {
+  const geometry = new BoxGeometry(xb - xa, yb - ya, zb - za);
+  geometry.translate((xa + xb) / 2, (ya + yb) / 2, (za + zb) / 2);
+  return geometry;
+}
+
+function UStairAtLift({ focusFloor }: { focusFloor: number }) {
+  const { x0, z1, flight: flightW, wallInner, zRun1, entryZ0, entryZ1 } = STAIR_U;
+  const wallFace = LIFT_BE5.wallFace;
+  const wallT = 0.07;
+  const deck = 0.2;
+  const half = FLOOR_HEIGHT / 2;
+  const rise = half / 4 / 2;
+  const count = Math.round(half / rise);
+  const going = (zRun1 - entryZ1) / count;
+  const outerX0 = wallInner - flightW;
+  const innerX1 = x0 + flightW;
+  const wallBase = floorBaseY(1);
+  const wallTop = buildingTopY();
+  const stop = (event: { stopPropagation: () => void }) => event.stopPropagation();
+
+  const built = useMemo(() => {
+    const flights: { name: string; floor: number; geometry: BufferGeometry }[] = [];
+    for (let floor = 1; floor <= FLOOR_COUNT; floor += 1) {
+      const base = floorBaseY(floor) + deck;
+      const flight1: BufferGeometry[] = [];
+      const flight2: BufferGeometry[] = [];
+      const join = 0.004;
+      for (let step = 0; step < count; step += 1) {
+        const y0 = base + rise * step;
+        const y1 = y0 + rise;
+        const zStep = entryZ1 + going * step;
+        flight1.push(
+          placedBox(
+            outerX0,
+            wallInner,
+            y0,
+            y1,
+            zStep,
+            zStep + going + (step === count - 1 ? join : 0),
+          ),
+        );
+        const zFar = zRun1 - going * step + (step === 0 ? join : 0);
+        const zNear = zRun1 - going * (step + 1) - (step === count - 1 ? join : 0);
+        flight2.push(
+          placedBox(x0, innerX1, base + half + rise * step, base + half + rise * (step + 1), zNear, zFar),
+        );
+      }
+      flights.push(
+        {
+          name: "staircase-flight-1",
+          floor,
+          geometry: mergeGeometries(flight1, false)!,
+        },
+        {
+          name: "staircase-flight-2",
+          floor,
+          geometry: mergeGeometries(flight2, false)!,
+        },
+        {
+          name: "staircase-landing",
+          floor,
+          geometry: placedBox(x0, wallInner, base + half - rise, base + half, zRun1, z1),
+        },
+        {
+          name: "staircase-corridor-entry",
+          floor,
+          geometry: placedBox(x0, wallFace, base - deck, base, entryZ0, entryZ1),
+        },
+      );
+      if (floor === FLOOR_COUNT) {
+        const arrival = base + FLOOR_HEIGHT;
+        flights.push({
+          name: "staircase-corridor-entry",
+          floor,
+          geometry: placedBox(x0, wallFace, arrival - deck, arrival, entryZ0, entryZ1),
+        });
+      }
+      for (const piece of flight1) piece.dispose();
+      for (const piece of flight2) piece.dispose();
+    }
+    return flights;
+  }, [count, deck, entryZ0, entryZ1, flightW, going, half, innerX1, outerX0, rise, wallFace, wallInner, x0, z1, zRun1]);
+
+  useEffect(() => {
+    return () => {
+      for (const part of built) part.geometry.dispose();
+    };
+  }, [built]);
+
+  const wall = (name: string, xa: number, xb: number, za: number, zb: number) => (
+    <mesh
+      name={name}
+      position={[(xa + xb) / 2, (wallBase + wallTop) / 2, (za + zb) / 2]}
+      onClick={stop}
+    >
+      <boxGeometry args={[xb - xa, wallTop - wallBase, zb - za]} />
+      <meshStandardMaterial color="#8d9391" roughness={0.88} metalness={0.02} />
+    </mesh>
+  );
+
+  return (
+    <group name="staircase-core">
+      {wall("staircase-wall-outer", x0 - wallT, x0, LIFT_BE5.z1, z1 + wallT)}
+      {wall("staircase-wall-core", x0, wallInner, LIFT_BE5.z1, entryZ0)}
+      {wall("staircase-wall-inner", x0, wallInner, z1, z1 + wallT)}
+      {built.map((part, index) => {
+        const dimmed = focusFloor !== 0 && part.floor !== focusFloor;
+        const concrete = part.name !== "staircase-corridor-entry";
+        return (
+          <mesh key={`${part.name}-${part.floor}-${index}`} name={part.name} geometry={part.geometry} onClick={stop}>
+            <meshStandardMaterial
+              color={dimmed ? "#8d8882" : concrete ? "#c8c2b6" : "#c8cccf"}
+              transparent={dimmed}
+              opacity={dimmed ? 0.28 : 1}
+              roughness={concrete ? 0.84 : 0.82}
+              metalness={0.02}
+            />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
+/**
+ * Brochure U-stair in front of B3 only — two parallel flights, mid landing,
+ * corridor entry landing, no lift. Corridor-side wall spans living↔bedroom mids.
+ */
+function StairAtB3({ focusFloor }: { focusFloor: number }) {
+  const {
+    x0,
+    x1,
+    z0,
+    z1,
+    wallT,
+    wallInner,
+    flight: flightW,
+    flight1X0,
+    flight1X1,
+    flight2X0,
+    flight2X1,
+    zEntry0,
+    zEntry1,
+    zRun1,
+    zLand0,
+    zLand1,
+    doorX0,
+    doorX1,
+    rise,
+    perFlight,
+    going,
+  } = STAIR_B3;
+  const deck = 0.2;
+  const half = FLOOR_HEIGHT / 2;
+  const count = perFlight;
+  const wallBase = floorBaseY(1);
+  const wallTop = buildingTopY();
+  const stop = (event: { stopPropagation: () => void }) => event.stopPropagation();
+
+  const built = useMemo(() => {
+    const flights: { name: string; floor: number; geometry: BufferGeometry }[] = [];
+    for (let floor = 1; floor <= FLOOR_COUNT; floor += 1) {
+      const base = floorBaseY(floor) + deck;
+      const flight1: BufferGeometry[] = [];
+      const flight2: BufferGeometry[] = [];
+      const join = 0.004;
+      for (let step = 0; step < count; step += 1) {
+        const y0 = base + rise * step;
+        const y1 = y0 + rise;
+        // Flight 1 (corridor-side strip): south entry → north mid landing.
+        const z1Lo = zEntry1 + going * step - (step === 0 ? join : 0);
+        const z1Hi = zEntry1 + going * (step + 1) + (step === count - 1 ? join : 0);
+        flight1.push(placedBox(flight1X0, flight1X1, y0, y1, z1Lo, z1Hi));
+        // Flight 2 (apartment-side strip): north mid → south, return to upper level.
+        const z2Hi = zRun1 - going * step + (step === 0 ? join : 0);
+        const z2Lo = zRun1 - going * (step + 1) - (step === count - 1 ? join : 0);
+        flight2.push(
+          placedBox(
+            flight2X0,
+            flight2X1,
+            base + half + rise * step,
+            base + half + rise * (step + 1),
+            z2Lo,
+            z2Hi,
+          ),
+        );
+      }
+      flights.push(
+        {
+          name: "staircase-b3-flight-1",
+          floor,
+          geometry: mergeGeometries(flight1, false)!,
+        },
+        {
+          name: "staircase-b3-flight-2",
+          floor,
+          geometry: mergeGeometries(flight2, false)!,
+        },
+        {
+          name: "staircase-b3-landing-mid",
+          floor,
+          geometry: placedBox(x0, wallInner, base + half - rise, base + half, zLand0, zLand1),
+        },
+        {
+          name: "staircase-b3-entry",
+          floor,
+          geometry: placedBox(x0, x1, base - deck, base, zEntry0, zEntry1),
+        },
+        {
+          // Flat approach through the south door toward B5 / BN6.
+          name: "staircase-b3-approach",
+          floor,
+          geometry: placedBox(doorX0, doorX1, base - deck, base, z0 - 0.22, z0 + wallT),
+        },
+      );
+      if (floor === FLOOR_COUNT) {
+        const arrival = base + FLOOR_HEIGHT;
+        flights.push(
+          {
+            name: "staircase-b3-entry",
+            floor,
+            geometry: placedBox(x0, x1, arrival - deck, arrival, zEntry0, zEntry1),
+          },
+          {
+            name: "staircase-b3-approach",
+            floor,
+            geometry: placedBox(doorX0, doorX1, arrival - deck, arrival, z0 - 0.22, z0 + wallT),
+          },
+        );
+      }
+      for (const piece of flight1) piece.dispose();
+      for (const piece of flight2) piece.dispose();
+    }
+    return flights;
+  }, [
+    count,
+    deck,
+    flight1X0,
+    flight1X1,
+    flight2X0,
+    flight2X1,
+    going,
+    half,
+    rise,
+    wallInner,
+    x0,
+    x1,
+    doorX0,
+    doorX1,
+    wallT,
+    z0,
+    zEntry0,
+    zEntry1,
+    zLand0,
+    zLand1,
+    zRun1,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      for (const part of built) part.geometry.dispose();
+    };
+  }, [built]);
+
+  const wall = (name: string, xa: number, xb: number, za: number, zb: number) => {
+    if (xb - xa < 0.01 || zb - za < 0.01) return null;
+    return (
+      <mesh
+        key={name}
+        name={name}
+        position={[(xa + xb) / 2, (wallBase + wallTop) / 2, (za + zb) / 2]}
+        onClick={stop}
+      >
+        <boxGeometry args={[xb - xa, wallTop - wallBase, zb - za]} />
+        <meshStandardMaterial color="#8d9391" roughness={0.88} metalness={0.02} />
+      </mesh>
+    );
+  };
+
+  return (
+    <group name="staircase-b3">
+      {/* West face closed to the aisle. */}
+      {wall("staircase-b3-wall-west", x1 - wallT, x1, z0, z1)}
+      {wall("staircase-b3-wall-apt", x0, x0 + wallT, z0, z1)}
+      {wall("staircase-b3-wall-north", x0, x1, z1 - wallT, z1)}
+      {/* South opens toward B5 — wall returns only, door gap in the middle. */}
+      {wall("staircase-b3-wall-south-e", x0, doorX0, z0, z0 + wallT)}
+      {wall("staircase-b3-wall-south-w", doorX1, x1, z0, z0 + wallT)}
+      {built.map((part, index) => {
+        const dimmed = focusFloor !== 0 && part.floor !== focusFloor;
+        const landing = !part.name.includes("flight");
+        return (
+          <mesh key={`${part.name}-${part.floor}-${index}`} name={part.name} geometry={part.geometry} onClick={stop}>
+            <meshStandardMaterial
+              color={dimmed ? "#8d8882" : landing ? "#c8cccf" : "#c8c2b6"}
+              transparent={dimmed}
+              opacity={dimmed ? 0.28 : 1}
+              roughness={landing ? 0.82 : 0.84}
+              metalness={0.02}
+            />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
+/**
+ * Brochure U-stair in an A-wing corridor lobby — two parallel flights, mid
+ * landing at the south, entry at the north (aisle open; north face closed).
+ */
+function StairAtAWing({
+  focusFloor,
+  stair,
+  id,
+  northWall = true,
+}: {
+  focusFloor: number
+  stair: typeof STAIR_A8
+  id: string
+  /** A4 omits this so LIFT_A4's south door faces the stair open. */
+  northWall?: boolean
+}) {
+  const {
+    x0,
+    x1,
+    z0,
+    z1,
+    wallT,
+    wallInner,
+    flight1X0,
+    flight1X1,
+    flight2X0,
+    flight2X1,
+    zEntry0,
+    zEntry1,
+    zRun1,
+    zLand0,
+    zLand1,
+    rise,
+    perFlight,
+    going,
+  } = stair;
+  const deck = 0.2;
+  const half = FLOOR_HEIGHT / 2;
+  const count = perFlight;
+  const wallBase = floorBaseY(1);
+  const wallTop = buildingTopY();
+  const prefix = `staircase-${id}`;
+  const stop = (event: { stopPropagation: () => void }) => event.stopPropagation();
+
+  const built = useMemo(() => {
+    const flights: { name: string; floor: number; geometry: BufferGeometry }[] = [];
+    for (let floor = 1; floor <= FLOOR_COUNT; floor += 1) {
+      const base = floorBaseY(floor) + deck;
+      const flight1: BufferGeometry[] = [];
+      const flight2: BufferGeometry[] = [];
+      const join = 0.004;
+      for (let step = 0; step < count; step += 1) {
+        const y0 = base + rise * step;
+        const y1 = y0 + rise;
+        const z1Hi = zEntry0 - going * step + (step === 0 ? join : 0);
+        const z1Lo = zEntry0 - going * (step + 1) - (step === count - 1 ? join : 0);
+        flight1.push(placedBox(flight1X0, flight1X1, y0, y1, z1Lo, z1Hi));
+        const z2Lo = zRun1 + going * step - (step === 0 ? join : 0);
+        const z2Hi = zRun1 + going * (step + 1) + (step === count - 1 ? join : 0);
+        flight2.push(
+          placedBox(
+            flight2X0,
+            flight2X1,
+            base + half + rise * step,
+            base + half + rise * (step + 1),
+            z2Lo,
+            z2Hi,
+          ),
+        );
+      }
+      flights.push(
+        {
+          name: `${prefix}-flight-1`,
+          floor,
+          geometry: mergeGeometries(flight1, false)!,
+        },
+        {
+          name: `${prefix}-flight-2`,
+          floor,
+          geometry: mergeGeometries(flight2, false)!,
+        },
+        {
+          name: `${prefix}-landing-mid`,
+          floor,
+          geometry: placedBox(x0, wallInner, base + half - rise, base + half, zLand0, zLand1),
+        },
+        {
+          name: `${prefix}-entry`,
+          floor,
+          geometry: placedBox(x0, x1, base - deck, base, zEntry0, zEntry1),
+        },
+      );
+      if (floor === FLOOR_COUNT) {
+        const arrival = base + FLOOR_HEIGHT;
+        flights.push({
+          name: `${prefix}-entry`,
+          floor,
+          geometry: placedBox(x0, x1, arrival - deck, arrival, zEntry0, zEntry1),
+        });
+      }
+      for (const piece of flight1) piece.dispose();
+      for (const piece of flight2) piece.dispose();
+    }
+    return flights;
+  }, [
+    count,
+    deck,
+    flight1X0,
+    flight1X1,
+    flight2X0,
+    flight2X1,
+    going,
+    half,
+    prefix,
+    rise,
+    wallInner,
+    x0,
+    x1,
+    zEntry0,
+    zEntry1,
+    zLand0,
+    zLand1,
+    zRun1,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      for (const part of built) part.geometry.dispose();
+    };
+  }, [built]);
+
+  const wall = (name: string, xa: number, xb: number, za: number, zb: number) => {
+    if (xb - xa < 0.01 || zb - za < 0.01) return null;
+    return (
+      <mesh
+        key={name}
+        name={name}
+        position={[(xa + xb) / 2, (wallBase + wallTop) / 2, (za + zb) / 2]}
+        onClick={stop}
+      >
+        <boxGeometry args={[xb - xa, wallTop - wallBase, zb - za]} />
+        <meshStandardMaterial color="#8d9391" roughness={0.88} metalness={0.02} />
+      </mesh>
+    );
+  };
+
+  return (
+    <group name={prefix}>
+      {wall(`${prefix}-wall-aisle`, x1 - wallT, x1, z0, zEntry0)}
+      {wall(`${prefix}-wall-apt`, x0, x0 + wallT, z0, z1)}
+      {wall(`${prefix}-wall-south`, x0, x1, z0, z0 + wallT)}
+      {northWall ? wall(`${prefix}-wall-north`, x0, x1, z1 - wallT, z1) : null}
+      {built.map((part, index) => {
+        const dimmed = focusFloor !== 0 && part.floor !== focusFloor;
+        const landing = !part.name.includes("flight");
+        return (
+          <mesh key={`${part.name}-${part.floor}-${index}`} name={part.name} geometry={part.geometry} onClick={stop}>
+            <meshStandardMaterial
+              color={dimmed ? "#8d8882" : landing ? "#c8cccf" : "#c8c2b6"}
+              transparent={dimmed}
+              opacity={dimmed ? 0.28 : 1}
+              roughness={landing ? 0.82 : 0.84}
+              metalness={0.02}
+            />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
+function StairAtBN7({ focusFloor }: { focusFloor: number }) {
+  const {
+    x0,
+    deckNorth,
+    flightX0,
+    flightX1,
+    flight1X0,
+    flight1X1,
+    flight2X0,
+    flight2X1,
+    zWalk,
+    zTread0,
+    zTread1,
+    zStop,
+    rise,
+    treads,
+    going,
+    wallT,
+  } = STAIR_BN7;
+  const deck = 0.2;
+  const stop = (event: { stopPropagation: () => void }) => event.stopPropagation();
+
+  const built = useMemo(() => {
+    const parts: { name: string; floor: number; geometry: BufferGeometry }[] = [];
+    const join = 0.002;
+    const pushLevel = (floor: number, yTop: number, lowerName: string) => {
+      parts.push(
+        {
+          name: "staircase-bn7-approach",
+          floor,
+          geometry: placedBox(flightX0, flightX1, yTop - deck, yTop, deckNorth, zWalk + join),
+        },
+        {
+          name: lowerName,
+          floor,
+          geometry: placedBox(flightX0, flightX1, yTop - deck, yTop, zWalk, zTread0 + join),
+        },
+      );
+    };
+    for (let floor = 1; floor <= FLOOR_COUNT; floor += 1) {
+      const base = floorBaseY(floor) + deck;
+      const midY = base - rise * (treads + 1);
+      const yBottom = midY - rise * (treads + 1);
+      const flight1: BufferGeometry[] = [];
+      const flight2: BufferGeometry[] = [];
+      for (let step = 0; step < treads; step += 1) {
+        const y1 = base - rise * (step + 1);
+        const z0 = zTread0 + going * step - (step === 0 ? join : 0);
+        const z1 = zTread0 + going * (step + 1) + (step === treads - 1 ? join : 0);
+        flight1.push(placedBox(flight1X0, flight1X1, y1 - rise, y1, z0, z1));
+        const y2 = midY - rise * (step + 1);
+        const zFar = zTread1 - going * step + (step === 0 ? join : 0);
+        const zNear = zTread1 - going * (step + 1) - (step === treads - 1 ? join : 0);
+        flight2.push(placedBox(flight2X0, flight2X1, y2 - rise, y2, zNear, zFar));
+      }
+      pushLevel(floor, base, "staircase-bn7-landing-top");
+      parts.push(
+        {
+          name: "staircase-bn7-flight-1",
+          floor,
+          geometry: mergeGeometries(flight1, false)!,
+        },
+        {
+          name: "staircase-bn7-landing-mid",
+          floor,
+          geometry: placedBox(flightX0, flightX1, midY - deck, midY, zTread1, zStop),
+        },
+        {
+          name: "staircase-bn7-flight-2",
+          floor,
+          geometry: mergeGeometries(flight2, false)!,
+        },
+      );
+      if (floor === 1) pushLevel(floor, yBottom, "staircase-bn7-landing-lower");
+      for (const piece of flight1) piece.dispose();
+      for (const piece of flight2) piece.dispose();
+    }
+    return parts;
+  }, [
+    deck,
+    deckNorth,
+    flight1X0,
+    flight1X1,
+    flight2X0,
+    flight2X1,
+    flightX0,
+    flightX1,
+    going,
+    rise,
+    treads,
+    zStop,
+    zTread0,
+    zTread1,
+    zWalk,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      for (const part of built) part.geometry.dispose();
+    };
+  }, [built]);
+
+  const wall = (name: string, xa: number, xb: number, za: number, zb: number, floor: number) => {
+    const base = floorBaseY(floor) + deck;
+    const y0 = base - FLOOR_HEIGHT;
+    const y1 = base;
+    const dimmed = focusFloor !== 0 && floor !== focusFloor;
+    return (
+      <mesh
+        key={`${name}-${floor}`}
+        name={name}
+        position={[(xa + xb) / 2, (y0 + y1) / 2, (za + zb) / 2]}
+        onClick={stop}
+      >
+        <boxGeometry args={[xb - xa, y1 - y0, zb - za]} />
+        <meshStandardMaterial
+          color={dimmed ? "#8d8882" : "#8d9391"}
+          transparent={dimmed}
+          opacity={dimmed ? 0.28 : 1}
+          roughness={0.88}
+          metalness={0.02}
+        />
+      </mesh>
+    );
+  };
+
+  return (
+    <group name="staircase-bn7">
+      {Array.from({ length: FLOOR_COUNT }, (_, index) => index + 1).flatMap((floor) => [
+        wall("staircase-bn7-wall-left", x0, flightX0, deckNorth + wallT, zStop, floor),
+        wall("staircase-bn7-wall-right", flightX1, flightX1 + wallT, deckNorth + wallT, zStop, floor),
+        wall("staircase-bn7-wall-end", x0, flightX1 + wallT, zStop, zStop + wallT, floor),
+      ])}
+      {built.map((part, index) => {
+        const dimmed = focusFloor !== 0 && part.floor !== focusFloor;
+        const landing = !part.name.includes("flight");
+        return (
+          <mesh key={`${part.name}-${part.floor}-${index}`} name={part.name} geometry={part.geometry} onClick={stop}>
+            <meshStandardMaterial
+              color={dimmed ? "#8d8882" : landing ? "#c8cccf" : "#c8c2b6"}
+              transparent={dimmed}
+              opacity={dimmed ? 0.28 : 1}
+              roughness={landing ? 0.82 : 0.84}
+              metalness={0.02}
+            />
+          </mesh>
+        );
+      })}
+    </group>
   );
 }
 
@@ -2329,6 +3280,15 @@ function Scene({
   focusFloor,
   myFlatNumber,
   labels,
+  measure,
+  showAcross,
+  showDown,
+  debugMarks,
+  debugLayers,
+  corridorCoverage,
+  debugOn,
+  debugOpen,
+  onCorridorReport,
   onSelect,
   controlsRef,
   roseRef,
@@ -2339,6 +3299,15 @@ function Scene({
   focusFloor: number
   myFlatNumber?: string | null
   labels: LabelVisibility
+  measure: boolean
+  showAcross: boolean
+  showDown: boolean
+  debugMarks: ReturnType<typeof buildDebugLabels>
+  debugLayers: Record<DebugLayer, boolean>
+  corridorCoverage: boolean
+  debugOn: boolean
+  debugOpen: boolean
+  onCorridorReport: (report: CorridorLabelReport) => void
   onSelect: (flat: ModelFlat) => void
   controlsRef: RefObject<OrbitControlsImpl | null>
   roseRef: RefObject<HTMLDivElement | null>
@@ -2367,6 +3336,21 @@ function Scene({
 
       <Site />
       <Corridors focusFloor={focusFloor} />
+      <LiftAtBE5 focusFloor={focusFloor} />
+      <LiftAtBN5 focusFloor={focusFloor} />
+      <LiftAtAS1 focusFloor={focusFloor} />
+      <LiftAtA4 focusFloor={focusFloor} />
+      <UStairAtLift focusFloor={focusFloor} />
+      <AWingCorridorFills focusFloor={focusFloor} fills={A4_CORRIDOR_FILLS} name="a4-corridor-fills" />
+      <AWingEntranceDoor focusFloor={focusFloor} entrance={A4_ENTRANCE} name="a4-entrance" />
+      <StairAtAWing focusFloor={focusFloor} stair={STAIR_A4} id="a4" northWall={false} />
+      <AWingCorridorFills focusFloor={focusFloor} fills={A8_CORRIDOR_FILLS} name="a8-corridor-fills" />
+      <AWingEntranceDoor focusFloor={focusFloor} entrance={A8_ENTRANCE} name="a8-entrance" />
+      <StairAtAWing focusFloor={focusFloor} stair={STAIR_A8} id="a8" />
+      <B3CorridorFills focusFloor={focusFloor} />
+      <StairAtB3 focusFloor={focusFloor} />
+      <B3EntranceDoor focusFloor={focusFloor} />
+      <StairAtBN7 focusFloor={focusFloor} />
 
       {flats.map((flat) =>
         isClubhousePodiumFlat(flat.wing, flat.unit, flat.floor) ? null : (
@@ -2385,6 +3369,24 @@ function Scene({
       )}
 
       <GroundLabels labels={labels} focusFloor={focusFloor} />
+      <CorridorSegmentLayer
+        focusFloor={focusFloor}
+        showIds={labels.corridors || debugOn || debugOpen}
+        showDimensions={measure}
+        showCoverage={corridorCoverage}
+        showFeet={measure && (debugOn || debugOpen)}
+        onReport={onCorridorReport}
+      />
+      {measure ? (
+        <FloorMeasureGrid
+          focusFloor={focusFloor}
+          showX={showAcross}
+          showZ={showDown}
+        />
+      ) : null}
+      {debugMarks.length > 0 ? (
+        <DebugLabelLayer labels={debugMarks} enabled={debugLayers} />
+      ) : null}
       <FocusMyFlat flat={myFlat} controlsRef={controlsRef} />
       <ProjectSelectedAnchor flat={selectedFlat} onScreen={onSelectedScreen} />
       <CompassSync roseRef={roseRef} controlsRef={controlsRef} />
@@ -2704,24 +3706,16 @@ function AmenityLegend({ invert = false }: { invert?: boolean }) {
       >
         Amenities
       </p>
-      <ol className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] leading-tight sm:grid-cols-1">
+      <ul className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] leading-tight sm:grid-cols-1">
         {AMENITY_LEGEND.map((entry) => (
-          <li key={entry.n} className="inline-flex items-center gap-1.5">
-            <span
-              className={`grid size-5 shrink-0 place-items-center rounded-full text-[10px] font-black ${
-                invert
-                  ? "bg-[#e8d5a3]/20 text-[#f7f2e6]"
-                  : "bg-[#1b3a2f] text-[#e8d5a3]"
-              }`}
-            >
-              {entry.n}
-            </span>
-            <span className={invert ? "text-[#e0d0a0]" : "text-[#3d5247]"}>
-              {entry.label}
-            </span>
+          <li
+            key={entry.label}
+            className={invert ? "text-[#e0d0a0]" : "text-[#3d5247]"}
+          >
+            {entry.label}
           </li>
         ))}
-      </ol>
+      </ul>
     </div>
   );
 }
@@ -2742,6 +3736,38 @@ export default function Building3DView({
   const [canvasKey, setCanvasKey] = useState(0);
   const [fullScreen, setFullScreen] = useState(false);
   const [labels, setLabels] = useState<LabelVisibility>(DEFAULT_LABELS);
+  const [measure, setMeasure] = useState(false);
+  const [showAcross, setShowAcross] = useState(true);
+  const [showDown, setShowDown] = useState(true);
+  const [debugOpen, setDebugOpen] = useState(false);
+  const [corridorCoverage, setCorridorCoverage] = useState(false);
+  const [corridorReport, setCorridorReport] = useState<CorridorLabelReport | null>(null);
+  const onCorridorReport = useCallback((report: CorridorLabelReport) => {
+    setCorridorReport((current) => {
+      if (
+        current &&
+        current.detected === report.detected &&
+        current.labelled === report.labelled &&
+        current.active === report.active &&
+        current.missingIds.join() === report.missingIds.join()
+      ) {
+        return current;
+      }
+      return report;
+    });
+  }, []);
+  const [debugLayers, setDebugLayers] = useState<Record<DebugLayer, boolean>>(() =>
+    Object.fromEntries(DEBUG_LAYER_OPTIONS.map((option) => [option.key, false])) as Record<
+      DebugLayer,
+      boolean
+    >,
+  );
+  const debugOn =
+    corridorCoverage || DEBUG_LAYER_OPTIONS.some((option) => debugLayers[option.key]);
+  const debugMarks = useMemo(
+    () => (debugOn ? buildDebugLabels(flats, focusFloor) : []),
+    [debugOn, flats, focusFloor],
+  );
   const [anchor, setAnchor] = useState<{
     clientX: number
     clientY: number
@@ -2768,11 +3794,21 @@ export default function Building3DView({
 
   // Production: keep non-amenity labels off even if state was somehow toggled.
   const visibleLabels = useMemo(() => {
-    if (IS_DEV) return labels;
     const next = { ...labels };
-    for (const key of DEV_ONLY_LABEL_KEYS) next[key] = false;
+    if (!IS_DEV) {
+      for (const key of DEV_ONLY_LABEL_KEYS) next[key] = false;
+    }
+    if (measure || debugOn) {
+      next.units = false;
+      next.compound = false;
+      next.siteMarks = false;
+      next.amenities = false;
+      next.clubhouse = false;
+      next.gate = false;
+      next.faces = false;
+    }
     return next;
-  }, [labels]);
+  }, [labels, measure, debugOn]);
   const selected = useMemo(
     () => flats.find((flat) => flat.flatNumber === selectedId) ?? null,
     [flats, selectedId],
@@ -2833,12 +3869,75 @@ export default function Building3DView({
         ref={stageRef}
         className={
           fullScreen
-            ? "relative min-h-0 flex-1 touch-none"
-            : "relative min-h-0 flex-1 touch-none overflow-hidden rounded-2xl border border-[rgba(27,58,47,0.14)] bg-[#1b3a2f]"
+            ? "relative min-h-0 flex-1 touch-none select-none"
+            : "relative min-h-0 flex-1 touch-none select-none overflow-hidden rounded-2xl border border-[rgba(27,58,47,0.14)] bg-[#1b3a2f]"
         }
       >
         <div className="absolute top-3 left-3 z-10">{floorControl}</div>
         <div className="absolute top-3 right-3 z-10 flex flex-col items-end gap-2 sm:flex-row">
+          <div className="relative">
+            <button
+              type="button"
+              aria-pressed={debugOpen}
+              onClick={() => setDebugOpen((open) => !open)}
+              className={`inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold backdrop-blur-sm ${
+                debugOn ? "bg-[#c9a45c] text-[#14241c]" : "bg-[#14241c]/80 text-[#e8d5a3]"
+              }`}
+            >
+              Debug
+            </button>
+            {debugOpen ? (
+              <div className="absolute top-[calc(100%+0.4rem)] right-0 z-20">
+                <DebugLayerPanel
+                  value={debugLayers}
+                  onChange={setDebugLayers}
+                  coverage={corridorCoverage}
+                  onCoverage={setCorridorCoverage}
+                  report={corridorReport}
+                />
+              </div>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            aria-pressed={measure}
+            onClick={() => setMeasure((on) => !on)}
+            className={`inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold backdrop-blur-sm ${
+              measure
+                ? "bg-[#c9a45c] text-[#14241c]"
+                : "bg-[#14241c]/80 text-[#e8d5a3]"
+            }`}
+          >
+            Dimensions
+          </button>
+          {measure ? (
+            <>
+              <button
+                type="button"
+                aria-pressed={showAcross}
+                onClick={() => setShowAcross((on) => !on)}
+                className={`inline-flex min-h-11 items-center rounded-full px-3 text-sm font-semibold backdrop-blur-sm ${
+                  showAcross
+                    ? "bg-[#c9a45c] text-[#14241c]"
+                    : "bg-[#14241c]/80 text-[#e8d5a3]"
+                }`}
+              >
+                Across
+              </button>
+              <button
+                type="button"
+                aria-pressed={showDown}
+                onClick={() => setShowDown((on) => !on)}
+                className={`inline-flex min-h-11 items-center rounded-full px-3 text-sm font-semibold backdrop-blur-sm ${
+                  showDown
+                    ? "bg-[#c9a45c] text-[#14241c]"
+                    : "bg-[#14241c]/80 text-[#e8d5a3]"
+                }`}
+              >
+                Down
+              </button>
+            </>
+          ) : null}
           <LabelPicker value={labels} onChange={setLabels} />
           <button
             type="button"
@@ -2875,6 +3974,15 @@ export default function Building3DView({
               focusFloor={focusFloor}
               myFlatNumber={myFlatNumber}
               labels={visibleLabels}
+              measure={measure}
+              showAcross={showAcross}
+              showDown={showDown}
+              debugMarks={debugMarks}
+              debugLayers={debugLayers}
+              corridorCoverage={corridorCoverage}
+              debugOn={debugOn}
+              debugOpen={debugOpen}
+              onCorridorReport={onCorridorReport}
               onSelect={onSelect}
               controlsRef={controlsRef}
               roseRef={roseRef}
@@ -2893,9 +4001,11 @@ export default function Building3DView({
         >
           <div className="flex flex-col gap-1.5 text-[#e8d5a3] md:flex-row md:items-center md:justify-between">
             <p className="text-sm text-[#d0c090]">
-              {selected
-                ? "Click empty space or × to close details"
-                : "Click a flat for details · Drag to orbit"}
+              {measure
+                ? "Dimensions. 0′ is the east–south corner. Across grows west. Down grows north."
+                : selected
+                  ? "Click empty space or × to close details"
+                  : "Click a flat for details · Drag to orbit"}
               {fullScreen ? " · Esc to exit" : ""}
             </p>
           </div>

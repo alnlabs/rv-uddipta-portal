@@ -128,7 +128,8 @@ export const A8_ROOMS: A8Room[] = [
 ];
 
 export const A8_DOORS: A8Door[] = [
-  { id: "entry", wall: "e", x: 36.75, y: 13.1, length: 3.2, swing: "ccw", entrance: true },
+  // North-side entrance (corridor face); stairs start immediately north of this door.
+  { id: "entry", wall: "e", x: 36.75, y: 2.4, length: 3.2, swing: "ccw", entrance: true },
   { id: "utility", wall: "w", x: X0, y: 4.2, length: 2.4, swing: "cw" },
   { id: "puja", wall: "n", x: 6.2, y: 14.5, length: 2.2, swing: "ccw" },
   { id: "toilet-1", wall: "s", x: 15.7, y: 6, length: 2.2, swing: "cw" },

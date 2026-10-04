@@ -457,9 +457,9 @@ function CadInterior({ cad }: { cad: CadPlan }) {
               position={[box.x, 0.22, box.z]}
               center
               zIndexRange={[2, 0]}
-              style={{ pointerEvents: "none" }}
+              style={{ pointerEvents: "none", userSelect: "none" }}
             >
-              <div className="whitespace-nowrap text-center leading-tight">
+              <div className="pointer-events-none whitespace-nowrap text-center leading-tight select-none">
                 <p className="text-[10px] font-bold text-[#14241c]">{room.label}</p>
                 {room.dim ? (
                   <p className="text-[8px] text-[#3d5247]">{room.dim}</p>
