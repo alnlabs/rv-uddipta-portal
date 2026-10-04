@@ -36,8 +36,13 @@ const GAP_AB = 4.6;
 const GAP_COURT = 6.4;
 const GAP_CAB_A7 = 1.9;
 const CAB_WIDTH = 1.02;
-/** Extra length for B1/B3/B5/B6; also widens the B wing / site. */
-const BW_LEN = 0.72;
+/** Extra length for B1/B3/B5/B6; also widens the B wing / site (+X). */
+const BW_LEN = 1.05;
+/**
+ * Extra depth for A1/A4/A6/A8/A9 on the east/gate face (−X).
+ * Corridor / west faces stay on the pre-growth plane (same pattern as BW_LEN).
+ */
+const AW_LEN = 1.2;
 /**
  * Corridor-side staircase lobby carved from B3 only (brochure stair core).
  * B3 keeps the same east face as B1/B5; width shrinks on the corridor side.
@@ -77,21 +82,22 @@ const Z = {
 const AS1_NORTH = Z[3] - UNIT / 2 - GAP_CAB_A7;
 
 export const UNIT_FOOTPRINT: Record<string, [number, number]> = {
-  A1: [X.A_W, Z[0]],
+  // A-west column: corridor face fixed; AW_LEN grows toward the gate (−X).
+  A1: [X.A_W - AW_LEN / 2, Z[0]],
   A2: [X.A_E, Z[0]],
   A3: [X.A_E, Z[1]],
-  // Corridor-side stair lobby carve (same depth as A8).
-  A4: [X.A_W - A_STAIR_DEPTH / 2, Z[1]],
+  // Corridor-side stair lobby carve (same depth as A8) + AW_LEN east.
+  A4: [X.A_W - A_STAIR_DEPTH / 2 - AW_LEN / 2, Z[1]],
   A5: [X.A_E, Z[2]],
-  A6: [X.A_W, Z[2]],
+  A6: [X.A_W - AW_LEN / 2, Z[2]],
   A7: [X.A_E, Z[3]],
   // East face insets for the corridor-side stair lobby (A8 north / brochure core).
   // South face flush with AS1·n; depth grows north from that plane.
   A8: [
-    X.A_W - A_STAIR_DEPTH / 2,
+    X.A_W - A_STAIR_DEPTH / 2 - AW_LEN / 2,
     AS1_NORTH + (UNIT + A8_SOUTH_EXTRA) / 2,
   ],
-  A9: [X.A_W, Z[4]],
+  A9: [X.A_W - AW_LEN / 2, Z[4]],
   A10: [X.A_E, Z[4]],
   B1: [X.B_W - BW_LEN / 2, Z[0]],
   B2: [X.B_W2, Z[0]],
@@ -133,8 +139,11 @@ export function buildingTopY() {
 }
 
 const UNIT_PLAN: Record<string, [number, number]> = {
-  A4: [UNIT - A_STAIR_DEPTH, UNIT],
-  A8: [UNIT - A_STAIR_DEPTH, UNIT + A8_SOUTH_EXTRA],
+  A1: [UNIT + AW_LEN, UNIT],
+  A4: [UNIT - A_STAIR_DEPTH + AW_LEN, UNIT],
+  A6: [UNIT + AW_LEN, UNIT],
+  A8: [UNIT - A_STAIR_DEPTH + AW_LEN, UNIT + A8_SOUTH_EXTRA],
+  A9: [UNIT + AW_LEN, UNIT],
   B1: [UNIT + BW_LEN, UNIT],
   B3: [UNIT + BW_LEN - B3_STAIR_DEPTH, UNIT],
   B5: [UNIT + BW_LEN, UNIT],
@@ -1516,7 +1525,8 @@ const COMPOUND_LW = 37.5;
 const COMPOUND_LD = 24.5;
 /**
  * Site / compound center ignoring BW_LEN so the gate wall, drive paving,
- * lawn grid, and L# IDs stay on the original base layout while B flats grow.
+ * lawn grid, and L# IDs stay on the original base layout while B / A-west
+ * flats grow. A1–A9 still clear this gate plane after AW_LEN (~5 m+).
  */
 const cxSite = (X.A_W + X.B_EE - BW_LEN) / 2;
 /** Extra yard on screen-south / world-north (seating & kids play side). */
@@ -1527,11 +1537,20 @@ const EAST_GATE_EXTRA = 1.5;
 const EAST_SOUTH_EXTRA = 4.6;
 /** Lawn debug cell size — NE wall is L16→L162 slant + ledge to L184. */
 const LAWN_CELL = 1.25;
+/**
+ * Original plot pad used for L# lawn indexing. SITE.plot may grow east for
+ * AW_LEN flats, but inPlot for L# must stay on this footprint so drive-path
+ * corner IDs (L146/L216/…) do not renumber.
+ */
+const LAWN_PLOT_POS: [number, number] = [cxSite, cz];
+const LAWN_PLOT_SIZE: [number, number] = [28.4, 16.4];
 
 export const SITE = {
+  // Visual pad grows east (−X) so enlarged A1–A9 sit on the checkers; L# lawn
+  // indexing still uses LAWN_PLOT_* (see LAWN_PARTS.inPlot).
   plot: {
-    position: [cxSite, 0.02, cz] as [number, number, number],
-    size: [28.4, 16.4] as [number, number],
+    position: [cxSite - AW_LEN / 2, 0.02, cz] as [number, number, number],
+    size: [28.4 + AW_LEN, 16.4] as [number, number],
   },
   compound: (() => {
     const [lw, ld] = [COMPOUND_LW, COMPOUND_LD];
@@ -1664,7 +1683,7 @@ export const SITE = {
     const { west, westWide, north, south, gateN } = (() => {
       const hx = COMPOUND_LW / 2;
       const hz = COMPOUND_LD / 2;
-      const westGate = cx - hx - EAST_GATE_EXTRA;
+      const westGate = cxSite - hx - EAST_GATE_EXTRA;
       const westWide = westGate - EAST_SOUTH_EXTRA;
       const north = cz - hz - NORTH_YARD_EXTRA;
       const south = cz + hz;
@@ -1732,7 +1751,7 @@ export const SITE = {
   courtAB: {
     position: [
       (UNIT_FOOTPRINT.A2[0] + halfX("A2") + UNIT_FOOTPRINT.B1[0] - halfX("B1")) /
-        2,
+      2,
       0.05,
       (Z[2] + Z[3]) / 2,
     ] as [number, number, number],
@@ -1932,12 +1951,13 @@ export function compoundExtraMarks() {
 /** Grey compound lawn — fine debug grid of small patches (outside plot, inside walls). */
 export const LAWN_PARTS = (() => {
   const { west, westWide, east, north, south, gateN } = SITE.compound.bounds;
-  const [pw, pd] = SITE.plot.size;
-  const [px, , pz] = SITE.plot.position;
-  const pW = px - pw / 2;
-  const pE = px + pw / 2;
-  const pN = pz - pd / 2;
-  const pS = pz + pd / 2;
+  // Index against the pre–AW_LEN plot so growing SITE.plot does not renumber L#.
+  const [lawnPx, lawnPz] = LAWN_PLOT_POS;
+  const [lawnPw, lawnPd] = LAWN_PLOT_SIZE;
+  const pW = lawnPx - lawnPw / 2;
+  const pE = lawnPx + lawnPw / 2;
+  const pN = lawnPz - lawnPd / 2;
+  const pS = lawnPz + lawnPd / 2;
   const eAt = (z: number) => {
     if (z <= north) return westWide;
     if (z >= gateN) return west;
