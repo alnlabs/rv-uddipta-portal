@@ -4,7 +4,7 @@ import { RoleAssignForm } from "@/components/RoleAssignForm";
 import { RolePersonEditor } from "@/components/RolePersonEditor";
 import { WorkspaceHeader } from "@/components/form-ui";
 import { isSuperAdmin } from "@/lib/admin";
-import { accessSummary } from "@/lib/roleLabels";
+import { accessSummary, roleLabel } from "@/lib/roleLabels";
 import { canManageAdmin } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
 import {
@@ -13,10 +13,66 @@ import {
 } from "@/lib/societyPeople";
 import { createAdminClient } from "@/utils/supabase/admin";
 
+type SignInPerson = {
+  userId: string
+  role: string
+  displayName: string
+  email: string
+  locked: boolean
+  flatNumber: string | null
+};
+
+function personName(person: SignInPerson) {
+  return person.displayName || person.email || "Signed-in person";
+}
+
+function roleOrder(role: string) {
+  if (role === "owner") return 0;
+  if (role === "co_owner") return 1;
+  if (role === "tenant") return 2;
+  return 3;
+}
+
+function groupByFlat(people: SignInPerson[]) {
+  const withoutFlat: SignInPerson[] = [];
+  const byFlat = new Map<string, SignInPerson[]>();
+  for (const person of people) {
+    if (!person.flatNumber) {
+      withoutFlat.push(person);
+      continue;
+    }
+    const list = byFlat.get(person.flatNumber) ?? [];
+    list.push(person);
+    byFlat.set(person.flatNumber, list);
+  }
+  for (const list of byFlat.values()) {
+    list.sort(
+      (a, b) =>
+        roleOrder(a.role) - roleOrder(b.role) ||
+        personName(a).localeCompare(personName(b)),
+    );
+  }
+  withoutFlat.sort((a, b) => {
+    if (a.locked !== b.locked) return a.locked ? -1 : 1;
+    return personName(a).localeCompare(personName(b));
+  });
+  const flats = [...byFlat.entries()]
+    .map(([flatNumber, members]) => ({
+      flatNumber,
+      members,
+      registeredOwner: members.some((person) => person.role === "owner"),
+    }))
+    .sort((a, b) => {
+      if (a.registeredOwner !== b.registeredOwner) return a.registeredOwner ? -1 : 1;
+      return a.flatNumber.localeCompare(b.flatNumber, undefined, { numeric: true });
+    });
+  return { flats, withoutFlat };
+}
+
 export default async function AdminRolesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ flat?: string; as?: string; person?: string }>
+  readonly searchParams: Promise<{ flat?: string; as?: string; person?: string }>
 }) {
   const params = await searchParams;
   const { user, profile } = await getAuthState();
@@ -70,13 +126,8 @@ export default async function AdminRolesPage({
         flatNumber,
       };
     })
-    .filter((person) => isSocietyPerson({ ...person, index }))
-    .sort((a, b) => {
-      if (a.locked !== b.locked) return a.locked ? -1 : 1;
-      const nameA = (a.displayName || a.email).toLowerCase();
-      const nameB = (b.displayName || b.email).toLowerCase();
-      return nameA.localeCompare(nameB);
-    });
+    .filter((person) => isSocietyPerson({ ...person, index }));
+  const grouped = groupByFlat(people);
   const unsignedOwners = index.unsignedOwners.filter(
     (owner) =>
       !people.some(
@@ -116,55 +167,108 @@ export default async function AdminRolesPage({
       {people.length === 0 ? (
         <p className="mt-3 text-base text-[#3d5247]">No one has signed in yet.</p>
       ) : (
-        <ul className="mt-3 grid gap-2 sm:grid-cols-2 2xl:grid-cols-3">
-          {people.map((person) => {
-            const editing = openPerson?.userId === person.userId;
-            const label = person.displayName || person.email || "Signed-in person";
-            return (
-              <li
-                key={person.userId}
-                className={`flex min-h-24 flex-col justify-between rounded-[1.25rem] px-3.5 py-3 ring-1 ${
-                  editing
-                    ? "bg-[#1b3a2f] text-[#e8d5a3] ring-transparent"
-                    : "bg-[#fffcf5] text-[#14241c] ring-[rgba(27,58,47,0.1)]"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <span
-                    className={`grid size-10 place-items-center rounded-2xl text-sm font-bold ${
-                      editing ? "bg-[#c9a45c] text-[#14241c]" : "bg-[#1b3a2f] text-[#e8d5a3]"
-                    }`}
-                  >
-                    {label.slice(0, 1).toUpperCase()}
-                  </span>
-                  {person.flatNumber ? (
-                    <span className="text-lg font-semibold tracking-tight">{person.flatNumber}</span>
-                  ) : null}
-                </div>
-                <div className="mt-3 min-w-0">
-                  <p className="truncate text-base font-semibold">{label}</p>
-                  <p className={`truncate text-sm ${editing ? "text-[#d8c898]" : "text-[#3d5247]"}`}>
-                    {person.locked ? "Cannot be removed. No flat." : accessSummary(person)}
-                  </p>
-                </div>
-                {person.locked ? (
-                  <span className="shrink-0 rounded-full bg-[#c9a45c] px-2 py-1 text-[10px] font-bold tracking-wide text-[#14241c] uppercase">
-                    Super admin
-                  </span>
-                ) : (
-                  <Link
-                    href={editing ? "/account/roles" : `/account/roles?person=${person.userId}`}
-                    className={`inline-flex min-h-11 shrink-0 items-center rounded-full px-3 text-sm font-semibold ${
-                      editing ? "text-[#e8d5a3]" : "text-[#1b3a2f]"
-                    }`}
-                  >
-                    {editing ? "Close" : "Change"}
-                  </Link>
-                )}
-              </li>
-            );
-          })}
+        <>
+        <ul className="mt-3 grid gap-3">
+          {grouped.flats.map((group) => (
+            <li
+              key={group.flatNumber}
+              className="overflow-hidden rounded-[1.25rem] bg-[#fffcf5] text-[#14241c] ring-1 ring-[rgba(27,58,47,0.1)]"
+            >
+              <div className="flex items-center justify-between gap-3 border-b border-[rgba(27,58,47,0.08)] px-4 py-3">
+                <p className="text-lg font-semibold tracking-tight">{group.flatNumber}</p>
+                <p className="text-sm text-[#3d5247]">
+                  {group.members.length} {group.members.length === 1 ? "person" : "people"}
+                </p>
+              </div>
+              <ul className="divide-y divide-[rgba(27,58,47,0.08)]">
+                {group.members.map((person) => {
+                  const editing = openPerson?.userId === person.userId;
+                  const label = personName(person);
+                  const owner = person.role === "owner";
+                  return (
+                    <li
+                      key={person.userId}
+                      className={`flex items-center justify-between gap-3 px-4 py-3 ${
+                        editing ? "bg-[#1b3a2f] text-[#e8d5a3]" : ""
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <p className="flex flex-wrap items-center gap-2 text-base font-semibold">
+                          <span className="truncate">{label}</span>
+                          {owner ? (
+                            <span className="rounded-full bg-[#c9a45c] px-2 py-0.5 text-[10px] font-bold tracking-wide text-[#14241c] uppercase">
+                              Registered
+                            </span>
+                          ) : (
+                            <span
+                              className={`text-[10px] font-bold tracking-wide uppercase ${
+                                editing ? "text-[#e8d5a3]" : "text-[#7a5c22]"
+                              }`}
+                            >
+                              {roleLabel(person.role)}
+                            </span>
+                          )}
+                        </p>
+                        <p className={`truncate text-sm ${editing ? "text-[#d8c898]" : "text-[#3d5247]"}`}>
+                          {accessSummary(person)}
+                        </p>
+                      </div>
+                      <Link
+                        href={editing ? "/account/roles" : `/account/roles?person=${person.userId}`}
+                        className={`inline-flex min-h-11 shrink-0 items-center rounded-full px-3 text-sm font-semibold ${
+                          editing ? "text-[#e8d5a3]" : "text-[#1b3a2f]"
+                        }`}
+                      >
+                        {editing ? "Close" : "Change"}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </li>
+          ))}
         </ul>
+        {grouped.withoutFlat.length ? (
+          <div className="mt-8">
+            <h3 className="text-base font-semibold text-[#14241c]">No flat linked</h3>
+            <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+              {grouped.withoutFlat.map((person) => {
+                const editing = openPerson?.userId === person.userId;
+                const label = personName(person);
+                return (
+                  <li
+                    key={person.userId}
+                    className={`flex min-h-24 flex-col justify-between rounded-[1.25rem] px-3.5 py-3 ring-1 ${
+                      editing
+                        ? "bg-[#1b3a2f] text-[#e8d5a3] ring-transparent"
+                        : "bg-[#fffcf5] text-[#14241c] ring-[rgba(27,58,47,0.1)]"
+                    }`}
+                  >
+                    <p className="truncate text-base font-semibold">{label}</p>
+                    <p className={`truncate text-sm ${editing ? "text-[#d8c898]" : "text-[#3d5247]"}`}>
+                      {person.locked ? "Cannot be removed. No flat." : accessSummary(person)}
+                    </p>
+                    {person.locked ? (
+                      <span className="w-fit rounded-full bg-[#c9a45c] px-2 py-1 text-[10px] font-bold tracking-wide text-[#14241c] uppercase">
+                        Super admin
+                      </span>
+                    ) : (
+                      <Link
+                        href={editing ? "/account/roles" : `/account/roles?person=${person.userId}`}
+                        className={`inline-flex min-h-11 items-center text-sm font-semibold ${
+                          editing ? "text-[#e8d5a3]" : "text-[#1b3a2f]"
+                        }`}
+                      >
+                        {editing ? "Close" : "Change"}
+                      </Link>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : null}
+        </>
       )}
 
       {unsignedOwners.length ? (
