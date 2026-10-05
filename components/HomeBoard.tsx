@@ -101,17 +101,23 @@ export function HomeBoard({
     <div
       className={
         view === "building"
-          ? "flex h-full min-h-0 flex-col pt-2 md:pt-3 md:pb-3"
-          : view === "guide"
-            ? ""
-            : ""
+          ? signedIn
+            ? "flex h-full min-h-0 flex-col pt-2 md:pt-3 md:pb-3"
+            : "flex flex-col pt-2 pb-4"
+          : ""
       }
     >
       <CommunityChoices view={view} />
       {view === "guide" ? (
         <BuildingGuide project={project} showVisit={showVisit} signedIn={signedIn} />
       ) : view === "building" ? (
-        <div className="flex min-h-0 flex-1 flex-col px-2 md:px-4">
+        <div
+          className={
+            signedIn
+              ? "flex min-h-0 flex-1 flex-col px-2 md:px-4"
+              : "flex h-[calc(100svh-9rem)] min-h-[28rem] flex-col px-2 md:h-[calc(100svh-14rem)] md:px-4"
+          }
+        >
           <div className="min-h-0 flex-1">
             <Building3DLoader flats={modelFlats} myFlatNumber={myFlatNumber} />
           </div>
