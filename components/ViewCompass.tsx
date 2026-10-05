@@ -44,7 +44,8 @@ export function CompassSync({
   useFrame(() => {
     const el = roseRef?.current;
     if (!el) return;
-    const target = controlsRef?.current?.target;
+    const controls = controlsRef?.current;
+    const target = controls?.enabled === false ? null : controls?.target;
     if (target) {
       LOOK.set(target.x - camera.position.x, 0, target.z - camera.position.z);
     } else {

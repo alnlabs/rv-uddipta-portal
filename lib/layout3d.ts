@@ -123,7 +123,21 @@ export const UNIT_FOOTPRINT: Record<string, [number, number]> = {
 export const FOOTPRINT_IDS = Object.keys(UNIT_FOOTPRINT);
 
 export const FLOOR_COUNT = 10;
+/**
+ * Floor-to-ceiling storey height in scene units.
+ * Semantically this is {@link FLOOR_TO_CEILING_FT} feet.
+ */
 export const FLOOR_HEIGHT = 1.08;
+/** Floor-to-ceiling height in feet represented by {@link FLOOR_HEIGHT}. */
+export const FLOOR_TO_CEILING_FT = 10;
+/** Adult figure heights in feet. */
+export const PERSON_HEIGHT_FT = { man: 6, woman: 5.8 } as const;
+
+/** Convert real feet to scene units (floor-to-ceiling = {@link FLOOR_TO_CEILING_FT} ft). */
+export function ftToScene(ft: number) {
+  return (ft / FLOOR_TO_CEILING_FT) * FLOOR_HEIGHT;
+}
+
 /** Open stilt / parking level under floor 1 — apartments sit on pillars. */
 export const STILT_HEIGHT = FLOOR_HEIGHT;
 export const UNIT_SIZE: [number, number, number] = [UNIT, 0.92, UNIT];
@@ -519,7 +533,8 @@ export const STAIR_BN7 = (() => {
   const oldTreads = 31;
   const oldGoing = (prevLower - prevLand) / oldTreads;
   const treads = 15;
-  const rise = FLOOR_HEIGHT / 48;
+  /** Two flights × (treads+1) risers = one storey; floor 1 then reaches ground. */
+  const rise = FLOOR_HEIGHT / (2 * (treads + 1));
   const perFlight = treads + 1;
   const going = (oldGoing * oldTreads) / treads;
   const flightRun = going * treads;

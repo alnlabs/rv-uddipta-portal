@@ -34,6 +34,7 @@ import {
 } from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
+import { CommunityWalkers } from "@/components/CommunityWalkers";
 import { CorridorSegmentLayer, type CorridorLabelReport } from "@/components/CorridorSegmentLayer";
 import { DebugLabelLayer, DebugLayerPanel } from "@/components/DebugLabelLayer";
 import { FloorMeasureGrid } from "@/components/FloorMeasureGrid";
@@ -47,6 +48,7 @@ import {
 import { FlatTextFacts, FlatViews, toPlanInput } from "@/components/FlatViews";
 import { facingLabel, typeLabel } from "@/lib/flatDisplay";
 import { BUILDING } from "@/lib/building";
+import { getWalkFlatFloorHint, isWalkableFlat } from "@/lib/walkFlatInterior";
 import {
   BUILDING_CENTER,
   CAMERA_START,
@@ -398,6 +400,8 @@ function UnitMesh({
   onFocusFloor,
   geometry,
   onSelect,
+  walkMode,
+  walkFloor,
 }: {
   flat: ModelFlat
   selected: boolean
@@ -407,6 +411,8 @@ function UnitMesh({
   onFocusFloor: boolean
   geometry: BoxGeometry
   onSelect: (flat: ModelFlat) => void
+  walkMode?: boolean
+  walkFloor?: number
 }) {
   const meshRef = useRef<Mesh>(null);
   const [hovered, setHovered] = useState(false);
@@ -415,9 +421,15 @@ function UnitMesh({
   const bought = isBought(flat);
   const keepBright = selected || hovered || mine || bought;
   const faded = dimmed && !keepBright;
+  // Hollow CAD stacks on the walker's floor — WalkFlatInteriors draws them.
+  const hideForWalkInterior =
+    !!walkMode &&
+    walkFloor != null &&
+    flat.floor === walkFloor &&
+    isWalkableFlat(flat.wing, flat.unit);
 
   useFrame(({ clock }) => {
-    if (!meshRef.current) return;
+    if (!meshRef.current || hideForWalkInterior) return;
     const mat = meshRef.current.material as MeshStandardMaterial;
     if (mine) {
       const pulse = 0.28 + Math.sin(clock.elapsedTime * 2.2) * 0.14;
@@ -430,6 +442,8 @@ function UnitMesh({
       mat.emissiveIntensity = 0.16;
     }
   });
+
+  if (hideForWalkInterior) return null;
 
   return (
     <group position={position}>
@@ -1898,6 +1912,7 @@ function Corridors({ focusFloor }: { focusFloor: number }) {
 
 function LiftShaft({
   focusFloor,
+  walkMode,
   x0,
   x1,
   z0,
@@ -1908,6 +1923,7 @@ function LiftShaft({
   doorDir = -1,
 }: {
   focusFloor: number
+  walkMode?: boolean
   x0: number
   x1: number
   z0: number
@@ -1923,68 +1939,111 @@ function LiftShaft({
   const doorH = 0.72;
   const frameT = 0.012;
   const doorT = 0.03;
+  const wallT = 0.05;
   const stop = (event: { stopPropagation: () => void }) => event.stopPropagation();
   const along = (offset: number) => wallFace + doorDir * offset;
 
   return (
     <group>
-      <mesh position={[cx, top / 2, cz]} onClick={stop}>
-        <boxGeometry args={[x1 - x0, top, z1 - z0]} />
-        <meshStandardMaterial color="#5c6563" roughness={0.84} metalness={0.04} />
-      </mesh>
-      {Array.from({ length: FLOOR_COUNT }, (_, index) => index + 1).map((floor) => {
-        const dimmed = focusFloor !== 0 && floor !== focusFloor;
-        const doorY = floorBaseY(floor) + 0.2 + doorH / 2;
-        const framePos =
-          doorAxis === "x"
-            ? ([along(frameT / 2), doorY, cz] as const)
-            : ([cx, doorY, along(frameT / 2)] as const);
-        const leafPos =
-          doorAxis === "x"
-            ? ([along(frameT + doorT / 2), doorY, cz] as const)
-            : ([cx, doorY, along(frameT + doorT / 2)] as const);
-        const frameSize =
-          doorAxis === "x"
-            ? ([frameT, doorH + 0.035, opening] as const)
-            : ([opening, doorH + 0.035, frameT] as const);
-        const leafSize =
-          doorAxis === "x"
-            ? ([doorT, doorH, opening - 0.04] as const)
-            : ([opening - 0.04, doorH, doorT] as const);
-        return (
-          <group key={`lift-door-${floor}`}>
-            <mesh position={[...framePos]} onClick={stop}>
-              <boxGeometry args={[...frameSize]} />
-              <meshStandardMaterial
-                color="#c9a45c"
-                transparent={dimmed}
-                opacity={dimmed ? 0.35 : 1}
-                roughness={0.38}
-                metalness={0.5}
-              />
+      {walkMode ? (
+        <>
+          {/*
+            Outer shell only — sit OUTSIDE the shaft AABB so it never
+            z-fights the walk-mode cabin walls (same plane = flashing).
+          */}
+          {(doorAxis === "z" || Math.abs(x0 - wallFace) > Math.abs(x1 - wallFace)) && (
+            <mesh position={[x0 - wallT / 2, top / 2, cz]} onClick={stop}>
+              <boxGeometry args={[wallT, top, z1 - z0 + wallT * 2]} />
+              <meshStandardMaterial color="#6a7270" roughness={0.85} metalness={0.06} />
             </mesh>
-            <mesh position={[...leafPos]} onClick={stop}>
-              <boxGeometry args={[...leafSize]} />
-              <meshStandardMaterial
-                color={dimmed ? "#3a403e" : "#1e2623"}
-                transparent={dimmed}
-                opacity={dimmed ? 0.35 : 1}
-                roughness={0.42}
-                metalness={0.4}
-              />
+          )}
+          {(doorAxis === "z" || Math.abs(x1 - wallFace) > Math.abs(x0 - wallFace)) && (
+            <mesh position={[x1 + wallT / 2, top / 2, cz]} onClick={stop}>
+              <boxGeometry args={[wallT, top, z1 - z0 + wallT * 2]} />
+              <meshStandardMaterial color="#6a7270" roughness={0.85} metalness={0.06} />
             </mesh>
-          </group>
-        );
-      })}
+          )}
+          {(doorAxis === "x" || Math.abs(z0 - wallFace) > Math.abs(z1 - wallFace)) && (
+            <mesh position={[cx, top / 2, z0 - wallT / 2]} onClick={stop}>
+              <boxGeometry args={[x1 - x0 + wallT * 2, top, wallT]} />
+              <meshStandardMaterial color="#6a7270" roughness={0.85} metalness={0.06} />
+            </mesh>
+          )}
+          {(doorAxis === "x" || Math.abs(z1 - wallFace) > Math.abs(z0 - wallFace)) && (
+            <mesh position={[cx, top / 2, z1 + wallT / 2]} onClick={stop}>
+              <boxGeometry args={[x1 - x0 + wallT * 2, top, wallT]} />
+              <meshStandardMaterial color="#6a7270" roughness={0.85} metalness={0.06} />
+            </mesh>
+          )}
+        </>
+      ) : (
+        <mesh position={[cx, top / 2, cz]} onClick={stop}>
+          <boxGeometry args={[x1 - x0, top, z1 - z0]} />
+          <meshStandardMaterial color="#5c6563" roughness={0.84} metalness={0.04} />
+        </mesh>
+      )}
+      {/* Static floor doors — hidden in walk mode (interactive cabin owns doors). */}
+      {!walkMode &&
+        Array.from({ length: FLOOR_COUNT }, (_, index) => index + 1).map((floor) => {
+          const dimmed = focusFloor !== 0 && floor !== focusFloor;
+          const doorY = floorBaseY(floor) + 0.2 + doorH / 2;
+          const framePos =
+            doorAxis === "x"
+              ? ([along(frameT / 2), doorY, cz] as const)
+              : ([cx, doorY, along(frameT / 2)] as const);
+          const leafPos =
+            doorAxis === "x"
+              ? ([along(frameT + doorT / 2), doorY, cz] as const)
+              : ([cx, doorY, along(frameT + doorT / 2)] as const);
+          const frameSize =
+            doorAxis === "x"
+              ? ([frameT, doorH + 0.035, opening] as const)
+              : ([opening, doorH + 0.035, frameT] as const);
+          const leafSize =
+            doorAxis === "x"
+              ? ([doorT, doorH, opening - 0.04] as const)
+              : ([opening - 0.04, doorH, doorT] as const);
+          return (
+            <group key={`lift-door-${floor}`}>
+              <mesh position={[...framePos]} onClick={stop}>
+                <boxGeometry args={[...frameSize]} />
+                <meshStandardMaterial
+                  color="#c9a45c"
+                  transparent={dimmed}
+                  opacity={dimmed ? 0.35 : 1}
+                  roughness={0.38}
+                  metalness={0.5}
+                />
+              </mesh>
+              <mesh position={[...leafPos]} onClick={stop}>
+                <boxGeometry args={[...leafSize]} />
+                <meshStandardMaterial
+                  color={dimmed ? "#3a403e" : "#1e2623"}
+                  transparent={dimmed}
+                  opacity={dimmed ? 0.35 : 1}
+                  roughness={0.42}
+                  metalness={0.4}
+                />
+              </mesh>
+            </group>
+          );
+        })}
     </group>
   );
 }
 
-function LiftAtBE5({ focusFloor }: { focusFloor: number }) {
+function LiftAtBE5({
+  focusFloor,
+  walkMode,
+}: {
+  focusFloor: number
+  walkMode?: boolean
+}) {
   const { x0, x1, z0, z1, wallFace, opening } = LIFT_BE5;
   return (
     <LiftShaft
       focusFloor={focusFloor}
+      walkMode={walkMode}
       x0={x0}
       x1={x1}
       z0={z0}
@@ -1997,11 +2056,18 @@ function LiftAtBE5({ focusFloor }: { focusFloor: number }) {
   );
 }
 
-function LiftAtBN5({ focusFloor }: { focusFloor: number }) {
+function LiftAtBN5({
+  focusFloor,
+  walkMode,
+}: {
+  focusFloor: number
+  walkMode?: boolean
+}) {
   const { x0, x1, z0, z1, wallFace, opening, doorDir } = LIFT_BN5;
   return (
     <LiftShaft
       focusFloor={focusFloor}
+      walkMode={walkMode}
       x0={x0}
       x1={x1}
       z0={z0}
@@ -2014,11 +2080,18 @@ function LiftAtBN5({ focusFloor }: { focusFloor: number }) {
   );
 }
 
-function LiftAtAS1({ focusFloor }: { focusFloor: number }) {
+function LiftAtAS1({
+  focusFloor,
+  walkMode,
+}: {
+  focusFloor: number
+  walkMode?: boolean
+}) {
   const { x0, x1, z0, z1, wallFace, opening, doorDir } = LIFT_AS1;
   return (
     <LiftShaft
       focusFloor={focusFloor}
+      walkMode={walkMode}
       x0={x0}
       x1={x1}
       z0={z0}
@@ -2032,11 +2105,18 @@ function LiftAtAS1({ focusFloor }: { focusFloor: number }) {
 }
 
 /** A4 lobby lift — between north flat door and stair; door faces the stair. */
-function LiftAtA4({ focusFloor }: { focusFloor: number }) {
+function LiftAtA4({
+  focusFloor,
+  walkMode,
+}: {
+  focusFloor: number
+  walkMode?: boolean
+}) {
   const { x0, x1, z0, z1, wallFace, opening, doorDir, doorAxis } = LIFT_A4;
   return (
     <LiftShaft
       focusFloor={focusFloor}
+      walkMode={walkMode}
       x0={x0}
       x1={x1}
       z0={z0}
@@ -2266,47 +2346,97 @@ function placedBox(xa: number, xb: number, ya: number, yb: number, za: number, z
   return geometry;
 }
 
-function UStairAtLift({ focusFloor }: { focusFloor: number }) {
+/** Keep stacked stair boxes from sharing a face (z-fight / flashing). */
+const STAIR_SEAM = 0.0012;
+/** Thin mid-landing slab — avoids overlapping the last riser of flight 1. */
+const STAIR_LANDING_T = 0.036;
+
+function stairLevelBaseY(floor: number, deck: number) {
+  // floor 0 starts at true ground (no raised curb); floor 1+ uses slab + deck.
+  return floor <= 0 ? 0 : floorBaseY(floor) + deck;
+}
+
+/** Top of the walkable deck reached after climbing from `fromFloor` (not slab underside). */
+function stairArrivalY(fromFloor: number, deck: number) {
+  if (fromFloor < FLOOR_COUNT) return stairLevelBaseY(fromFloor + 1, deck);
+  return stairLevelBaseY(fromFloor, deck) + FLOOR_HEIGHT;
+}
+
+/** Dim other floors; keep ground (0) visible with floor 1 so the stilt run stays clear. */
+function stairFloorDimmed(focusFloor: number, floor: number) {
+  if (focusFloor === 0) return false;
+  if (floor === focusFloor) return false;
+  if (focusFloor === 1 && floor === 0) return false;
+  return true;
+}
+
+/** Stair tread/landing material — no transparent fade in walk mode (causes flash). */
+function StairSurfaceMaterial({
+  dimmed,
+  concrete,
+  walkMode,
+}: {
+  dimmed: boolean
+  concrete: boolean
+  walkMode?: boolean
+}) {
+  const fade = dimmed && !walkMode;
+  return (
+    <meshStandardMaterial
+      color={fade ? "#8d8882" : concrete ? "#c8c2b6" : "#c8cccf"}
+      transparent={fade}
+      opacity={fade ? 0.28 : 1}
+      depthWrite={!fade}
+      roughness={concrete ? 0.84 : 0.82}
+      metalness={0.02}
+      polygonOffset
+      polygonOffsetFactor={1}
+      polygonOffsetUnits={1}
+    />
+  );
+}
+
+function UStairAtLift({
+  focusFloor,
+  walkMode,
+}: {
+  focusFloor: number
+  walkMode?: boolean
+}) {
   const { x0, z1, flight: flightW, wallInner, zRun1, entryZ0, entryZ1 } = STAIR_U;
   const wallFace = LIFT_BE5.wallFace;
   const wallT = 0.07;
   const deck = 0.2;
-  const half = FLOOR_HEIGHT / 2;
-  const rise = half / 4 / 2;
-  const count = Math.round(half / rise);
+  const refHalf = FLOOR_HEIGHT / 2;
+  const count = Math.round(refHalf / (refHalf / 4 / 2));
   const going = (zRun1 - entryZ1) / count;
   const outerX0 = wallInner - flightW;
   const innerX1 = x0 + flightW;
-  const wallBase = floorBaseY(1);
+  const wallBase = 0;
   const wallTop = buildingTopY();
   const stop = (event: { stopPropagation: () => void }) => event.stopPropagation();
 
   const built = useMemo(() => {
     const flights: { name: string; floor: number; geometry: BufferGeometry }[] = [];
-    for (let floor = 1; floor <= FLOOR_COUNT; floor += 1) {
-      const base = floorBaseY(floor) + deck;
+    for (let floor = 0; floor <= FLOOR_COUNT; floor += 1) {
+      const base = stairLevelBaseY(floor, deck);
+      const arrival = stairArrivalY(floor, deck);
+      const half = (arrival - base) / 2;
+      const rise = half / count;
       const flight1: BufferGeometry[] = [];
       const flight2: BufferGeometry[] = [];
-      const join = 0.004;
       for (let step = 0; step < count; step += 1) {
-        const y0 = base + rise * step;
-        const y1 = y0 + rise;
-        const zStep = entryZ1 + going * step;
-        flight1.push(
-          placedBox(
-            outerX0,
-            wallInner,
-            y0,
-            y1,
-            zStep,
-            zStep + going + (step === count - 1 ? join : 0),
-          ),
-        );
-        const zFar = zRun1 - going * step + (step === 0 ? join : 0);
-        const zNear = zRun1 - going * (step + 1) - (step === count - 1 ? join : 0);
-        flight2.push(
-          placedBox(x0, innerX1, base + half + rise * step, base + half + rise * (step + 1), zNear, zFar),
-        );
+        const y0 = base + rise * step + (step === 0 ? 0 : STAIR_SEAM);
+        const y1 = base + rise * (step + 1) - STAIR_SEAM * 0.5;
+        const z0 = entryZ1 + going * step + (step === 0 ? 0 : STAIR_SEAM);
+        const z1Step = entryZ1 + going * (step + 1) - STAIR_SEAM;
+        flight1.push(placedBox(outerX0, wallInner, y0, y1, z0, z1Step));
+        const y2_0 = base + half + rise * step + (step === 0 ? STAIR_SEAM : STAIR_SEAM);
+        const y2_1 =
+          base + half + rise * (step + 1) - (step === count - 1 ? STAIR_SEAM : STAIR_SEAM * 0.5);
+        const zFar = zRun1 - going * step - (step === 0 ? 0 : STAIR_SEAM);
+        const zNear = zRun1 - going * (step + 1) + STAIR_SEAM;
+        flight2.push(placedBox(x0, innerX1, y2_0, y2_1, zNear, zFar));
       }
       flights.push(
         {
@@ -2322,27 +2452,50 @@ function UStairAtLift({ focusFloor }: { focusFloor: number }) {
         {
           name: "staircase-landing",
           floor,
-          geometry: placedBox(x0, wallInner, base + half - rise, base + half, zRun1, z1),
-        },
-        {
-          name: "staircase-corridor-entry",
-          floor,
-          geometry: placedBox(x0, wallFace, base - deck, base, entryZ0, entryZ1),
+          geometry: placedBox(
+            x0,
+            wallInner,
+            base + half - STAIR_LANDING_T,
+            base + half,
+            zRun1 + STAIR_SEAM,
+            z1,
+          ),
         },
       );
-      if (floor === FLOOR_COUNT) {
-        const arrival = base + FLOOR_HEIGHT;
+      // No raised curb at ground — treads start at y=0. Upper floors keep entry landing.
+      if (floor > 0) {
         flights.push({
           name: "staircase-corridor-entry",
           floor,
-          geometry: placedBox(x0, wallFace, arrival - deck, arrival, entryZ0, entryZ1),
+          geometry: placedBox(
+            x0,
+            wallFace,
+            base - deck,
+            base - STAIR_SEAM,
+            entryZ0,
+            entryZ1,
+          ),
+        });
+      }
+      if (floor === FLOOR_COUNT) {
+        flights.push({
+          name: "staircase-corridor-entry",
+          floor,
+          geometry: placedBox(
+            x0,
+            wallFace,
+            arrival - deck,
+            arrival - STAIR_SEAM,
+            entryZ0,
+            entryZ1,
+          ),
         });
       }
       for (const piece of flight1) piece.dispose();
       for (const piece of flight2) piece.dispose();
     }
     return flights;
-  }, [count, deck, entryZ0, entryZ1, flightW, going, half, innerX1, outerX0, rise, wallFace, wallInner, x0, z1, zRun1]);
+  }, [count, deck, entryZ0, entryZ1, flightW, going, innerX1, outerX0, wallFace, wallInner, x0, z1, zRun1]);
 
   useEffect(() => {
     return () => {
@@ -2367,16 +2520,14 @@ function UStairAtLift({ focusFloor }: { focusFloor: number }) {
       {wall("staircase-wall-core", x0, wallInner, LIFT_BE5.z1, entryZ0)}
       {wall("staircase-wall-inner", x0, wallInner, z1, z1 + wallT)}
       {built.map((part, index) => {
-        const dimmed = focusFloor !== 0 && part.floor !== focusFloor;
+        const dimmed = stairFloorDimmed(focusFloor, part.floor);
         const concrete = part.name !== "staircase-corridor-entry";
         return (
           <mesh key={`${part.name}-${part.floor}-${index}`} name={part.name} geometry={part.geometry} onClick={stop}>
-            <meshStandardMaterial
-              color={dimmed ? "#8d8882" : concrete ? "#c8c2b6" : "#c8cccf"}
-              transparent={dimmed}
-              opacity={dimmed ? 0.28 : 1}
-              roughness={concrete ? 0.84 : 0.82}
-              metalness={0.02}
+            <StairSurfaceMaterial
+              dimmed={dimmed}
+              concrete={concrete}
+              walkMode={walkMode}
             />
           </mesh>
         );
@@ -2389,7 +2540,13 @@ function UStairAtLift({ focusFloor }: { focusFloor: number }) {
  * Brochure U-stair in front of B3 only — two parallel flights, mid landing,
  * corridor entry landing, no lift. Corridor-side wall spans living↔bedroom mids.
  */
-function StairAtB3({ focusFloor }: { focusFloor: number }) {
+function StairAtB3({
+  focusFloor,
+  walkMode,
+}: {
+  focusFloor: number
+  walkMode?: boolean
+}) {
   const {
     x0,
     x1,
@@ -2409,44 +2566,41 @@ function StairAtB3({ focusFloor }: { focusFloor: number }) {
     zLand1,
     doorX0,
     doorX1,
-    rise,
     perFlight,
     going,
   } = STAIR_B3;
   const deck = 0.2;
-  const half = FLOOR_HEIGHT / 2;
   const count = perFlight;
-  const wallBase = floorBaseY(1);
+  const wallBase = 0;
   const wallTop = buildingTopY();
   const stop = (event: { stopPropagation: () => void }) => event.stopPropagation();
 
   const built = useMemo(() => {
     const flights: { name: string; floor: number; geometry: BufferGeometry }[] = [];
-    for (let floor = 1; floor <= FLOOR_COUNT; floor += 1) {
-      const base = floorBaseY(floor) + deck;
+    for (let floor = 0; floor <= FLOOR_COUNT; floor += 1) {
+      const base = stairLevelBaseY(floor, deck);
+      const arrival = stairArrivalY(floor, deck);
+      const half = (arrival - base) / 2;
+      const stepRise = half / count;
       const flight1: BufferGeometry[] = [];
       const flight2: BufferGeometry[] = [];
-      const join = 0.004;
       for (let step = 0; step < count; step += 1) {
-        const y0 = base + rise * step;
-        const y1 = y0 + rise;
+        const y0 = base + stepRise * step + (step === 0 ? 0 : STAIR_SEAM);
+        const y1 = base + stepRise * (step + 1) - STAIR_SEAM * 0.5;
         // Flight 1 (corridor-side strip): south entry → north mid landing.
-        const z1Lo = zEntry1 + going * step - (step === 0 ? join : 0);
-        const z1Hi = zEntry1 + going * (step + 1) + (step === count - 1 ? join : 0);
+        const z1Lo = zEntry1 + going * step + (step === 0 ? 0 : STAIR_SEAM);
+        const z1Hi = zEntry1 + going * (step + 1) - STAIR_SEAM;
         flight1.push(placedBox(flight1X0, flight1X1, y0, y1, z1Lo, z1Hi));
         // Flight 2 (apartment-side strip): north mid → south, return to upper level.
-        const z2Hi = zRun1 - going * step + (step === 0 ? join : 0);
-        const z2Lo = zRun1 - going * (step + 1) - (step === count - 1 ? join : 0);
-        flight2.push(
-          placedBox(
-            flight2X0,
-            flight2X1,
-            base + half + rise * step,
-            base + half + rise * (step + 1),
-            z2Lo,
-            z2Hi,
-          ),
-        );
+        const y2_0 = base + half + stepRise * step + STAIR_SEAM;
+        const y2_1 =
+          base +
+          half +
+          stepRise * (step + 1) -
+          (step === count - 1 ? STAIR_SEAM : STAIR_SEAM * 0.5);
+        const z2Hi = zRun1 - going * step - (step === 0 ? 0 : STAIR_SEAM);
+        const z2Lo = zRun1 - going * (step + 1) + STAIR_SEAM;
+        flight2.push(placedBox(flight2X0, flight2X1, y2_0, y2_1, z2Lo, z2Hi));
       }
       flights.push(
         {
@@ -2462,32 +2616,63 @@ function StairAtB3({ focusFloor }: { focusFloor: number }) {
         {
           name: "staircase-b3-landing-mid",
           floor,
-          geometry: placedBox(x0, wallInner, base + half - rise, base + half, zLand0, zLand1),
-        },
-        {
-          name: "staircase-b3-entry",
-          floor,
-          geometry: placedBox(x0, x1, base - deck, base, zEntry0, zEntry1),
-        },
-        {
-          // Flat approach through the south door toward B5 / BN6.
-          name: "staircase-b3-approach",
-          floor,
-          geometry: placedBox(doorX0, doorX1, base - deck, base, z0 - 0.22, z0 + wallT),
+          geometry: placedBox(
+            x0,
+            wallInner,
+            base + half - STAIR_LANDING_T,
+            base + half,
+            zLand0 + STAIR_SEAM,
+            zLand1,
+          ),
         },
       );
-      if (floor === FLOOR_COUNT) {
-        const arrival = base + FLOOR_HEIGHT;
+      if (floor > 0) {
         flights.push(
           {
             name: "staircase-b3-entry",
             floor,
-            geometry: placedBox(x0, x1, arrival - deck, arrival, zEntry0, zEntry1),
+            geometry: placedBox(x0, x1, base - deck, base - STAIR_SEAM, zEntry0, zEntry1),
+          },
+          {
+            // Flat approach through the south door toward B5 / BN6.
+            name: "staircase-b3-approach",
+            floor,
+            geometry: placedBox(
+              doorX0,
+              doorX1,
+              base - deck,
+              base - STAIR_SEAM,
+              z0 - 0.22,
+              z0 + wallT,
+            ),
+          },
+        );
+      }
+      if (floor === FLOOR_COUNT) {
+        flights.push(
+          {
+            name: "staircase-b3-entry",
+            floor,
+            geometry: placedBox(
+              x0,
+              x1,
+              arrival - deck,
+              arrival - STAIR_SEAM,
+              zEntry0,
+              zEntry1,
+            ),
           },
           {
             name: "staircase-b3-approach",
             floor,
-            geometry: placedBox(doorX0, doorX1, arrival - deck, arrival, z0 - 0.22, z0 + wallT),
+            geometry: placedBox(
+              doorX0,
+              doorX1,
+              arrival - deck,
+              arrival - STAIR_SEAM,
+              z0 - 0.22,
+              z0 + wallT,
+            ),
           },
         );
       }
@@ -2503,8 +2688,6 @@ function StairAtB3({ focusFloor }: { focusFloor: number }) {
     flight2X0,
     flight2X1,
     going,
-    half,
-    rise,
     wallInner,
     x0,
     x1,
@@ -2550,16 +2733,14 @@ function StairAtB3({ focusFloor }: { focusFloor: number }) {
       {wall("staircase-b3-wall-south-e", x0, doorX0, z0, z0 + wallT)}
       {wall("staircase-b3-wall-south-w", doorX1, x1, z0, z0 + wallT)}
       {built.map((part, index) => {
-        const dimmed = focusFloor !== 0 && part.floor !== focusFloor;
+        const dimmed = stairFloorDimmed(focusFloor, part.floor);
         const landing = !part.name.includes("flight");
         return (
           <mesh key={`${part.name}-${part.floor}-${index}`} name={part.name} geometry={part.geometry} onClick={stop}>
-            <meshStandardMaterial
-              color={dimmed ? "#8d8882" : landing ? "#c8cccf" : "#c8c2b6"}
-              transparent={dimmed}
-              opacity={dimmed ? 0.28 : 1}
-              roughness={landing ? 0.82 : 0.84}
-              metalness={0.02}
+            <StairSurfaceMaterial
+              dimmed={dimmed}
+              concrete={!landing}
+              walkMode={walkMode}
             />
           </mesh>
         );
@@ -2574,11 +2755,13 @@ function StairAtB3({ focusFloor }: { focusFloor: number }) {
  */
 function StairAtAWing({
   focusFloor,
+  walkMode,
   stair,
   id,
   northWall = true,
 }: {
   focusFloor: number
+  walkMode?: boolean
   stair: typeof STAIR_A8
   id: string
   /** A4 omits this so LIFT_A4's south door faces the stair open. */
@@ -2600,43 +2783,40 @@ function StairAtAWing({
     zRun1,
     zLand0,
     zLand1,
-    rise,
     perFlight,
     going,
   } = stair;
   const deck = 0.2;
-  const half = FLOOR_HEIGHT / 2;
   const count = perFlight;
-  const wallBase = floorBaseY(1);
+  const wallBase = 0;
   const wallTop = buildingTopY();
   const prefix = `staircase-${id}`;
   const stop = (event: { stopPropagation: () => void }) => event.stopPropagation();
 
   const built = useMemo(() => {
     const flights: { name: string; floor: number; geometry: BufferGeometry }[] = [];
-    for (let floor = 1; floor <= FLOOR_COUNT; floor += 1) {
-      const base = floorBaseY(floor) + deck;
+    for (let floor = 0; floor <= FLOOR_COUNT; floor += 1) {
+      const base = stairLevelBaseY(floor, deck);
+      const arrival = stairArrivalY(floor, deck);
+      const half = (arrival - base) / 2;
+      const stepRise = half / count;
       const flight1: BufferGeometry[] = [];
       const flight2: BufferGeometry[] = [];
-      const join = 0.004;
       for (let step = 0; step < count; step += 1) {
-        const y0 = base + rise * step;
-        const y1 = y0 + rise;
-        const z1Hi = zEntry0 - going * step + (step === 0 ? join : 0);
-        const z1Lo = zEntry0 - going * (step + 1) - (step === count - 1 ? join : 0);
+        const y0 = base + stepRise * step + (step === 0 ? 0 : STAIR_SEAM);
+        const y1 = base + stepRise * (step + 1) - STAIR_SEAM * 0.5;
+        const z1Hi = zEntry0 - going * step - (step === 0 ? 0 : STAIR_SEAM);
+        const z1Lo = zEntry0 - going * (step + 1) + STAIR_SEAM;
         flight1.push(placedBox(flight1X0, flight1X1, y0, y1, z1Lo, z1Hi));
-        const z2Lo = zRun1 + going * step - (step === 0 ? join : 0);
-        const z2Hi = zRun1 + going * (step + 1) + (step === count - 1 ? join : 0);
-        flight2.push(
-          placedBox(
-            flight2X0,
-            flight2X1,
-            base + half + rise * step,
-            base + half + rise * (step + 1),
-            z2Lo,
-            z2Hi,
-          ),
-        );
+        const y2_0 = base + half + stepRise * step + STAIR_SEAM;
+        const y2_1 =
+          base +
+          half +
+          stepRise * (step + 1) -
+          (step === count - 1 ? STAIR_SEAM : STAIR_SEAM * 0.5);
+        const z2Lo = zRun1 + going * step + (step === 0 ? 0 : STAIR_SEAM);
+        const z2Hi = zRun1 + going * (step + 1) - STAIR_SEAM;
+        flight2.push(placedBox(flight2X0, flight2X1, y2_0, y2_1, z2Lo, z2Hi));
       }
       flights.push(
         {
@@ -2652,20 +2832,35 @@ function StairAtAWing({
         {
           name: `${prefix}-landing-mid`,
           floor,
-          geometry: placedBox(x0, wallInner, base + half - rise, base + half, zLand0, zLand1),
-        },
-        {
-          name: `${prefix}-entry`,
-          floor,
-          geometry: placedBox(x0, x1, base - deck, base, zEntry0, zEntry1),
+          geometry: placedBox(
+            x0,
+            wallInner,
+            base + half - STAIR_LANDING_T,
+            base + half,
+            zLand0,
+            zLand1 - STAIR_SEAM,
+          ),
         },
       );
-      if (floor === FLOOR_COUNT) {
-        const arrival = base + FLOOR_HEIGHT;
+      if (floor > 0) {
         flights.push({
           name: `${prefix}-entry`,
           floor,
-          geometry: placedBox(x0, x1, arrival - deck, arrival, zEntry0, zEntry1),
+          geometry: placedBox(x0, x1, base - deck, base - STAIR_SEAM, zEntry0, zEntry1),
+        });
+      }
+      if (floor === FLOOR_COUNT) {
+        flights.push({
+          name: `${prefix}-entry`,
+          floor,
+          geometry: placedBox(
+            x0,
+            x1,
+            arrival - deck,
+            arrival - STAIR_SEAM,
+            zEntry0,
+            zEntry1,
+          ),
         });
       }
       for (const piece of flight1) piece.dispose();
@@ -2680,9 +2875,7 @@ function StairAtAWing({
     flight2X0,
     flight2X1,
     going,
-    half,
     prefix,
-    rise,
     wallInner,
     x0,
     x1,
@@ -2721,16 +2914,14 @@ function StairAtAWing({
       {wall(`${prefix}-wall-south`, x0, x1, z0, z0 + wallT)}
       {northWall ? wall(`${prefix}-wall-north`, x0, x1, z1 - wallT, z1) : null}
       {built.map((part, index) => {
-        const dimmed = focusFloor !== 0 && part.floor !== focusFloor;
+        const dimmed = stairFloorDimmed(focusFloor, part.floor);
         const landing = !part.name.includes("flight");
         return (
           <mesh key={`${part.name}-${part.floor}-${index}`} name={part.name} geometry={part.geometry} onClick={stop}>
-            <meshStandardMaterial
-              color={dimmed ? "#8d8882" : landing ? "#c8cccf" : "#c8c2b6"}
-              transparent={dimmed}
-              opacity={dimmed ? 0.28 : 1}
-              roughness={landing ? 0.82 : 0.84}
-              metalness={0.02}
+            <StairSurfaceMaterial
+              dimmed={dimmed}
+              concrete={!landing}
+              walkMode={walkMode}
             />
           </mesh>
         );
@@ -2739,7 +2930,13 @@ function StairAtAWing({
   );
 }
 
-function StairAtBN7({ focusFloor }: { focusFloor: number }) {
+function StairAtBN7({
+  focusFloor,
+  walkMode,
+}: {
+  focusFloor: number
+  walkMode?: boolean
+}) {
   const {
     x0,
     deckNorth,
@@ -2763,18 +2960,31 @@ function StairAtBN7({ focusFloor }: { focusFloor: number }) {
 
   const built = useMemo(() => {
     const parts: { name: string; floor: number; geometry: BufferGeometry }[] = [];
-    const join = 0.002;
     const pushLevel = (floor: number, yTop: number, lowerName: string) => {
       parts.push(
         {
           name: "staircase-bn7-approach",
           floor,
-          geometry: placedBox(flightX0, flightX1, yTop - deck, yTop, deckNorth, zWalk + join),
+          geometry: placedBox(
+            flightX0,
+            flightX1,
+            yTop - deck,
+            yTop - STAIR_SEAM,
+            deckNorth,
+            zWalk,
+          ),
         },
         {
           name: lowerName,
           floor,
-          geometry: placedBox(flightX0, flightX1, yTop - deck, yTop, zWalk, zTread0 + join),
+          geometry: placedBox(
+            flightX0,
+            flightX1,
+            yTop - deck,
+            yTop - STAIR_SEAM,
+            zWalk + STAIR_SEAM,
+            zTread0,
+          ),
         },
       );
     };
@@ -2785,14 +2995,18 @@ function StairAtBN7({ focusFloor }: { focusFloor: number }) {
       const flight1: BufferGeometry[] = [];
       const flight2: BufferGeometry[] = [];
       for (let step = 0; step < treads; step += 1) {
-        const y1 = base - rise * (step + 1);
-        const z0 = zTread0 + going * step - (step === 0 ? join : 0);
-        const z1 = zTread0 + going * (step + 1) + (step === treads - 1 ? join : 0);
-        flight1.push(placedBox(flight1X0, flight1X1, y1 - rise, y1, z0, z1));
-        const y2 = midY - rise * (step + 1);
-        const zFar = zTread1 - going * step + (step === 0 ? join : 0);
-        const zNear = zTread1 - going * (step + 1) - (step === treads - 1 ? join : 0);
-        flight2.push(placedBox(flight2X0, flight2X1, y2 - rise, y2, zNear, zFar));
+        const yTop = base - rise * (step + 1);
+        const yBot = yTop - rise + STAIR_SEAM;
+        const z0 = zTread0 + going * step + (step === 0 ? 0 : STAIR_SEAM);
+        const z1 = zTread0 + going * (step + 1) - STAIR_SEAM;
+        flight1.push(placedBox(flight1X0, flight1X1, yBot, yTop - STAIR_SEAM * 0.5, z0, z1));
+        const y2Top = midY - rise * (step + 1);
+        const y2Bot = y2Top - rise + STAIR_SEAM;
+        const zFar = zTread1 - going * step - (step === 0 ? 0 : STAIR_SEAM);
+        const zNear = zTread1 - going * (step + 1) + STAIR_SEAM;
+        flight2.push(
+          placedBox(flight2X0, flight2X1, y2Bot, y2Top - STAIR_SEAM * 0.5, zNear, zFar),
+        );
       }
       pushLevel(floor, base, "staircase-bn7-landing-top");
       parts.push(
@@ -2804,7 +3018,14 @@ function StairAtBN7({ focusFloor }: { focusFloor: number }) {
         {
           name: "staircase-bn7-landing-mid",
           floor,
-          geometry: placedBox(flightX0, flightX1, midY - deck, midY, zTread1, zStop),
+          geometry: placedBox(
+            flightX0,
+            flightX1,
+            midY - STAIR_LANDING_T,
+            midY,
+            zTread1 + STAIR_SEAM,
+            zStop,
+          ),
         },
         {
           name: "staircase-bn7-flight-2",
@@ -2845,7 +3066,7 @@ function StairAtBN7({ focusFloor }: { focusFloor: number }) {
     const base = floorBaseY(floor) + deck;
     const y0 = base - FLOOR_HEIGHT;
     const y1 = base;
-    const dimmed = focusFloor !== 0 && floor !== focusFloor;
+    const dimmed = stairFloorDimmed(focusFloor, floor);
     return (
       <mesh
         key={`${name}-${floor}`}
@@ -2855,11 +3076,15 @@ function StairAtBN7({ focusFloor }: { focusFloor: number }) {
       >
         <boxGeometry args={[xb - xa, y1 - y0, zb - za]} />
         <meshStandardMaterial
-          color={dimmed ? "#8d8882" : "#8d9391"}
-          transparent={dimmed}
-          opacity={dimmed ? 0.28 : 1}
+          color={dimmed && !walkMode ? "#8d8882" : "#8d9391"}
+          transparent={dimmed && !walkMode}
+          opacity={dimmed && !walkMode ? 0.28 : 1}
+          depthWrite={!(dimmed && !walkMode)}
           roughness={0.88}
           metalness={0.02}
+          polygonOffset
+          polygonOffsetFactor={1}
+          polygonOffsetUnits={1}
         />
       </mesh>
     );
@@ -2873,16 +3098,14 @@ function StairAtBN7({ focusFloor }: { focusFloor: number }) {
         wall("staircase-bn7-wall-end", x0, flightX1 + wallT, zStop, zStop + wallT, floor),
       ])}
       {built.map((part, index) => {
-        const dimmed = focusFloor !== 0 && part.floor !== focusFloor;
+        const dimmed = stairFloorDimmed(focusFloor, part.floor);
         const landing = !part.name.includes("flight");
         return (
           <mesh key={`${part.name}-${part.floor}-${index}`} name={part.name} geometry={part.geometry} onClick={stop}>
-            <meshStandardMaterial
-              color={dimmed ? "#8d8882" : landing ? "#c8cccf" : "#c8c2b6"}
-              transparent={dimmed}
-              opacity={dimmed ? 0.28 : 1}
-              roughness={landing ? 0.82 : 0.84}
-              metalness={0.02}
+            <StairSurfaceMaterial
+              dimmed={dimmed}
+              concrete={!landing}
+              walkMode={walkMode}
             />
           </mesh>
         );
@@ -3281,6 +3504,7 @@ function Scene({
   myFlatNumber,
   labels,
   measure,
+  walkMode,
   showAcross,
   showDown,
   debugMarks,
@@ -3300,6 +3524,7 @@ function Scene({
   myFlatNumber?: string | null
   labels: LabelVisibility
   measure: boolean
+  walkMode: boolean
   showAcross: boolean
   showDown: boolean
   debugMarks: ReturnType<typeof buildDebugLabels>
@@ -3316,6 +3541,7 @@ function Scene({
   ) => void
 }) {
   const geometry = useMemo(() => new BoxGeometry(1, 1, 1), []);
+  const [walkFloor, setWalkFloor] = useState(1);
   const myFlat = useMemo(
     () => flats.find((flat) => flat.flatNumber === myFlatNumber) ?? null,
     [flats, myFlatNumber],
@@ -3327,6 +3553,12 @@ function Scene({
 
   useEffect(() => () => geometry.dispose(), [geometry]);
 
+  useFrame(() => {
+    if (!walkMode) return;
+    const next = getWalkFlatFloorHint();
+    setWalkFloor((prev) => (prev === next ? prev : next));
+  });
+
   return (
     <>
       <color attach="background" args={["#d8d0c0"]} />
@@ -3335,22 +3567,29 @@ function Scene({
       <ambientLight intensity={0.45} />
 
       <Site />
+      {walkMode ? <CommunityWalkers /> : null}
       <Corridors focusFloor={focusFloor} />
-      <LiftAtBE5 focusFloor={focusFloor} />
-      <LiftAtBN5 focusFloor={focusFloor} />
-      <LiftAtAS1 focusFloor={focusFloor} />
-      <LiftAtA4 focusFloor={focusFloor} />
-      <UStairAtLift focusFloor={focusFloor} />
+      <LiftAtBE5 focusFloor={focusFloor} walkMode={walkMode} />
+      <LiftAtBN5 focusFloor={focusFloor} walkMode={walkMode} />
+      <LiftAtAS1 focusFloor={focusFloor} walkMode={walkMode} />
+      <LiftAtA4 focusFloor={focusFloor} walkMode={walkMode} />
+      <UStairAtLift focusFloor={focusFloor} walkMode={walkMode} />
       <AWingCorridorFills focusFloor={focusFloor} fills={A4_CORRIDOR_FILLS} name="a4-corridor-fills" />
       <AWingEntranceDoor focusFloor={focusFloor} entrance={A4_ENTRANCE} name="a4-entrance" />
-      <StairAtAWing focusFloor={focusFloor} stair={STAIR_A4} id="a4" northWall={false} />
+      <StairAtAWing
+        focusFloor={focusFloor}
+        walkMode={walkMode}
+        stair={STAIR_A4}
+        id="a4"
+        northWall={false}
+      />
       <AWingCorridorFills focusFloor={focusFloor} fills={A8_CORRIDOR_FILLS} name="a8-corridor-fills" />
       <AWingEntranceDoor focusFloor={focusFloor} entrance={A8_ENTRANCE} name="a8-entrance" />
-      <StairAtAWing focusFloor={focusFloor} stair={STAIR_A8} id="a8" />
+      <StairAtAWing focusFloor={focusFloor} walkMode={walkMode} stair={STAIR_A8} id="a8" />
       <B3CorridorFills focusFloor={focusFloor} />
-      <StairAtB3 focusFloor={focusFloor} />
+      <StairAtB3 focusFloor={focusFloor} walkMode={walkMode} />
       <B3EntranceDoor focusFloor={focusFloor} />
-      <StairAtBN7 focusFloor={focusFloor} />
+      <StairAtBN7 focusFloor={focusFloor} walkMode={walkMode} />
 
       {flats.map((flat) =>
         isClubhousePodiumFlat(flat.wing, flat.unit, flat.floor) ? null : (
@@ -3364,6 +3603,8 @@ function Scene({
             onFocusFloor={focusFloor !== 0 && flat.floor === focusFloor}
             geometry={geometry}
             onSelect={onSelect}
+            walkMode={walkMode}
+            walkFloor={walkFloor}
           />
         ),
       )}
@@ -3394,6 +3635,10 @@ function Scene({
       <OrbitControls
         ref={controlsRef}
         makeDefault
+        enabled={!walkMode}
+        enableRotate={!walkMode}
+        enablePan={!walkMode}
+        enableZoom={!walkMode}
         target={
           myFlat
             ? (() => {
@@ -3406,8 +3651,6 @@ function Scene({
               })()
             : [BUILDING_CENTER[0], 0, BUILDING_CENTER[2]]
         }
-        enablePan
-        enableZoom
         zoomSpeed={0.2}
         minDistance={ZOOM_MIN}
         maxDistance={ZOOM_MAX}
@@ -3737,6 +3980,7 @@ export default function Building3DView({
   const [fullScreen, setFullScreen] = useState(false);
   const [labels, setLabels] = useState<LabelVisibility>(DEFAULT_LABELS);
   const [measure, setMeasure] = useState(false);
+  const [walkMode, setWalkMode] = useState(false);
   const [showAcross, setShowAcross] = useState(true);
   const [showDown, setShowDown] = useState(true);
   const [debugOpen, setDebugOpen] = useState(false);
@@ -3900,6 +4144,18 @@ export default function Building3DView({
           </div>
           <button
             type="button"
+            aria-pressed={walkMode}
+            onClick={() => setWalkMode((on) => !on)}
+            className={`inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold backdrop-blur-sm ${
+              walkMode
+                ? "bg-[#c9a45c] text-[#14241c]"
+                : "bg-[#14241c]/80 text-[#e8d5a3]"
+            }`}
+          >
+            Walk mode
+          </button>
+          <button
+            type="button"
             aria-pressed={measure}
             onClick={() => setMeasure((on) => !on)}
             className={`inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold backdrop-blur-sm ${
@@ -3975,6 +4231,7 @@ export default function Building3DView({
               myFlatNumber={myFlatNumber}
               labels={visibleLabels}
               measure={measure}
+              walkMode={walkMode}
               showAcross={showAcross}
               showDown={showDown}
               debugMarks={debugMarks}
@@ -4003,10 +4260,12 @@ export default function Building3DView({
             <p className="text-sm text-[#d0c090]">
               {measure
                 ? "Dimensions. 0′ is the east–south corner. Across grows west. Down grows north."
-                : selected
-                  ? "Click empty space or × to close details"
-                  : "Click a flat for details · Drag to orbit"}
-              {fullScreen ? " · Esc to exit" : ""}
+                : walkMode
+                  ? "At the gate · drag to look · WASD walk (walls block, stairs climb) · Esc releases mouse"
+                  : selected
+                    ? "Click empty space or × to close details"
+                    : "Click a flat for details · Drag to orbit"}
+              {fullScreen && !walkMode ? " · Esc to exit" : ""}
             </p>
           </div>
           <div className="mt-1.5">

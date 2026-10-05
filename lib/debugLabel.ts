@@ -15,6 +15,7 @@ import {
   floorBaseY,
   unitPlanSize,
 } from "@/lib/layout3d";
+import { planToWorld } from "@/lib/planWorld";
 
 export type DebugLayer =
   | "flats"
@@ -85,23 +86,6 @@ function pair(widthM: number, depthM: number) {
 
 function labelY(floor: number) {
   return floor > 0 ? floorBaseY(floor) + UNIT_TOP + 0.42 : floorBaseY(1) + UNIT_TOP + 0.42;
-}
-
-/** Plan +x is east (world −X). Plan +y is south (world −Z). */
-function planToWorld(
-  flatX: number,
-  flatZ: number,
-  unitW: number,
-  unitD: number,
-  extentW: number,
-  extentH: number,
-  planX: number,
-  planY: number,
-  y: number,
-): [number, number, number] {
-  const u = extentW === 0 ? 0 : planX / extentW;
-  const v = extentH === 0 ? 0 : planY / extentH;
-  return [flatX + unitW / 2 - u * unitW, y, flatZ + unitD / 2 - v * unitD];
 }
 
 function roomCode(id: string, label: string, bed: number, toilet: number) {
