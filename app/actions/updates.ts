@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { publishActivity } from "@/lib/activity";
+import { savePostPhoto } from "@/lib/postPhoto";
 import { postKind } from "@/lib/postKinds";
 import { canManageAdmin, ensureProfile, isCommunityRole } from "@/lib/roles";
 import { createAdminClient } from "@/utils/supabase/admin";
@@ -52,6 +53,20 @@ export async function postUpdate(
       kind.value === "poll" ? pollChoices(formData) : { ok: true as const, labels: [] as string[] };
     if (!choices.ok) return { ok: false, message: choices.message };
 
+    let startsOn: string | null = null;
+    if (kind.value === "event") {
+      startsOn = String(formData.get("startsOn") || "").trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(startsOn)) {
+        return { ok: false, message: "Choose the date." };
+      }
+    }
+
+    const photo = formData.get("photo");
+    const hasPhoto = photo instanceof File && photo.size > 0;
+    if (hasPhoto && kind.value !== "sale" && kind.value !== "lost" && kind.value !== "event") {
+      return { ok: false, message: "A photo fits a sale, a lost item, or an event." };
+    }
+
     const { data: created, error } = await admin
       .from("member_posts")
       .insert({
@@ -61,10 +76,28 @@ export async function postUpdate(
         author_name: name,
         kind: kind.value,
         body,
+        starts_on: startsOn,
       })
       .select("id")
       .single();
     if (error || !created) return { ok: false, message: "Could not post. Try again." };
+
+    if (hasPhoto && photo instanceof File) {
+      try {
+        const imageUrl = await savePostPhoto(created.id, photo);
+        const { error: photoError } = await admin
+          .from("member_posts")
+          .update({ image_url: imageUrl })
+          .eq("id", created.id);
+        if (photoError) throw new Error(photoError.message);
+      } catch (error) {
+        await admin.from("member_posts").delete().eq("id", created.id);
+        return {
+          ok: false,
+          message: error instanceof Error ? error.message : "Could not save the photo.",
+        };
+      }
+    }
 
     if (kind.value === "poll") {
       const { error: optionError } = await admin.from("member_poll_options").insert(
@@ -137,10 +170,11 @@ export async function voteOnPoll(
 
     const { data: post } = await admin
       .from("member_posts")
-      .select("kind")
+      .select("kind, closed_at")
       .eq("id", postId)
       .maybeSingle();
     if (post?.kind !== "poll") return { ok: false, message: "That is not a poll." };
+    if (post.closed_at) return { ok: false, message: "Voting is closed." };
 
     const { error } = await admin.from("member_poll_votes").upsert(
       {
@@ -160,6 +194,94 @@ export async function voteOnPoll(
       message: error instanceof Error ? error.message : "Could not save your vote.",
     };
   }
+}
+
+export async function reactToPost(formData: FormData) {
+  const { user, admin } = await memberContext();
+  const postId = Number(formData.get("postId"));
+  const kind = String(formData.get("kind") || "");
+  if (!postId || (kind !== "helpful" && kind !== "thanks")) return;
+
+  const { data: existing } = await admin
+    .from("member_post_reactions")
+    .select("kind")
+    .eq("post_id", postId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (existing?.kind === kind) {
+    await admin.from("member_post_reactions").delete().eq("post_id", postId).eq("user_id", user.id);
+  } else if (existing) {
+    await admin
+      .from("member_post_reactions")
+      .update({ kind })
+      .eq("post_id", postId)
+      .eq("user_id", user.id);
+  } else {
+    await admin.from("member_post_reactions").insert({
+      post_id: postId,
+      user_id: user.id,
+      kind,
+    });
+  }
+  revalidatePath("/feed");
+}
+
+export async function rsvpEvent(formData: FormData) {
+  const { user, admin } = await memberContext();
+  const postId = Number(formData.get("postId"));
+  if (!postId) return;
+  const { data: post } = await admin
+    .from("member_posts")
+    .select("kind")
+    .eq("id", postId)
+    .maybeSingle();
+  if (post?.kind !== "event") return;
+
+  const { data: existing } = await admin
+    .from("member_event_rsvps")
+    .select("user_id")
+    .eq("post_id", postId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (existing) {
+    await admin.from("member_event_rsvps").delete().eq("post_id", postId).eq("user_id", user.id);
+  } else {
+    await admin.from("member_event_rsvps").insert({ post_id: postId, user_id: user.id });
+  }
+  revalidatePath("/feed");
+}
+
+export async function closePoll(formData: FormData) {
+  const { user, profile, admin } = await memberContext();
+  const postId = Number(formData.get("postId"));
+  if (!postId) return;
+  const { data: post } = await admin
+    .from("member_posts")
+    .select("author_user_id, kind, closed_at")
+    .eq("id", postId)
+    .maybeSingle();
+  if (!post || post.kind !== "poll" || post.closed_at) return;
+  const allowed = post.author_user_id === user.id || canManageAdmin(profile.role, user);
+  if (!allowed) return;
+  await admin.from("member_posts").update({ closed_at: new Date().toISOString() }).eq("id", postId);
+  revalidatePath("/feed");
+}
+
+export async function markSold(formData: FormData) {
+  const { user, profile, admin } = await memberContext();
+  const postId = Number(formData.get("postId"));
+  if (!postId) return;
+  const { data: post } = await admin
+    .from("member_posts")
+    .select("author_user_id, kind, sold_at")
+    .eq("id", postId)
+    .maybeSingle();
+  if (!post || post.kind !== "sale" || post.sold_at) return;
+  const allowed = post.author_user_id === user.id || canManageAdmin(profile.role, user);
+  if (!allowed) return;
+  await admin.from("member_posts").update({ sold_at: new Date().toISOString() }).eq("id", postId);
+  revalidatePath("/feed");
 }
 
 export async function replyToPost(

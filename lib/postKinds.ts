@@ -35,7 +35,7 @@ export const POST_KINDS = [
     value: "event",
     label: "Event",
     audience: "community",
-    prompt: "What is happening, and when?",
+    prompt: "What is happening?",
     submit: "Post event",
     done: "Event posted.",
   },

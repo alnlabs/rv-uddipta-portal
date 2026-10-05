@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { publishActivity } from "@/lib/activity";
+import { reachPerson } from "@/lib/reach";
 import { isSuperAdmin, isSuperAdminContact, SUPER_ADMIN_NO_FLAT } from "@/lib/admin";
 import { getAuthState, requireAdminUser } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
@@ -19,6 +20,8 @@ async function notifyApprovedPerson(input: {
   userId: string
   flatNumber: string
   family: boolean
+  email?: string | null
+  phone?: string | null
 }) {
   const admin = createAdminClient();
   const { error } = await admin.from("notifications").insert({
@@ -31,6 +34,17 @@ async function notifyApprovedPerson(input: {
     href: "/feed",
   });
   if (error) console.warn("approval notice failed", error.message);
+  const site = process.env.NEXT_PUBLIC_SITE_URL || "https://uddipta.vercel.app";
+  await reachPerson({
+    title: input.family
+      ? `You're approved as family on ${input.flatNumber}`
+      : `You're approved for ${input.flatNumber}`,
+    body: `Your home is open. Sign in at ${site}/feed`,
+    email: input.email,
+    phone: input.phone,
+  }).catch((error: unknown) => {
+    console.warn("approval reach failed", error instanceof Error ? error.message : error);
+  });
 }
 
 export async function approveRegistration(requestId: number): Promise<ActionResult> {
@@ -144,6 +158,8 @@ export async function approveRegistration(requestId: number): Promise<ActionResu
         userId: request.user_id,
         flatNumber: request.flat_number,
         family: isFamily,
+        email: request.email,
+        phone: request.phone,
       });
     }
 
@@ -208,6 +224,8 @@ export async function approveFamilyAsOwner(requestId: number): Promise<ActionRes
       userId: request.user_id,
       flatNumber: request.flat_number,
       family: true,
+      email: request.email,
+      phone: request.phone,
     });
 
     revalidatePath("/");
