@@ -9,7 +9,7 @@ export default async function AccountLayout({
   children: React.ReactNode
 }) {
   const { user, profile } = await getAuthState();
-  if (!user) redirect("/login");
+  if (!user) return children;
 
   const admin = canManageAdmin(profile.role, user);
   const builder = canEditBuilder(profile.role, user);

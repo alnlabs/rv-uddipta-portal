@@ -11,7 +11,7 @@ type NavItem = {
   label: string
   short?: string
   match: (p: string) => boolean
-  icon: "home" | "feed" | "floors" | "model" | "flat" | "admin" | "bell" | "people" | "mail"
+  icon: "home" | "feed" | "floors" | "model" | "flat" | "admin" | "bell" | "people" | "mail" | "form"
 };
 
 function NavIcon({
@@ -95,6 +95,13 @@ function NavIcon({
         <svg {...common}>
           <path d="M4 7h16v10H4V7Z" />
           <path d="m4 8 8 5 8-5" />
+        </svg>
+      );
+    case "form":
+      return (
+        <svg {...common}>
+          <path d="M8 4h6l4 4v12a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z" />
+          <path d="M14 4v4h4M9 13h6M9 17h6" />
         </svg>
       );
   }
@@ -264,13 +271,21 @@ export function OwnersShell({
       icon: "people",
     });
   }
-  ownerNav.push({
-    href: "/messages",
-    label: "Messages",
-    short: "Messages",
-    match: (p) => p.startsWith("/messages"),
-    icon: "mail",
-  });
+  ownerNav.push(
+    {
+      href: "/forms",
+      label: "Forms",
+      match: (p) => p.startsWith("/forms") || p.startsWith("/f/"),
+      icon: "form",
+    },
+    {
+      href: "/messages",
+      label: "Messages",
+      short: "Messages",
+      match: (p) => p.startsWith("/messages"),
+      icon: "mail",
+    },
+  );
 
   const adminNav: NavItem[] = [];
   if (isSuperAdmin || isAdmin) {
@@ -291,12 +306,20 @@ export function OwnersShell({
     );
   }
   if (isSuperAdmin || isAdmin) {
-    adminNav.push({
-      href: "/account/requests",
-      label: "Requests",
-      match: (p) => p.startsWith("/account/requests"),
-      icon: "bell",
-    });
+    adminNav.push(
+      {
+        href: "/account/requests",
+        label: "Requests",
+        match: (p) => p.startsWith("/account/requests"),
+        icon: "bell",
+      },
+      {
+        href: "/account/forms",
+        label: "Forms",
+        match: (p) => p.startsWith("/account/forms"),
+        icon: "form",
+      },
+    );
   }
   if (isSuperAdmin || isAdmin || canEditBuilder) {
     adminNav.push({
@@ -312,6 +335,7 @@ export function OwnersShell({
   const communityItem = ownerNav.find((item) => item.href === "/community")!;
   const feedItem = ownerNav.find((item) => item.href === "/feed");
   const directoryItem = ownerNav.find((item) => item.href === "/members");
+  const formsItem = ownerNav.find((item) => item.href === "/forms")!;
   const messagesItem = ownerNav.find((item) => item.href === "/messages")!;
   const notificationBadge =
     unreadNotifications > 0 && !pathname.startsWith("/notifications") ? unreadNotifications : 0;
@@ -331,6 +355,7 @@ export function OwnersShell({
         ...(feedItem ? [feedItem] : []),
         communityItem,
         ...(directoryItem ? [directoryItem] : []),
+        formsItem,
         messagesItem,
         ...(canSwitch
           ? [

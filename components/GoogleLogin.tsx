@@ -4,7 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 
-export default function GoogleLogin({ error }: { error?: string }) {
+export default function GoogleLogin({
+  error,
+  next,
+}: {
+  error?: string
+  next?: string
+}) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(error || "");
 
@@ -16,7 +22,9 @@ export default function GoogleLogin({ error }: { error?: string }) {
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${origin}/auth/callback`,
+        redirectTo: next
+          ? `${origin}/auth/callback?next=${encodeURIComponent(next)}`
+          : `${origin}/auth/callback`,
       },
     });
     if (oauthError) {

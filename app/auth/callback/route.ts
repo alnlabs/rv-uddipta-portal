@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { safeNextPath } from "@/lib/enquiries";
 import { postLoginPath } from "@/lib/post-login";
 import { createClient } from "@/utils/supabase/server";
 
@@ -22,6 +23,6 @@ export async function GET(request: Request) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const path = next || (await postLoginPath(supabase, user));
+  const path = safeNextPath(next) || (await postLoginPath(supabase, user));
   return NextResponse.redirect(`${origin}${path}`);
 }
