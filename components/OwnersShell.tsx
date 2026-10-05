@@ -252,13 +252,6 @@ export function OwnersShell({
         match: (p) => p.startsWith("/account/owners"),
         icon: "flat",
       },
-      {
-        href: "/account/roles",
-        label: "Who can sign in",
-        short: "Access",
-        match: (p) => p.startsWith("/account/roles"),
-        icon: "people",
-      },
     );
   }
   if (isSuperAdmin || isAdmin) {

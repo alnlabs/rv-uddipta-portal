@@ -262,13 +262,13 @@ export default async function AdminOwnersPage({
               </div>
               <div className="flex gap-2">
                 <Link
-                  href={`/account/roles?flat=${editing.flat_number}&as=owner`}
+                  href={`/members?flat=${editing.flat_number}&as=owner`}
                   className="btn btn-forest"
                 >
                   Add owner
                 </Link>
                 <Link
-                  href={`/account/roles?flat=${editing.flat_number}&as=family`}
+                  href={`/members?flat=${editing.flat_number}&as=family`}
                   className="btn btn-ghost ring-1 ring-[rgba(27,58,47,0.16)]"
                 >
                   Add family

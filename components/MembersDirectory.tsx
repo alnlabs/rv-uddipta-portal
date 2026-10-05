@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useId, useState } from "react";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import {
@@ -47,6 +48,8 @@ export type MemberCard = {
   statusLabel: string | null
   openForRent: boolean
   openForResale: boolean
+  /** Owner has a signed-in account linked to this flat. */
+  ownerRegistered: boolean
 };
 
 function formatDate(value: string | null) {
@@ -67,78 +70,114 @@ function periodLabel(renter: MemberRenter) {
 
 type Filter = "all" | "owners" | "tenants" | "family";
 
-type DirectoryPerson = {
-  id: string
-  name: string
-  photoUrl: string | null
-  flatNumber: string
-  wing: string
-  role: "Owner" | "Tenant" | "Family"
-  card: MemberCard
+export type LinkedAccount = {
+  userId: string
+  role: string
+  displayName: string
+  email: string
+  locked: boolean
+  flatNumber: string | null
 };
 
-function peopleFromFlats(flats: MemberCard[]): DirectoryPerson[] {
-  const people: DirectoryPerson[] = [];
-  for (const flat of flats) {
-    people.push({
-      id: `owner-${flat.flatNumber}`,
-      name: flat.ownerName,
+type HouseholdRow = {
+  key: string
+  name: string
+  photoUrl: string | null
+  role: "Owner" | "Family" | "Tenant"
+  registered: boolean
+  userId: string | null
+};
+
+function sameName(left: string, right: string) {
+  return left.trim().toLowerCase() === right.trim().toLowerCase();
+}
+
+function householdRows(flat: MemberCard, accounts: LinkedAccount[], filter: Filter): HouseholdRow[] {
+  const here = accounts.filter((account) => account.flatNumber === flat.flatNumber && !account.locked);
+  const ownerAccount = here.find((account) => account.role === "owner");
+  const rows: HouseholdRow[] = [];
+  const showOwner = filter === "all" || filter === "owners" || (filter === "family" && (flat.ownerRegistered || Boolean(ownerAccount)));
+  if (showOwner) {
+    rows.push({
+      key: `owner-${flat.flatNumber}`,
+      name: ownerAccount?.displayName || flat.ownerName,
       photoUrl: flat.ownerPhotoUrl,
-      flatNumber: flat.flatNumber,
-      wing: flat.wing,
       role: "Owner",
-      card: flat,
+      registered: flat.ownerRegistered || Boolean(ownerAccount),
+      userId: ownerAccount?.userId ?? null,
     });
-    if (flat.tenantName) {
-      people.push({
-        id: `tenant-${flat.flatNumber}-${flat.tenantName}`,
-        name: flat.tenantName,
-        photoUrl: null,
-        flatNumber: flat.flatNumber,
-        wing: flat.wing,
-        role: "Tenant",
-        card: flat,
-      });
-    }
+  }
+  if (filter === "all" || filter === "family") {
+    const listed = new Set<string>();
     for (const member of flat.members) {
-      people.push({
-        id: `family-${flat.flatNumber}-${member.name}`,
+      listed.add(member.name.trim().toLowerCase());
+      const account = here.find(
+        (item) => item.role === "co_owner" && sameName(item.displayName || item.email, member.name),
+      );
+      rows.push({
+        key: `family-${flat.flatNumber}-${member.name}`,
         name: member.name,
         photoUrl: member.photoUrl,
-        flatNumber: flat.flatNumber,
-        wing: flat.wing,
         role: "Family",
-        card: flat,
+        registered: Boolean(account),
+        userId: account?.userId ?? null,
+      });
+    }
+    for (const account of here) {
+      if (account.role !== "co_owner") continue;
+      const name = account.displayName || account.email || "Family";
+      if (listed.has(name.trim().toLowerCase())) continue;
+      rows.push({
+        key: `account-${account.userId}`,
+        name,
+        photoUrl: null,
+        role: "Family",
+        registered: true,
+        userId: account.userId,
       });
     }
   }
-  return people.sort((a, b) => a.name.localeCompare(b.name));
+  if ((filter === "all" || filter === "tenants") && flat.tenantName) {
+    const tenantAccount = here.find((account) => account.role === "tenant");
+    rows.push({
+      key: `tenant-${flat.flatNumber}`,
+      name: flat.tenantName,
+      photoUrl: null,
+      role: "Tenant",
+      registered: Boolean(tenantAccount),
+      userId: tenantAccount?.userId ?? null,
+    });
+  }
+  if (filter === "family" && !rows.some((row) => row.role === "Family")) return [];
+  if (filter === "tenants" && !rows.some((row) => row.role === "Tenant")) return [];
+  return rows;
 }
 
 export function MembersDirectory({
   flats,
   initialQuery = "",
+  accounts = [],
+  canManage = false,
+  openUserId = null,
 }: {
-  flats: MemberCard[]
-  initialQuery?: string
+  readonly flats: MemberCard[]
+  readonly initialQuery?: string
+  readonly accounts?: LinkedAccount[]
+  readonly canManage?: boolean
+  readonly openUserId?: string | null
 }) {
   const [selected, setSelected] = useState<MemberCard | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const titleId = useId();
-  const people = peopleFromFlats(flats).filter((person) => {
-    if (filter === "owners") return person.role === "Owner";
-    if (filter === "tenants") return person.role === "Tenant";
-    if (filter === "family") return person.role === "Family";
-    return true;
-  });
-  const groups = new Map<string, DirectoryPerson[]>();
-  for (const person of people) {
-    const letter = (person.name[0] || "#").toUpperCase();
-    const list = groups.get(letter) ?? [];
-    list.push(person);
-    groups.set(letter, list);
-  }
-  const letters = [...groups.keys()].sort();
+  const homes = flats
+    .map((flat) => ({ flat, rows: householdRows(flat, accounts, filter) }))
+    .filter((home) => home.rows.length > 0)
+    .sort((a, b) => {
+      const aRegistered = a.rows.some((row) => row.role === "Owner" && row.registered);
+      const bRegistered = b.rows.some((row) => row.role === "Owner" && row.registered);
+      if (aRegistered !== bRegistered) return aRegistered ? -1 : 1;
+      return a.flat.flatNumber.localeCompare(b.flat.flatNumber, undefined, { numeric: true });
+    });
 
   useEffect(() => {
     if (!selected) return;
@@ -192,37 +231,45 @@ export function MembersDirectory({
         ))}
       </div>
 
-      {people.length === 0 ? (
+      {homes.length === 0 ? (
         <p className="mt-8 text-sm text-[#3d5247]">No residents match that search.</p>
       ) : (
         <div className="mt-6">
-          {letters.map((letter) => (
-            <section key={letter} className="mb-6">
-              <h2 className="mb-1 text-sm font-semibold text-[#7a5c22]">{letter}</h2>
+          {homes.map(({ flat, rows }) => (
+            <section key={flat.flatNumber} className="mb-6">
+              <h2 className="mb-1 text-sm font-semibold text-[#7a5c22]">
+                {flat.flatNumber}
+                {flat.wing ? ` · Wing ${flat.wing}` : ""}
+              </h2>
               <ul className="divide-y divide-[rgba(27,58,47,0.08)]">
-                {(groups.get(letter) ?? []).map((person) => (
-                  <li key={person.id}>
+                {rows.map((row) => (
+                  <li key={row.key} className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => setSelected(person.card)}
-                      className="flex w-full items-center gap-3 py-3 text-left"
+                      onClick={() => setSelected(flat)}
+                      className="flex min-w-0 flex-1 items-center gap-3 py-3 text-left"
                     >
-                      <ProfileAvatar
-                        name={person.name}
-                        photoUrl={person.photoUrl}
-                        size="sm"
-                      />
+                      <ProfileAvatar name={row.name} photoUrl={row.photoUrl} size="sm" />
                       <span className="min-w-0 flex-1">
-                        <span className="block font-medium text-[#14241c]">
-                          {person.name}
+                        <span className="flex flex-wrap items-center gap-2 font-medium text-[#14241c]">
+                          {row.name}
+                          {row.registered ? (
+                            <span className="rounded-full bg-[#c9a45c] px-2 py-0.5 text-[10px] font-bold tracking-wide text-[#14241c] uppercase">
+                              Registered
+                            </span>
+                          ) : null}
                         </span>
-                        <span className="block text-sm text-[#3d5247]">
-                          {person.flatNumber}
-                          {person.wing ? ` · Wing ${person.wing}` : ""} ·{" "}
-                          {person.role}
-                        </span>
+                        <span className="block text-sm text-[#3d5247]">{row.role}</span>
                       </span>
                     </button>
+                    {canManage && row.userId ? (
+                      <Link
+                        href={openUserId === row.userId ? "/members" : `/members?person=${row.userId}`}
+                        className="shrink-0 text-sm font-semibold text-[#1b3a2f]"
+                      >
+                        {openUserId === row.userId ? "Close" : "Change"}
+                      </Link>
+                    ) : null}
                   </li>
                 ))}
               </ul>
