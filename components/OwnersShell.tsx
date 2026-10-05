@@ -11,7 +11,7 @@ type NavItem = {
   label: string
   short?: string
   match: (p: string) => boolean
-  icon: "home" | "feed" | "floors" | "model" | "flat" | "admin" | "bell" | "people"
+  icon: "home" | "feed" | "floors" | "model" | "flat" | "admin" | "bell" | "people" | "mail"
 };
 
 function NavIcon({
@@ -88,6 +88,13 @@ function NavIcon({
         <svg {...common}>
           <path d="M6.5 16.5h11l-1.2-1.8V10a4.3 4.3 0 1 0-8.6 0v4.7L6.5 16.5Z" />
           <path d="M10 18.2a2 2 0 0 0 4 0" />
+        </svg>
+      );
+    case "mail":
+      return (
+        <svg {...common}>
+          <path d="M4 7h16v10H4V7Z" />
+          <path d="m4 8 8 5 8-5" />
         </svg>
       );
   }
@@ -169,6 +176,33 @@ function SignOutSubmit({ className }: { readonly className: string }) {
   );
 }
 
+function NotificationBell({
+  count,
+  tone,
+}: {
+  readonly count: number
+  readonly tone: "dark" | "light"
+}) {
+  return (
+    <Link
+      href="/notifications"
+      className={`relative grid size-10 shrink-0 place-items-center rounded-full ${
+        tone === "dark"
+          ? "text-[#e8d5a3] hover:bg-white/8"
+          : "text-[#1b3a2f] hover:bg-[rgba(27,58,47,0.06)]"
+      }`}
+      aria-label={count ? `${count} new notifications` : "Notifications"}
+    >
+      <NavIcon name="bell" className="size-5" />
+      {count > 0 ? (
+        <span className="absolute top-1 right-1 grid min-w-4 place-items-center rounded-full bg-[#c9a45c] px-1 text-[10px] font-bold text-[#14241c]">
+          {count > 9 ? "9+" : count}
+        </span>
+      ) : null}
+    </Link>
+  );
+}
+
 function SignOutForm({ className }: { readonly className: string }) {
   return (
     <form action={signOut}>
@@ -231,10 +265,11 @@ export function OwnersShell({
     });
   }
   ownerNav.push({
-    href: "/notifications",
-    label: "My messages",
-    match: (p) => p.startsWith("/notifications"),
-    icon: "bell",
+    href: "/messages",
+    label: "Messages",
+    short: "Messages",
+    match: (p) => p.startsWith("/messages"),
+    icon: "mail",
   });
 
   const adminNav: NavItem[] = [];
@@ -277,7 +312,9 @@ export function OwnersShell({
   const communityItem = ownerNav.find((item) => item.href === "/community")!;
   const feedItem = ownerNav.find((item) => item.href === "/feed");
   const directoryItem = ownerNav.find((item) => item.href === "/members");
-  const alertsItem = ownerNav.find((item) => item.href === "/notifications")!;
+  const messagesItem = ownerNav.find((item) => item.href === "/messages")!;
+  const notificationBadge =
+    unreadNotifications > 0 && !pathname.startsWith("/notifications") ? unreadNotifications : 0;
 
   const mobileItems: NavItem[] = inAdmin
     ? [
@@ -294,7 +331,7 @@ export function OwnersShell({
         ...(feedItem ? [feedItem] : []),
         communityItem,
         ...(directoryItem ? [directoryItem] : []),
-        alertsItem,
+        messagesItem,
         ...(canSwitch
           ? [
               {
@@ -309,12 +346,7 @@ export function OwnersShell({
 
   function sideLink(item: NavItem) {
     const active = item.match(pathname);
-    const badgeCount =
-      item.href === "/notifications"
-        ? unreadNotifications
-        : item.href === "/account"
-          ? pendingApprovals
-          : 0;
+    const badgeCount = item.href === "/account" ? pendingApprovals : 0;
     const showBadge = badgeCount > 0;
 
     return (
@@ -364,19 +396,22 @@ export function OwnersShell({
           }}
         />
 
-        <Link href={ownersHome} className="relative mb-4 flex items-center gap-3 px-2">
-          <span className="grid h-10 w-10 place-items-center rounded-2xl bg-[#c9a45c] text-xs font-bold tracking-wide text-[#14241c] shadow-[0_8px_24px_rgba(0,0,0,0.25)]">
-            RV
-          </span>
-          <span className="leading-tight">
-            <strong className="block text-[0.95rem] tracking-[0.04em]">
-              UDDIIPTA
-            </strong>
-            <span className="text-[0.68rem] font-medium tracking-[0.14em] text-[#b0a070] uppercase">
-              Owners
+        <div className="relative mb-4 flex items-center gap-2 px-2">
+          <Link href={ownersHome} className="flex min-w-0 flex-1 items-center gap-3">
+            <span className="grid h-10 w-10 place-items-center rounded-2xl bg-[#c9a45c] text-xs font-bold tracking-wide text-[#14241c] shadow-[0_8px_24px_rgba(0,0,0,0.25)]">
+              RV
             </span>
-          </span>
-        </Link>
+            <span className="leading-tight">
+              <strong className="block text-[0.95rem] tracking-[0.04em]">
+                UDDIIPTA
+              </strong>
+              <span className="text-[0.68rem] font-medium tracking-[0.14em] text-[#b0a070] uppercase">
+                Owners
+              </span>
+            </span>
+          </Link>
+          <NotificationBell count={notificationBadge} tone="dark" />
+        </div>
 
         <SidebarAccountCard
           isSuperAdmin={isSuperAdmin}
@@ -409,33 +444,18 @@ export function OwnersShell({
           style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}
         >
           <div className="flex items-center justify-between gap-3">
-            <Link href={ownersHome} className="flex items-center gap-2">
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#1b3a2f] text-[10px] font-bold text-[#e8d5a3]">
-                RV
-              </span>
-              <span className="text-sm font-semibold text-[#14241c]">
-                {flatNumber || "UDDIIPTA"}
-              </span>
-            </Link>
-            <div className="flex items-center gap-1">
-              <Link
-                href="/notifications"
-                className="relative grid size-10 place-items-center rounded-full text-[#1b3a2f] hover:bg-[rgba(27,58,47,0.06)]"
-                aria-label={
-                  unreadNotifications
-                    ? `${unreadNotifications} unread notifications`
-                    : "Notifications"
-                }
-              >
-                <NavIcon name="bell" className="size-5" />
-                {unreadNotifications > 0 ? (
-                  <span className="absolute top-1.5 right-1.5 grid min-w-4 place-items-center rounded-full bg-[#c9a45c] px-1 text-[10px] font-bold text-[#14241c]">
-                    {unreadNotifications > 9 ? "9+" : unreadNotifications}
-                  </span>
-                ) : null}
+            <div className="flex min-w-0 items-center gap-1">
+              <Link href={ownersHome} className="flex items-center gap-2">
+                <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#1b3a2f] text-[10px] font-bold text-[#e8d5a3]">
+                  RV
+                </span>
+                <span className="text-sm font-semibold text-[#14241c]">
+                  {flatNumber || "UDDIIPTA"}
+                </span>
               </Link>
-              <SignOutForm className="inline-flex min-h-12 items-center rounded-full bg-[#1b3a2f] px-4 text-base font-semibold text-[#e8d5a3] disabled:opacity-60" />
+              <NotificationBell count={notificationBadge} tone="light" />
             </div>
+            <SignOutForm className="inline-flex min-h-12 items-center rounded-full bg-[#1b3a2f] px-4 text-base font-semibold text-[#e8d5a3] disabled:opacity-60" />
           </div>
         </header>
 
@@ -453,7 +473,6 @@ export function OwnersShell({
             {mobileItems.map((item) => {
               const active = item.match(pathname);
               const showBadge =
-                (item.href === "/notifications" && unreadNotifications > 0) ||
                 (item.href === "/account" && pendingApprovals > 0) ||
                 (item.href === adminHref && pendingApprovals > 0 && !inAdmin);
               return (

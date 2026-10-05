@@ -188,7 +188,7 @@ export default async function FeedPage() {
           <div>
             <h2 className="text-lg font-semibold text-[#14241c]">Post an announcement</h2>
             <p className="mt-1 text-sm text-[#3d5247]">
-              Everyone in the community gets this in My messages.
+              Everyone in the community gets this in Notifications.
               {channels.email ? " It is also emailed." : ""}
               {channels.whatsapp ? " It is also sent on WhatsApp." : ""}
               {" "}

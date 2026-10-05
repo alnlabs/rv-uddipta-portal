@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { OwnersShell } from "@/components/OwnersShell";
 import { SiteHeader } from "@/components/SiteHeader";
 import { isSuperAdmin } from "@/lib/admin";
+import { MESSAGE_KINDS } from "@/lib/inbox";
 import {
   canEditBuilder,
   canManageAdmin,
@@ -64,9 +65,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             .maybeSingle(),
       supabase
         .from("notifications")
-        .select("*", { count: "exact", head: true })
+        .select("id", { count: "exact", head: true })
         .eq("user_id", user.id)
-        .is("read_at", null),
+        .is("seen_at", null)
+        .not("kind", "in", `(${MESSAGE_KINDS.map((kind) => `"${kind}"`).join(",")})`),
     ]);
     if (!superAdmin) {
       flatNumber = ownFlat?.flat_number ?? null;

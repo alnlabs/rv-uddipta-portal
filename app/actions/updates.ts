@@ -451,7 +451,7 @@ export async function replyToNote(formData: FormData) {
       kind: "note_reply",
       title: note.kind === "request" ? "Reply to your request" : "Reply to your feedback",
       body: reply,
-      href: "/notifications",
+      href: "/messages",
     });
   }
 
