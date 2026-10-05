@@ -1,14 +1,12 @@
 import { redirect } from "next/navigation";
-import { markNotificationsSeen } from "@/app/actions/activity";
 import { InboxList } from "@/components/InboxList";
+import { SeeNotifications } from "@/components/SeeNotifications";
 import { isMessageKind } from "@/lib/inbox";
 import { getAuthState } from "@/lib/session";
 
 export default async function NotificationsPage() {
   const { user, supabase } = await getAuthState();
   if (!user) redirect("/login");
-
-  await markNotificationsSeen();
 
   const { data: rows, error } = await supabase
     .from("notifications")
@@ -22,6 +20,7 @@ export default async function NotificationsPage() {
 
   return (
     <section className="page-gutter max-w-5xl py-6 md:py-10">
+      <SeeNotifications />
       <h1 className="font-semibold tracking-tight text-[#14241c] text-[clamp(2rem,5vw,3.25rem)] leading-[1.05]">
         Notifications
       </h1>

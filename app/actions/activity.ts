@@ -169,12 +169,14 @@ export async function markNotificationsSeen() {
   } = await supabase.auth.getUser();
   if (!user) return;
 
-  const { data: rows } = await supabase
+  const { data: rows, error } = await supabase
     .from("notifications")
     .select("id, kind")
     .eq("user_id", user.id)
     .is("seen_at", null);
-  const ids = (rows ?? []).filter((row) => !isMessageKind(row.kind)).map((row) => row.id);
+  if (error || !rows?.length) return;
+
+  const ids = rows.filter((row) => !isMessageKind(row.kind)).map((row) => row.id);
   if (!ids.length) return;
 
   await supabase
