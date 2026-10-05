@@ -128,27 +128,32 @@ export const A8_ROOMS: A8Room[] = [
 ];
 
 export const A8_DOORS: A8Door[] = [
-  // North-side entrance (corridor face); stairs start immediately north of this door.
-  { id: "entry", wall: "e", x: 36.75, y: 2.4, length: 3.2, swing: "ccw", entrance: true },
-  { id: "utility", wall: "w", x: X0, y: 4.2, length: 2.4, swing: "cw" },
-  { id: "puja", wall: "n", x: 6.2, y: 14.5, length: 2.2, swing: "ccw" },
+  // East wall of the drawing, at the south edge of the staircase lobby.
+  { id: "entry", wall: "e", x: 36.75, y: 11.7, length: 2.8, swing: "ccw", entrance: true },
+  // South end of the utility, just north of the puja — opens into the kitchen.
+  { id: "utility", wall: "w", x: X0, y: 12, length: 2.4, swing: "cw" },
+  // East side of the puja, swinging into the kitchen. Not into bedroom 2.
+  { id: "puja", wall: "w", x: 10, y: 15.1, length: 2.2, swing: "cw" },
   { id: "toilet-1", wall: "s", x: 15.7, y: 6, length: 2.2, swing: "cw" },
   { id: "toilet-2", wall: "s", x: 20.2, y: 7.75, length: 2.3, swing: "ccw" },
   { id: "bed-1", wall: "s", x: 28.2, y: 11.5, length: 3, swing: "ccw" },
-  { id: "bed-2", wall: "n", x: 7.2, y: 18, length: 2.8, swing: "cw" },
-  { id: "bed-3", wall: "n", x: 17.6, y: 18, length: 2.8, swing: "ccw" },
+  // East of the puja, into the dining side of the kitchen — not through the puja.
+  { id: "bed-2", wall: "n", x: 11.2, y: 18, length: 2.6, swing: "cw" },
+  { id: "bed-3", wall: "n", x: 16.2, y: 18, length: 2.6, swing: "ccw" },
   { id: "toilet-3", wall: "n", x: 28.6, y: 26.125, length: 2.5, swing: "cw" },
+  // West wall of bedroom 2, near its north end, into the 5' balcony.
+  { id: "balcony", wall: "w", x: X0, y: 19.2, length: 2.6, swing: "cw" },
 ];
 
 export const A8_WINDOWS: A8Window[] = [
   { id: "kit", x: 6.8, y: -0.18, w: 5.2, h: 0.36 },
   { id: "bed-1", x: 26.6, y: -0.18, w: 6.2, h: 0.36 },
   { id: "util", x: 0.82, y: 4.2, w: 0.36, h: 6.2 },
-  { id: "bed-2", x: 4.82, y: 20.4, w: 0.36, h: 6.2 },
+  { id: "bed-2", x: 4.82, y: 23, w: 0.36, h: 5.2 },
   { id: "bed-3", x: 17.4, y: 30.82, w: 6.2, h: 0.36 },
 ];
 
-/** Hall east of kitchen / south of the north toilets — dining to drawing. */
+/** Open floor east of the kitchen and west of the drawing, south of the north toilets. */
 export const A8_OPENINGS = [
   { id: "hall", x: 15, y: 6, w: 10.5, h: 12 },
 ] as const;
@@ -165,6 +170,7 @@ export const A8_WALLS: A8Wall[] = [
   { x1: 0, y1: 18, x2: 1, y2: 18, outer: true, parapet: true },
   { x1: 1, y1: 0, x2: 1, y2: 18, outer: true },
   { x1: 5, y1: 0, x2: 5, y2: 31 },
+  { x1: 1, y1: 18, x2: 5, y2: 18 },
   { x1: 15, y1: 0, x2: 15, y2: 6 },
   { x1: 15, y1: 18, x2: 15, y2: 31 },
   { x1: 19, y1: 0, x2: 19, y2: 6 },
@@ -175,7 +181,7 @@ export const A8_WALLS: A8Wall[] = [
   { x1: 5, y1: 18, x2: 25.5, y2: 18 },
   { x1: 5, y1: 14.5, x2: 10, y2: 14.5 },
   { x1: 10, y1: 14.5, x2: 10, y2: 18 },
-  { x1: 25.5, y1: 11.5, x2: 25.5, y2: 31 },
+  { x1: 25.5, y1: 18, x2: 25.5, y2: 31 },
   { x1: 25.5, y1: 26.125, x2: 36.75, y2: 26.125 },
   { x1: 36.75, y1: 0, x2: 45.25, y2: 0, outer: true },
   { x1: 45.25, y1: 0, x2: 45.25, y2: 14.5, outer: true },

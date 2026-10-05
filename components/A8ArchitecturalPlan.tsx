@@ -282,8 +282,8 @@ export function A8ArchitecturalPlan({
             />
             {door.entrance ? (
               <text
-                x={u(door.x + 0.5)}
-                y={u(door.y + 4.6)}
+                x={u(door.x - 7.2)}
+                y={u(door.y + 2.2)}
                 fill="#14241c"
                 fontSize="10"
                 fontWeight="700"

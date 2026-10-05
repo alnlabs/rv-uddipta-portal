@@ -1,6 +1,6 @@
 "use client";
 
-import { A1ArchitecturalPlan } from "@/components/A1ArchitecturalPlan";
+import { A1PlanView } from "@/components/A1PlanView";
 import { A2ArchitecturalPlan } from "@/components/A2ArchitecturalPlan";
 import { A3ArchitecturalPlan } from "@/components/A3ArchitecturalPlan";
 import { A4ArchitecturalPlan } from "@/components/A4ArchitecturalPlan";
@@ -384,7 +384,7 @@ export function FlatPlan2D({
   readonly compact?: boolean
 }) {
   const label = homeLabel ?? parseFlatNumber(flat.flatNumber)?.flatNumber;
-  if (isA1Unit(flat)) return <A1ArchitecturalPlan homeLabel={label} />;
+  if (isA1Unit(flat)) return <A1PlanView homeLabel={label} />;
   if (isA2Unit(flat)) return <A2ArchitecturalPlan homeLabel={label} />;
   if (isA3Unit(flat)) return <A3ArchitecturalPlan homeLabel={label} />;
   if (isA4Unit(flat)) return <A4ArchitecturalPlan homeLabel={label} />;
