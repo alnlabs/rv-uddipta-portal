@@ -35,8 +35,8 @@ export default async function RegisterPage() {
         </h1>
         <p className="mt-3 text-[#3d5247]">
           Signed in as {user.email}. Your request for flat{" "}
-          <strong>{pending.flat_number}</strong> is with an admin. Once they
-          approve it, you land on the feed and My flat shows that apartment.
+          <strong>{pending.flat_number}</strong> is with an admin. When they
+          approve it, you get a notice here and the portal opens your home.
         </p>
       </section>
     );

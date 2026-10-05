@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { publishActivity } from "@/lib/activity";
+import { postKind } from "@/lib/postKinds";
 import { canManageAdmin, ensureProfile, isCommunityRole } from "@/lib/roles";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
@@ -40,23 +41,51 @@ export async function postUpdate(
 ): Promise<UpdateState> {
   try {
     const { user, profile, admin, flatNumber, name } = await memberContext();
+    const kind = postKind(String(formData.get("kind") || "update"));
+    if (!kind) return { ok: false, message: "Choose a type." };
+    if (kind.audience === "admin") return sendNote(_prev, formData);
+
     const body = String(formData.get("body") || "").trim();
     if (body.length < 2) return { ok: false, message: "Write a few words first." };
 
-    const { error } = await admin.from("member_posts").insert({
-      author_user_id: user.id,
-      flat_id: profile.flatId,
-      flat_number: flatNumber,
-      author_name: name,
-      body,
-    });
-    if (error) return { ok: false, message: "Could not post. Try again." };
+    const choices =
+      kind.value === "poll" ? pollChoices(formData) : { ok: true as const, labels: [] as string[] };
+    if (!choices.ok) return { ok: false, message: choices.message };
 
+    const { data: created, error } = await admin
+      .from("member_posts")
+      .insert({
+        author_user_id: user.id,
+        flat_id: profile.flatId,
+        flat_number: flatNumber,
+        author_name: name,
+        kind: kind.value,
+        body,
+      })
+      .select("id")
+      .single();
+    if (error || !created) return { ok: false, message: "Could not post. Try again." };
+
+    if (kind.value === "poll") {
+      const { error: optionError } = await admin.from("member_poll_options").insert(
+        choices.labels.map((label, position) => ({
+          post_id: created.id,
+          label,
+          position,
+        })),
+      );
+      if (optionError) {
+        await admin.from("member_posts").delete().eq("id", created.id);
+        return { ok: false, message: "Could not post the poll. Try again." };
+      }
+    }
+
+    const who = flatNumber ? `${name} · ${flatNumber}` : name;
     await publishActivity({
       actorUserId: user.id,
       flatId: profile.flatId,
       kind: "member_post",
-      title: flatNumber ? `${name} · ${flatNumber}` : name,
+      title: `${kind.label} · ${who}`,
       body,
       visibility: "community",
       href: "/feed",
@@ -65,11 +94,70 @@ export async function postUpdate(
 
     revalidatePath("/feed");
     revalidatePath("/notifications");
-    return { ok: true, message: "Posted." };
+    return { ok: true, message: kind.done };
   } catch (error) {
     return {
       ok: false,
       message: error instanceof Error ? error.message : "Could not post.",
+    };
+  }
+}
+
+function pollChoices(formData: FormData): { ok: true; labels: string[] } | { ok: false; message: string } {
+  const labels = formData
+    .getAll("option")
+    .map((value) => String(value).trim())
+    .filter((label) => label.length > 0);
+  if (labels.length < 2) return { ok: false, message: "Add at least two choices." };
+  if (labels.length > 6) return { ok: false, message: "A poll can have up to six choices." };
+  if (labels.some((label) => label.length > 80)) {
+    return { ok: false, message: "Keep each choice under 80 characters." };
+  }
+  const seen = new Set(labels.map((label) => label.toLowerCase()));
+  if (seen.size !== labels.length) return { ok: false, message: "Each choice needs to be different." };
+  return { ok: true, labels };
+}
+
+export async function voteOnPoll(
+  _prev: UpdateState,
+  formData: FormData,
+): Promise<UpdateState> {
+  try {
+    const { user, admin } = await memberContext();
+    const postId = Number(formData.get("postId"));
+    const optionId = Number(formData.get("optionId"));
+    if (!postId || !optionId) return { ok: false, message: "That choice is missing." };
+
+    const { data: option } = await admin
+      .from("member_poll_options")
+      .select("id, post_id")
+      .eq("id", optionId)
+      .maybeSingle();
+    if (!option || option.post_id !== postId) return { ok: false, message: "That choice is gone." };
+
+    const { data: post } = await admin
+      .from("member_posts")
+      .select("kind")
+      .eq("id", postId)
+      .maybeSingle();
+    if (post?.kind !== "poll") return { ok: false, message: "That is not a poll." };
+
+    const { error } = await admin.from("member_poll_votes").upsert(
+      {
+        post_id: postId,
+        option_id: optionId,
+        user_id: user.id,
+      },
+      { onConflict: "post_id,user_id" },
+    );
+    if (error) return { ok: false, message: "Could not save your vote. Try again." };
+
+    revalidatePath("/feed");
+    return { ok: true, message: "Vote saved." };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Could not save your vote.",
     };
   }
 }

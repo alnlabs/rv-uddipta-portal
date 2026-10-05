@@ -10,6 +10,31 @@ import { createClient } from "@/utils/supabase/server";
 
 export type RegisterState = { ok: boolean; message: string };
 
+export async function myRegistrationWatch(): Promise<{
+  status: "pending" | "approved" | "rejected" | "none"
+  flatNumber: string | null
+}> {
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { status: "none", flatNumber: null };
+
+  const { data } = await supabase
+    .from("registration_requests")
+    .select("status, flat_number")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return { status: "none", flatNumber: null };
+  if (data.status === "pending" || data.status === "approved" || data.status === "rejected") {
+    return { status: data.status, flatNumber: data.flat_number };
+  }
+  return { status: "none", flatNumber: data.flat_number };
+}
+
 export async function lookupSavedOwner(phoneRaw: string): Promise<{
   ownerName: string
   flatNumber: string

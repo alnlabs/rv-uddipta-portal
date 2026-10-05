@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import { signOut } from "@/app/actions/auth";
+import { ApprovalWatcher } from "@/components/ApprovalWatcher";
 
 type NavItem = {
   href: string
@@ -439,6 +440,7 @@ export function OwnersShell({
         </header>
 
         <main className="relative min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-0">
+          {pendingApproval ? <ApprovalWatcher /> : null}
           {children}
         </main>
 

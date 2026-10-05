@@ -15,6 +15,24 @@ function fail(error: unknown): ActionResult {
   };
 }
 
+async function notifyApprovedPerson(input: {
+  userId: string
+  flatNumber: string
+  family: boolean
+}) {
+  const admin = createAdminClient();
+  const { error } = await admin.from("notifications").insert({
+    user_id: input.userId,
+    kind: "registration_approved",
+    title: input.family
+      ? `You're approved as family on ${input.flatNumber}`
+      : `You're approved for ${input.flatNumber}`,
+    body: "Your home is open. The portal will refresh.",
+    href: "/feed",
+  });
+  if (error) console.warn("approval notice failed", error.message);
+}
+
 export async function approveRegistration(requestId: number): Promise<ActionResult> {
   try {
     const adminUser = await requireAdminUser();
@@ -81,6 +99,24 @@ export async function approveRegistration(requestId: number): Promise<ActionResu
     if (upsertError) throw new Error(upsertError.message);
     }
 
+    if (request.user_id) {
+      await admin.auth.admin.updateUserById(request.user_id, {
+        user_metadata: {
+          phone: request.phone,
+          flatNumber: request.flat_number,
+          ownerName: request.owner_name,
+          registrationStatus: "approved",
+        },
+      });
+      const { error: profileError } = await admin.from("profiles").upsert({
+        user_id: request.user_id,
+        role: isFamily ? "co_owner" : "owner",
+        flat_id: inventory.id,
+        display_name: request.owner_name,
+      });
+      if (profileError) throw new Error(profileError.message);
+    }
+
     const { error: updateError } = await admin
       .from("registration_requests")
       .update({
@@ -92,20 +128,6 @@ export async function approveRegistration(requestId: number): Promise<ActionResu
     if (updateError) throw new Error(updateError.message);
 
     if (request.user_id) {
-      await admin.auth.admin.updateUserById(request.user_id, {
-        user_metadata: {
-          phone: request.phone,
-          flatNumber: request.flat_number,
-          ownerName: request.owner_name,
-          registrationStatus: "approved",
-        },
-      });
-      await admin.from("profiles").upsert({
-        user_id: request.user_id,
-        role: isFamily ? "co_owner" : "owner",
-        flat_id: inventory.id,
-        display_name: request.owner_name,
-      });
       await publishActivity({
         actorUserId: adminUser.id,
         flatId: inventory.id,
@@ -117,6 +139,14 @@ export async function approveRegistration(requestId: number): Promise<ActionResu
       });
     }
 
+    if (request.user_id) {
+      await notifyApprovedPerson({
+        userId: request.user_id,
+        flatNumber: request.flat_number,
+        family: isFamily,
+      });
+    }
+
     revalidatePath("/");
     revalidatePath("/account");
     revalidatePath("/register");
@@ -124,6 +154,7 @@ export async function approveRegistration(requestId: number): Promise<ActionResu
     revalidatePath("/feed");
     revalidatePath("/members");
     revalidatePath("/community");
+    revalidatePath("/notifications");
     return { ok: true };
   } catch (error) {
     return fail(error);
@@ -159,22 +190,31 @@ export async function approveFamilyAsOwner(requestId: number): Promise<ActionRes
     }
     if (!request.user_id) throw new Error("This request has no Google account.");
 
-    await admin.from("registration_requests").update({
-      status: "approved",
-      reviewed_at: new Date().toISOString(),
-      reviewed_by: auth.user.id,
-    }).eq("id", requestId);
-
-    await admin.from("profiles").upsert({
+    const { error: profileError } = await admin.from("profiles").upsert({
       user_id: request.user_id,
       role: "co_owner",
       flat_id: flat.id,
       display_name: request.owner_name,
     });
+    if (profileError) throw new Error(profileError.message);
+
+    const { error: updateError } = await admin.from("registration_requests").update({
+      status: "approved",
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: auth.user.id,
+    }).eq("id", requestId);
+    if (updateError) throw new Error(updateError.message);
+    await notifyApprovedPerson({
+      userId: request.user_id,
+      flatNumber: request.flat_number,
+      family: true,
+    });
 
     revalidatePath("/");
     revalidatePath("/account");
     revalidatePath("/feed");
+    revalidatePath("/register");
+    revalidatePath("/notifications");
     return { ok: true };
   } catch (error) {
     return fail(error);
