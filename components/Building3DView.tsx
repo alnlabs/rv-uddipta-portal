@@ -4120,30 +4120,30 @@ export default function Building3DView({
         <div className="absolute top-3 left-3 z-10">{floorControl}</div>
         <div className="absolute top-3 right-3 z-10 flex flex-col items-end gap-2 sm:flex-row">
           {IS_DEV ? (
-            <>
-          <div className="relative">
-            <button
-              type="button"
-              aria-pressed={debugOpen}
-              onClick={() => setDebugOpen((open) => !open)}
-              className={`inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold backdrop-blur-sm ${
-                debugOn ? "bg-[#c9a45c] text-[#14241c]" : "bg-[#14241c]/80 text-[#e8d5a3]"
-              }`}
-            >
-              Debug
-            </button>
-            {debugOpen ? (
-              <div className="absolute top-[calc(100%+0.4rem)] right-0 z-20">
-                <DebugLayerPanel
-                  value={debugLayers}
-                  onChange={setDebugLayers}
-                  coverage={corridorCoverage}
-                  onCoverage={setCorridorCoverage}
-                  report={corridorReport}
-                />
-              </div>
-            ) : null}
-          </div>
+            <div className="relative">
+              <button
+                type="button"
+                aria-pressed={debugOpen}
+                onClick={() => setDebugOpen((open) => !open)}
+                className={`inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold backdrop-blur-sm ${
+                  debugOn ? "bg-[#c9a45c] text-[#14241c]" : "bg-[#14241c]/80 text-[#e8d5a3]"
+                }`}
+              >
+                Debug
+              </button>
+              {debugOpen ? (
+                <div className="absolute top-[calc(100%+0.4rem)] right-0 z-20">
+                  <DebugLayerPanel
+                    value={debugLayers}
+                    onChange={setDebugLayers}
+                    coverage={corridorCoverage}
+                    onCoverage={setCorridorCoverage}
+                    report={corridorReport}
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           <button
             type="button"
             aria-pressed={walkMode}
@@ -4156,6 +4156,7 @@ export default function Building3DView({
           >
             Walk mode
           </button>
+          {IS_DEV ? (
           <button
             type="button"
             aria-pressed={measure}
@@ -4168,7 +4169,6 @@ export default function Building3DView({
           >
             Dimensions
           </button>
-            </>
           ) : null}
           {IS_DEV && measure ? (
             <>
@@ -4262,9 +4262,11 @@ export default function Building3DView({
         >
           <div className="flex flex-col gap-1.5 text-[#e8d5a3] md:flex-row md:items-center md:justify-between">
             <p className="text-base text-[#e8d5a3]">
-              {selected
-                ? "Tap the empty ground, or ×, to close."
-                : "Drag to turn the building. Tap a home to see it."}
+              {walkMode
+                ? "W A S D to walk. Hold Shift to run. Drag to look around."
+                : selected
+                  ? "Tap the empty ground, or ×, to close."
+                  : "Drag to turn the building. Tap a home to see it."}
             </p>
           </div>
           <div className="mt-1.5">
