@@ -82,8 +82,13 @@ export function HomeBoard({
         ? "floor"
         : "guide";
   const floorParam = Number(searchParams.get("floor"));
+  const myFloor =
+    data?.flats.find((flat) => flat.flatNumber === myFlatNumber)?.floor ?? null;
   const [activeFloor, setActiveFloor] = useState(() => {
     if (data?.floors.some((floor) => floor.floor === floorParam)) return floorParam;
+    if (myFloor != null && data?.floors.some((floor) => floor.floor === myFloor)) {
+      return myFloor;
+    }
     return data?.floors[0]?.floor ?? null;
   });
   const [openFlat, setOpenFlat] = useState<PublicFlat | null>(null);
@@ -143,6 +148,17 @@ export function HomeBoard({
                   <FloorPlate2D
                     floor={selected.floor}
                     highlight={openFlat?.flatNumber}
+                    myFlatNumber={myFlatNumber}
+                    soldFlats={
+                      new Set(
+                        selected.flats
+                          .filter(
+                            (flat) =>
+                              flat.saleStatus === "sold" || Boolean(flat.ownerName.trim()),
+                          )
+                          .map((flat) => flat.flatNumber),
+                      )
+                    }
                     onSelectUnit={openUnit}
                   />
                 </figure>

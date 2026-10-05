@@ -142,9 +142,16 @@ type PlateBox = {
   w: number
   d: number
   active: boolean
+  mine: boolean
+  sold: boolean
 };
 
-function boxesForFloor(floor: number, highlight?: string): PlateBox[] {
+function boxesForFloor(
+  floor: number,
+  highlight?: string,
+  soldFlats?: ReadonlySet<string>,
+  myFlatNumber?: string | null,
+): PlateBox[] {
   return INVENTORY.filter((row) => row.floor === floor)
     .map((row) => {
       const id = `${row.wing}${row.unit}`;
@@ -159,21 +166,40 @@ function boxesForFloor(floor: number, highlight?: string): PlateBox[] {
         w,
         d,
         active: row.flatNumber === highlight,
+        mine: row.flatNumber === myFlatNumber,
+        sold: Boolean(soldFlats?.has(row.flatNumber)),
       };
     })
     .filter((row): row is PlateBox => Boolean(row));
 }
 
+function plateFill(box: PlateBox) {
+  if (box.mine) return "#c9a45c";
+  if (box.active) return "#1b3a2f";
+  if (box.sold) return "#2f5a48";
+  return "#f8f2e6";
+}
+
+function plateInk(box: PlateBox) {
+  if (box.mine) return "#14241c";
+  if (box.active || box.sold) return "#e8d5a3";
+  return "#14241c";
+}
+
 export function FloorPlate2D({
   floor,
   highlight,
+  soldFlats,
+  myFlatNumber,
   onSelectUnit,
 }: {
   readonly floor: number
   readonly highlight?: string
+  readonly soldFlats?: ReadonlySet<string>
+  readonly myFlatNumber?: string | null
   readonly onSelectUnit?: (flatNumber: string) => void
 }) {
-  const boxes = boxesForFloor(floor, highlight);
+  const boxes = boxesForFloor(floor, highlight, soldFlats, myFlatNumber);
   if (!boxes.length) {
     return <p className="text-sm text-[#3d5247]">No plate for this floor.</p>;
   }
@@ -203,16 +229,16 @@ export function FloorPlate2D({
             y={box.z}
             width={box.w}
             height={box.d}
-            fill={box.active ? "#1b3a2f" : "#f8f2e6"}
-            stroke={box.active ? "#c9a45c" : "#1b3a2f"}
-            strokeWidth={box.active ? 0.12 : 0.05}
+            fill={plateFill(box)}
+            stroke={box.mine || box.active ? "#c9a45c" : "#1b3a2f"}
+            strokeWidth={box.mine || box.active ? 0.12 : 0.05}
           />
           <text
             x={box.x + box.w / 2}
             y={box.z + box.d / 2}
             textAnchor="middle"
             dominantBaseline="middle"
-            fill={box.active ? "#e8d5a3" : "#14241c"}
+            fill={plateInk(box)}
             fontSize={Math.min(box.w, box.d) * 0.26}
             fontWeight="700"
           >
