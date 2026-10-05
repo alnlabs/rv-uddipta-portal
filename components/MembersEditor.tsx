@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { Form, FormAlert, TextField } from "@/components/form-ui";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import { ProfilePhotoPicker } from "@/components/ProfilePhotoPicker";
 import { cleanError } from "@/lib/auth";
@@ -55,7 +56,7 @@ function RelationChips({
               className="sr-only"
             />
             <span
-              className={`inline-flex min-h-8 items-center rounded-full px-2.5 text-xs font-semibold ${
+              className={`inline-flex min-h-11 items-center rounded-full px-3 text-sm font-semibold ${
                 selected
                   ? "bg-[#1b3a2f] text-[#e8d5a3]"
                   : "bg-[rgba(27,58,47,0.06)] text-[#3d5247] ring-1 ring-[rgba(27,58,47,0.1)]"
@@ -82,13 +83,14 @@ export default function MembersEditor({
   const [members, setMembers] = useState(initialMembers);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [draftPhoto, setDraftPhoto] = useState<File | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editDraft, setEditDraft] = useState<Draft>(emptyDraft);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [openAdd, setOpenAdd] = useState(initialMembers.length === 0);
-  const stage = presentation === "stage";
+  void presentation;
 
   async function addMember(e: React.FormEvent) {
     e.preventDefault();
@@ -256,19 +258,11 @@ export default function MembersEditor({
   }
 
   return (
-    <section
-      className={
-        stage
-          ? "rounded-[1.75rem] bg-[#fffcf5] p-5 text-[#14241c] shadow-[0_20px_60px_rgba(0,0,0,0.28)] md:p-8"
-          : "rounded-3xl border border-[rgba(27,58,47,0.12)] bg-[#fffcf5]/95 p-5 shadow-lg md:p-6"
-      }
-    >
-      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[rgba(27,58,47,0.1)] pb-5">
+    <section className="field-panel text-[#14241c]">
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[rgba(27,58,47,0.08)] pb-3">
         <div>
-          <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">
-            Profile
-          </p>
-          <h2 className="mt-1 text-3xl font-semibold tracking-tight md:text-4xl">
+          <p className="eyebrow">Profile</p>
+          <h2 className="mt-0.5 text-xl font-semibold tracking-tight">
             Members
           </h2>
           <p className="mt-2 max-w-md text-sm text-[#3d5247]">
@@ -296,7 +290,7 @@ export default function MembersEditor({
                 key={member.id}
                 className="rounded-2xl bg-[rgba(27,58,47,0.04)] p-4 ring-1 ring-[rgba(27,58,47,0.1)] sm:col-span-2"
               >
-                <form onSubmit={saveEdit} className="space-y-3">
+                <Form onSubmit={saveEdit} className="space-y-3">
                   <ProfilePhotoPicker
                     name={editDraft.name || member.name}
                     photoUrl={member.photoUrl}
@@ -315,22 +309,20 @@ export default function MembersEditor({
                       });
                     }}
                   />
-                  <label className="flex flex-col gap-1.5 text-sm font-semibold">
-                    Name
-                    <input
-                      type="text"
-                      value={editDraft.name}
-                      onChange={(e) =>
-                        setEditDraft((prev) => ({
-                          ...prev,
-                          name: e.target.value,
-                        }))
-                      }
-                      required
-                      minLength={2}
-                      className="min-h-11 rounded-xl border border-[rgba(27,58,47,0.12)] bg-white px-3 py-2 text-base font-normal outline-none focus:border-[#1b3a2f] focus:ring-2 focus:ring-[rgba(27,58,47,0.12)]"
-                    />
-                  </label>
+                  <TextField
+                    label="Name"
+                    name="name"
+                    type="text"
+                    value={editDraft.name}
+                    onChange={(e) =>
+                      setEditDraft((prev) => ({
+                        ...prev,
+                        name: e.target.value,
+                      }))
+                    }
+                    required
+                    minLength={2}
+                  />
                   <div>
                     <p className="mb-1.5 text-sm font-semibold">Relation</p>
                     <RelationChips
@@ -341,40 +333,34 @@ export default function MembersEditor({
                       }
                     />
                   </div>
-                  <label className="flex flex-col gap-1.5 text-sm font-semibold">
-                    Phone
-                    <input
-                      type="tel"
-                      inputMode="numeric"
-                      value={editDraft.phone}
-                      onChange={(e) =>
-                        setEditDraft((prev) => ({
-                          ...prev,
-                          phone: e.target.value,
-                        }))
-                      }
-                      placeholder="Optional"
-                      className="min-h-11 rounded-xl border border-[rgba(27,58,47,0.12)] bg-white px-3 py-2 text-base font-normal outline-none focus:border-[#1b3a2f] focus:ring-2 focus:ring-[rgba(27,58,47,0.12)]"
-                    />
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="submit"
-                      disabled={busy}
-                      className="min-h-10 rounded-full bg-[#1b3a2f] px-4 text-sm font-semibold text-[#e8d5a3] disabled:opacity-65"
-                    >
+                  <TextField
+                    label="Phone"
+                    name="phone"
+                    type="tel"
+                    inputMode="numeric"
+                    value={editDraft.phone}
+                    onChange={(e) =>
+                      setEditDraft((prev) => ({
+                        ...prev,
+                        phone: e.target.value,
+                      }))
+                    }
+                    placeholder="Optional"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="submit" disabled={busy} className="btn btn-forest">
                       {busy ? "Saving…" : "Save"}
                     </button>
                     <button
                       type="button"
                       disabled={busy}
                       onClick={() => setEditingId(null)}
-                      className="min-h-10 rounded-full px-4 text-sm font-semibold text-[#3d5247]"
+                      className="btn btn-ghost"
                     >
                       Cancel
                     </button>
                   </div>
-                </form>
+                </Form>
               </li>
             ) : (
               <li
@@ -418,7 +404,7 @@ export default function MembersEditor({
       )}
 
       {openAdd ? (
-        <form
+          <Form
           onSubmit={addMember}
           className="mt-6 space-y-3 rounded-2xl bg-[rgba(27,58,47,0.04)] p-4 ring-1 ring-[rgba(27,58,47,0.08)]"
         >
@@ -439,13 +425,21 @@ export default function MembersEditor({
               </button>
             ) : null}
           </div>
-          <label className="flex flex-col gap-1.5 text-sm font-semibold">
-            Photo
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-semibold">Photo</span>
+            <button
+              type="button"
+              onClick={() => photoInputRef.current?.click()}
+              className="btn btn-forest w-fit"
+            >
+              Choose photo
+            </button>
             <input
+              ref={photoInputRef}
               type="file"
               accept={PROFILE_PHOTO_ACCEPT}
               onChange={(e) => setDraftPhoto(e.target.files?.[0] ?? null)}
-              className="block w-full text-sm font-normal text-[#3d5247] file:mr-3 file:rounded-full file:border-0 file:bg-[#1b3a2f] file:px-3 file:py-2 file:text-xs file:font-semibold file:text-[#e8d5a3]"
+              className="sr-only"
             />
             {draftPhoto ? (
               <span className="text-xs font-normal text-[#2f5a48]">
@@ -456,22 +450,20 @@ export default function MembersEditor({
                 Optional · JPEG, PNG, WebP or GIF · max 5 MB
               </span>
             )}
-          </label>
-          <label className="flex flex-col gap-1.5 text-sm font-semibold">
-            Name
-            <input
-              type="text"
-              value={draft.name}
-              onChange={(e) =>
-                setDraft((prev) => ({ ...prev, name: e.target.value }))
-              }
-              required
-              minLength={2}
-              placeholder="Full name"
-              autoComplete="name"
-              className="min-h-11 rounded-xl border border-[rgba(27,58,47,0.12)] bg-white px-3 py-2 text-base font-normal outline-none focus:border-[#1b3a2f] focus:ring-2 focus:ring-[rgba(27,58,47,0.12)]"
-            />
-          </label>
+          </div>
+          <TextField
+            label="Name"
+            name="name"
+            type="text"
+            value={draft.name}
+            onChange={(e) =>
+              setDraft((prev) => ({ ...prev, name: e.target.value }))
+            }
+            required
+            minLength={2}
+            placeholder="Full name"
+            autoComplete="name"
+          />
           <div>
             <p className="mb-1.5 text-sm font-semibold">Relation</p>
             <RelationChips
@@ -482,27 +474,21 @@ export default function MembersEditor({
               }
             />
           </div>
-          <label className="flex flex-col gap-1.5 text-sm font-semibold">
-            Phone
-            <input
-              type="tel"
-              inputMode="numeric"
-              value={draft.phone}
-              onChange={(e) =>
-                setDraft((prev) => ({ ...prev, phone: e.target.value }))
-              }
-              placeholder="Optional 10-digit mobile"
-              className="min-h-11 rounded-xl border border-[rgba(27,58,47,0.12)] bg-white px-3 py-2 text-base font-normal outline-none focus:border-[#1b3a2f] focus:ring-2 focus:ring-[rgba(27,58,47,0.12)]"
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={busy}
-            className="min-h-11 w-full rounded-full bg-[#1b3a2f] px-4 text-sm font-semibold text-[#e8d5a3] disabled:opacity-65"
-          >
+          <TextField
+            label="Phone"
+            name="phone"
+            type="tel"
+            inputMode="numeric"
+            value={draft.phone}
+            onChange={(e) =>
+              setDraft((prev) => ({ ...prev, phone: e.target.value }))
+            }
+            placeholder="Optional 10-digit mobile"
+          />
+          <button type="submit" disabled={busy} className="btn btn-forest w-full">
             {busy ? "Saving…" : "Add member"}
           </button>
-        </form>
+        </Form>
       ) : (
         <button
           type="button"
@@ -517,12 +503,9 @@ export default function MembersEditor({
       )}
 
       {error ? (
-        <p
-          role="alert"
-          className="mt-4 rounded-2xl bg-[rgba(138,47,47,0.08)] px-4 py-3 text-sm text-[#8a2f2f]"
-        >
-          {error}
-        </p>
+        <div className="mt-4">
+          <FormAlert tone="error">{error}</FormAlert>
+        </div>
       ) : null}
       {message ? (
         <p

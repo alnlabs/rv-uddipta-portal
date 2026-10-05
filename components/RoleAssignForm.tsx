@@ -3,6 +3,15 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { adminAssignRole } from "@/app/actions/admin-manage";
+import {
+  Button,
+  FieldGrid,
+  Form,
+  FormAlert,
+  FormPanel,
+  SelectField,
+  TextField,
+} from "@/components/form-ui";
 import { ROLE_GUIDE } from "@/lib/roleLabels";
 
 export type AssignCandidate = {
@@ -23,22 +32,24 @@ export function RoleAssignForm({
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [formEpoch, setFormEpoch] = useState(0);
   const [pending, startTransition] = useTransition();
 
   if (!candidates.length) {
     return (
-      <div className="mt-6 rounded-2xl bg-[#fffcf5] p-4 text-[#14241c] ring-1 ring-[rgba(27,58,47,0.12)]">
-        <h2 className="text-lg font-semibold">Add owner or family</h2>
-        <p className="mt-1 text-base text-[#3d5247]">
-          They need to sign in first. Then you can add them here.
-        </p>
-      </div>
+      <FormPanel
+        className="mt-5"
+        title="Add owner or family"
+        lede="They need to sign in first. Then you can add them here."
+      >
+        {null}
+      </FormPanel>
     );
   }
 
   return (
-    <form
-      className="mt-6 rounded-2xl bg-[#fffcf5] p-4 text-[#14241c] ring-1 ring-[rgba(27,58,47,0.12)]"
+    <Form
+      className="field-panel mt-5"
       onSubmit={(event) => {
         event.preventDefault();
         setError(null);
@@ -52,84 +63,69 @@ export function RoleAssignForm({
             return;
           }
           setNotice("Access saved.");
-          form.reset();
+          setFormEpoch((epoch) => epoch + 1);
           router.refresh();
         });
       }}
     >
-      <h2 className="text-lg font-semibold">Add owner or family</h2>
-      <p className="mt-1 text-base text-[#3d5247]">
-        Choose a person who has already signed in.
-      </p>
-
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <label className="block text-sm font-semibold sm:col-span-2">
-          Person
-          <select
-            name="userId"
-            required
-            defaultValue=""
-            className="mt-1 min-h-11 w-full rounded-xl border border-[rgba(232,213,163,0.2)] bg-[#fffcf5] px-3 font-normal text-[#14241c]"
-          >
-            <option value="" disabled>
-              Choose someone
-            </option>
-            {candidates.map((person) => (
-              <option key={person.userId} value={person.userId}>
-                {person.label}
-                {person.flatNumber ? ` · ${person.flatNumber}` : ""}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block text-sm font-semibold">
-          Access
-          <select
-            name="role"
-            defaultValue={defaultRole === "family" ? "co_owner" : defaultRole}
-            className="mt-1 min-h-11 w-full rounded-xl border border-[rgba(232,213,163,0.2)] bg-[#fffcf5] px-3 font-normal text-[#14241c]"
-          >
-            {ROLE_GUIDE.filter((item) =>
-              item.value === "owner" || item.value === "co_owner" || item.value === "admin",
-            ).map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block text-sm font-semibold">
-          Flat
-          <input
-            name="flatNumber"
-            defaultValue={defaultFlat}
-            placeholder="A101"
-            className="mt-1 min-h-11 w-full rounded-xl border border-[rgba(232,213,163,0.2)] bg-[#fffcf5] px-3 font-normal text-[#14241c]"
-          />
-          <span className="mt-1 block text-sm font-normal text-[#3d5247]">
-            Needed for owner or family.
-          </span>
-        </label>
-        <label className="block text-sm font-semibold sm:col-span-2">
-          Name shown in the portal
-          <input
-            name="displayName"
-            placeholder="Optional"
-            className="mt-1 min-h-11 w-full rounded-xl border border-[rgba(232,213,163,0.2)] bg-[#fffcf5] px-3 font-normal text-[#14241c]"
-          />
-        </label>
+      <div className="mb-4 border-b border-[rgba(27,58,47,0.08)] pb-3">
+        <h2 className="text-xl font-semibold tracking-tight">Add owner or family</h2>
+        <p className="mt-1 text-sm text-[#3d5247]">
+          Choose a person who has already signed in.
+        </p>
       </div>
 
-      {error ? <p className="mt-3 text-base text-[#8a2f2f]">{error}</p> : null}
-      {notice ? <p className="mt-3 text-base text-[#1b3a2f]">{notice}</p> : null}
+      <FieldGrid key={formEpoch}>
+        <SelectField
+          label="Person"
+          name="userId"
+          placeholder="Choose someone"
+          defaultValue=""
+          required
+          className="sm:col-span-2"
+          options={candidates.map((person) => ({
+            value: person.userId,
+            label: person.flatNumber ? `${person.label} · ${person.flatNumber}` : person.label,
+          }))}
+        />
+        <SelectField
+          label="Access"
+          name="role"
+          defaultValue={defaultRole === "family" ? "co_owner" : defaultRole}
+          options={ROLE_GUIDE.filter(
+            (item) =>
+              item.value === "owner" || item.value === "co_owner" || item.value === "admin",
+          ).map((item) => ({ value: item.value, label: item.label }))}
+        />
+        <TextField
+          label="Flat"
+          name="flatNumber"
+          defaultValue={defaultFlat}
+          placeholder="A101"
+          hint="Needed for owner or family."
+        />
+        <TextField
+          label="Name shown in the portal"
+          name="displayName"
+          placeholder="Optional"
+          className="sm:col-span-2"
+        />
+      </FieldGrid>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="mt-4 min-h-12 rounded-full bg-[#c9a45c] px-5 text-base font-semibold text-[#14241c] disabled:opacity-60"
-      >
+      {error ? (
+        <div className="mt-3">
+          <FormAlert tone="error">{error}</FormAlert>
+        </div>
+      ) : null}
+      {notice ? (
+        <div className="mt-3">
+          <FormAlert tone="ok">{notice}</FormAlert>
+        </div>
+      ) : null}
+
+      <Button disabled={pending} className="mt-4 w-full sm:w-auto">
         {pending ? "Saving…" : "Save"}
-      </button>
-    </form>
+      </Button>
+    </Form>
   );
 }

@@ -5,6 +5,7 @@ import {
   approveRegistration,
   rejectRegistration,
 } from "@/app/actions/admin";
+import { Disclosure, Form, FormAlert, TextField } from "@/components/form-ui";
 import { maskPhone } from "@/lib/phone";
 
 export type AdminRegistrationRequest = {
@@ -79,7 +80,7 @@ export function ApprovalsList({
 
   return (
     <section>
-      {error ? <p className="text-[#8a2f2f]">{error}</p> : null}
+      {error ? <FormAlert tone="error">{error}</FormAlert> : null}
 
       {waiting.length === 0 ? (
         <div className="mt-3 rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.12)]">
@@ -89,22 +90,27 @@ export function ApprovalsList({
           </p>
         </div>
       ) : (
-        <ul className="mt-4 flex flex-col gap-3">
+        <ul className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
           {waiting.map((row) => (
             <li
               key={row.id}
-              className="rounded-2xl border border-[rgba(27,58,47,0.14)] bg-[#fffcf5] p-4"
+              className="flex flex-col overflow-hidden rounded-[1.35rem] bg-[#fffcf5] shadow-[inset_0_0_0_1px_rgba(27,58,47,0.1)]"
             >
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <strong className="text-xl">Flat {row.flat_number}</strong>
-                <span className="text-sm text-[#3d5247]">
+              <div className="bg-[#14241c] px-4 py-4 text-[#f7f2e6]">
+                <div className="flex items-start justify-between gap-3">
+                  <strong className="text-3xl font-semibold tracking-tight">
+                    {row.flat_number}
+                  </strong>
+                  <span className="rounded-full bg-[#c9a45c] px-2.5 py-1 text-[0.68rem] font-bold tracking-wide text-[#14241c] uppercase">
+                    {row.request_kind === "family" ? "Family" : "Owner"}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-[#c9a45c]">
                   Floor {row.floor} · {row.type}
-                </span>
+                </p>
               </div>
-              <p className="mt-1">{row.owner_name}</p>
-              <p className="text-sm font-semibold text-[#14241c]">
-                {row.request_kind === "family" ? "Family" : "Owner"}
-              </p>
+              <div className="flex flex-1 flex-col p-4">
+              <p className="text-lg font-semibold text-[#14241c]">{row.owner_name}</p>
               {row.request_kind === "family" ? (
                 <p className="text-sm text-[#3d5247]">
                   The flat’s owner can also approve this.
@@ -114,17 +120,17 @@ export function ApprovalsList({
               )}
               <p className="text-base text-[#3d5247]">{row.email}</p>
               <p className="text-base text-[#3d5247]">{maskPhone(row.phone)}</p>
-              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+              <div className="mt-auto grid gap-2 pt-4">
                 <button
                   type="button"
                   disabled={pending}
                   onClick={() => approve(row.id)}
-                  className="min-h-12 w-full rounded-full bg-[#c9a45c] px-4 py-2 font-semibold text-[#14241c] disabled:opacity-60 sm:w-auto"
+                  className="btn btn-gold w-full"
                 >
                   Approve
                 </button>
-                <form
-                  className="flex flex-1 flex-col gap-2 sm:flex-row"
+                <Form
+                  className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
                   onSubmit={(event) => {
                     event.preventDefault();
                     const value = new FormData(event.currentTarget).get("reason");
@@ -136,22 +142,19 @@ export function ApprovalsList({
                     reject(row.id, reason);
                   }}
                 >
-                  <input
+                  <TextField
+                    label="Reason"
                     name="reason"
                     required
                     minLength={3}
-                    placeholder="Reason (required)"
+                    placeholder="Why this request is declined"
                     disabled={pending}
-                    className="min-h-12 flex-1 rounded-xl border border-[rgba(27,58,47,0.14)] bg-[#fffdf8] px-3 py-2"
                   />
-                  <button
-                    type="submit"
-                    disabled={pending}
-                    className="min-h-12 rounded-full border border-[rgba(138,47,47,0.3)] px-4 py-2 font-semibold text-[#8a2f2f] disabled:opacity-60"
-                  >
+                  <button type="submit" disabled={pending} className="btn btn-danger w-full sm:w-auto">
                     Reject
                   </button>
-                </form>
+                </Form>
+              </div>
               </div>
             </li>
           ))}
@@ -159,11 +162,8 @@ export function ApprovalsList({
       )}
 
       {reviewed.length > 0 ? (
-        <details className="mt-8">
-          <summary className="cursor-pointer text-base font-semibold text-[#14241c]">
-            Already decided ({reviewed.length})
-          </summary>
-          <ul className="mt-3 divide-y divide-[rgba(27,58,47,0.1)]">
+        <Disclosure title={`Already decided (${reviewed.length})`} className="mt-8">
+          <ul className="divide-y divide-[rgba(27,58,47,0.1)]">
             {reviewed.map((row) => (
               <li key={row.id} className="py-3 text-base text-[#3d5247]">
                 <strong className="text-[#14241c]">{row.flat_number}</strong> · {row.owner_name} ·{" "}
@@ -172,7 +172,7 @@ export function ApprovalsList({
               </li>
             ))}
           </ul>
-        </details>
+        </Disclosure>
       ) : null}
     </section>
   );

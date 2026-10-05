@@ -10,6 +10,34 @@ import { createClient } from "@/utils/supabase/server";
 
 export type RegisterState = { ok: boolean; message: string };
 
+export async function lookupSavedOwner(phoneRaw: string): Promise<{
+  ownerName: string
+  flatNumber: string
+} | null> {
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user || isSuperAdmin(user)) return null;
+
+  const phone = normalizePhone(phoneRaw);
+  if (!phone) return null;
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("flats")
+    .select("flat_number, owner_name")
+    .eq("phone", phone)
+    .limit(1);
+  const saved = data?.[0];
+  if (error || !saved?.flat_number) return null;
+  return {
+    ownerName: String(saved.owner_name || "").trim(),
+    flatNumber: saved.flat_number,
+  };
+}
+
 export async function registerOwner(
   _prev: RegisterState,
   formData: FormData,
@@ -43,12 +71,13 @@ export async function registerOwner(
 
   const admin = createAdminClient();
 
-  const { data: existingFlat } = await admin
+  const { data: existingRows } = await admin
     .from("flats")
     .select("flat_number")
     .eq("phone", phone)
-    .maybeSingle();
-  if (existingFlat) {
+    .limit(1);
+  const existingFlat = existingRows?.[0];
+  if (existingFlat && existingFlat.flat_number !== unit.flatNumber) {
     return { ok: false, message: "This phone is already linked to an approved owner." };
   }
 

@@ -7,6 +7,7 @@ import {
   adminUnlinkFlatUser,
   adminWipeHousehold,
 } from "@/app/actions/admin-manage";
+import { Form, FormAlert } from "@/components/form-ui";
 
 export function OwnerDangerZone({
   flatNumber,
@@ -61,11 +62,11 @@ export function OwnerDangerZone({
         </p>
       </div>
 
-      {error ? <p className="text-sm text-[#8a2f2f]">{error}</p> : null}
-      {notice ? <p className="text-sm text-[#1b3a2f]">{notice}</p> : null}
+      {error ? <FormAlert tone="error">{error}</FormAlert> : null}
+      {notice ? <FormAlert tone="ok">{notice}</FormAlert> : null}
 
       {hasLinkedUser ? (
-        <form
+        <Form
           className="space-y-2 rounded-xl bg-white/70 p-3 ring-1 ring-[rgba(27,58,47,0.08)]"
           onSubmit={(event) => {
             event.preventDefault();
@@ -87,20 +88,24 @@ export function OwnerDangerZone({
             autoComplete="off"
             disabled={pending}
             placeholder="UNLINK"
-            className="min-h-10 w-full rounded-xl border border-[rgba(27,58,47,0.12)] px-3 text-sm"
+            data-match="UNLINK"
+            data-field="confirm"
+            data-label="UNLINK"
+            aria-label="Confirm"
+            className="field-control"
           />
           <button
             type="submit"
             disabled={pending}
-            className="min-h-10 rounded-full border border-[rgba(138,47,47,0.3)] px-4 text-sm font-semibold text-[#8a2f2f] disabled:opacity-60"
+            className="btn btn-danger w-full sm:w-fit"
           >
             Unlink account
           </button>
-        </form>
+        </Form>
       ) : null}
 
       {isSold ? (
-        <form
+        <Form
           className="space-y-2 rounded-xl bg-white/70 p-3 ring-1 ring-[rgba(27,58,47,0.08)]"
           onSubmit={(event) => {
             event.preventDefault();
@@ -122,20 +127,24 @@ export function OwnerDangerZone({
             autoComplete="off"
             disabled={pending}
             placeholder={flatNumber}
-            className="min-h-10 w-full rounded-xl border border-[rgba(27,58,47,0.12)] px-3 text-sm"
+            data-match={flatNumber}
+            data-field="confirm"
+            data-label={flatNumber}
+            aria-label="Confirm"
+            className="field-control"
           />
           <button
             type="submit"
             disabled={pending}
-            className="min-h-10 rounded-full bg-[#8a2f2f] px-4 text-sm font-semibold text-white disabled:opacity-60"
+            className="btn btn-danger w-full bg-[#8a2f2f] text-white sm:w-fit"
           >
             Release unit
           </button>
-        </form>
+        </Form>
       ) : null}
 
       {household > 0 ? (
-        <form
+        <Form
           className="space-y-2 rounded-xl bg-white/70 p-3 ring-1 ring-[rgba(27,58,47,0.08)]"
           onSubmit={(event) => {
             event.preventDefault();
@@ -160,16 +169,20 @@ export function OwnerDangerZone({
             autoComplete="off"
             disabled={pending}
             placeholder={`WIPE ${flatNumber}`}
-            className="min-h-10 w-full rounded-xl border border-[rgba(27,58,47,0.12)] px-3 text-sm"
+            data-match={`WIPE ${flatNumber}`}
+            data-field="confirm"
+            data-label={`WIPE ${flatNumber}`}
+            aria-label="Confirm"
+            className="field-control"
           />
           <button
             type="submit"
             disabled={pending}
-            className="min-h-10 rounded-full border border-[rgba(138,47,47,0.45)] px-4 text-sm font-semibold text-[#8a2f2f] disabled:opacity-60"
+            className="btn btn-danger w-full sm:w-fit"
           >
             Wipe household
           </button>
-        </form>
+        </Form>
       ) : (
         <p className="text-xs text-[#3d5247]">No household or renter rows on this unit.</p>
       )}

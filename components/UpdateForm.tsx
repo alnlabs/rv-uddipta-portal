@@ -2,6 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import {
+  ChoiceField,
+  DateField,
+  Form,
+  FormAlert,
+  SwitchField,
+  TextField,
+} from "@/components/form-ui";
 import MembersEditor from "@/components/MembersEditor";
 import RentersEditor from "@/components/RentersEditor";
 import { ProfilePhotoPicker } from "@/components/ProfilePhotoPicker";
@@ -64,48 +72,6 @@ function todayIso() {
 function isDone(key: StatusKey, value: string) {
   if (key === "moving") return value === "moved_in";
   return value === "completed";
-}
-
-function DateField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string
-  value: string
-  onChange: (next: string) => void
-}) {
-  return (
-    <div className="flex flex-wrap items-end justify-between gap-2">
-      <label className="flex min-w-[10rem] flex-1 flex-col gap-2 text-sm text-[#d0c090]">
-        {label}
-        <input
-          type="date"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="min-h-11 border border-[rgba(232,213,163,0.22)] bg-transparent px-3 text-base font-normal text-[#f7f2e6] outline-none focus:border-[#c9a45c]"
-        />
-      </label>
-      <div className="flex gap-2 pb-1">
-        <button
-          type="button"
-          onClick={() => onChange(todayIso())}
-          className="min-h-11 rounded-full bg-[rgba(27,58,47,0.08)] px-3 text-sm font-semibold text-[#1b3a2f]"
-        >
-          Today
-        </button>
-        {value ? (
-          <button
-            type="button"
-            onClick={() => onChange("")}
-            className="min-h-11 rounded-full px-3 text-sm font-semibold text-[#8a2f2f]"
-          >
-            Clear
-          </button>
-        ) : null}
-      </div>
-    </div>
-  );
 }
 
 function journeyFromFlat(flat: OwnedFlat): JourneyState {
@@ -495,7 +461,7 @@ export default function UpdateForm({
       <section className="page-gutter relative max-w-5xl pb-24 pt-6 md:pb-16 md:pt-10">
         <div className="mb-8 flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-[clamp(2.25rem,6vw,3.5rem)] font-semibold leading-[0.95] tracking-tight text-[#f7f2e6]">
+            <h1 className="text-[clamp(1.7rem,6vw,2.4rem)] font-semibold leading-none tracking-tight text-[#f7f2e6]">
               {panel === "journey" ? "Home journey" : "Ownership & stay"}
             </h1>
             {panel === "journey" ? (
@@ -696,12 +662,12 @@ export default function UpdateForm({
                         </button>
 
                         {open ? (
-                          <form
+                          <Form
                             onSubmit={(e) => {
                               e.preventDefault();
                               void onSaveMilestone(step.key);
                             }}
-                            className="mt-4 text-[#f7f2e6]"
+                            className="field-panel mt-4 text-[#14241c]"
                           >
                             <div
                               className="grid gap-2 sm:grid-cols-2"
@@ -720,17 +686,9 @@ export default function UpdateForm({
                                       onChange={() =>
                                         setStatus(step.key, opt.value, step.dateKey)
                                       }
-                                      className="sr-only"
+                                      className="peer sr-only"
                                     />
-                                    <span
-                                      className={`flex min-h-11 items-center justify-between border px-3 text-sm ${
-                                        selected
-                                          ? "border-[#c9a45c] text-[#c9a45c]"
-                                          : "border-[rgba(232,213,163,0.18)] text-[#d0c090]"
-                                      }`}
-                                    >
-                                      {opt.label}
-                                    </span>
+                                    <span className="choice-face">{opt.label}</span>
                                   </label>
                                 );
                               })}
@@ -793,26 +751,23 @@ export default function UpdateForm({
                             </div>
 
                             {stepError[step.key] ? (
-                              <p
-                                role="alert"
-                                className="mt-4 rounded-2xl bg-[rgba(138,47,47,0.08)] px-4 py-3 text-sm text-[#8a2f2f]"
-                              >
-                                {stepError[step.key]}
-                              </p>
+                              <div className="mt-4">
+                                <FormAlert tone="error">{stepError[step.key]}</FormAlert>
+                              </div>
                             ) : null}
                             {stepMessage[step.key] ? (
-                              <p role="status" className="mt-3 text-sm text-[#c9a45c]">
-                                {stepMessage[step.key]}
-                              </p>
+                              <div className="mt-3">
+                                <FormAlert tone="ok">{stepMessage[step.key]}</FormAlert>
+                              </div>
                             ) : null}
                             <button
                               type="submit"
                               disabled={saving || !dirtyStep}
-                              className="mt-4 min-h-11 text-sm font-semibold text-[#c9a45c] disabled:opacity-40"
+                              className="btn btn-gold mt-4 w-full sm:w-fit"
                             >
                               {saving ? "Saving…" : "Save milestone"}
                             </button>
-                          </form>
+                          </Form>
                         ) : null}
                       </div>
                     </div>
@@ -823,16 +778,14 @@ export default function UpdateForm({
           </div>
         ) : panel === "stay" ? (
           <div className="space-y-5">
-            <form
+            <Form
               onSubmit={onSaveOwner}
-              className="rounded-[1.75rem] bg-[#fffcf5] p-5 text-[#14241c] shadow-[0_20px_60px_rgba(0,0,0,0.28)] md:p-8"
+              className="field-panel text-[#14241c]"
             >
-              <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[rgba(27,58,47,0.1)] pb-5">
+              <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[rgba(27,58,47,0.08)] pb-3">
                 <div>
-                  <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">
-                    Profile
-                  </p>
-                  <h2 className="mt-1 text-3xl font-semibold tracking-tight md:text-4xl">
+                  <p className="eyebrow">Profile</p>
+                  <h2 className="mt-0.5 text-xl font-semibold tracking-tight">
                     Owner
                   </h2>
                   <p className="mt-2 text-sm text-[#3d5247]">
@@ -843,7 +796,7 @@ export default function UpdateForm({
                 <button
                   type="submit"
                   disabled={ownerBusy || !ownerDirty}
-                  className="min-h-11 rounded-full bg-[#c9a45c] px-5 text-sm font-semibold text-[#14241c] disabled:opacity-45"
+                  className="btn btn-gold"
                 >
                   {ownerBusy ? "Saving…" : "Save"}
                 </button>
@@ -894,22 +847,21 @@ export default function UpdateForm({
                 />
               </div>
 
-              <label className="mt-5 flex max-w-md flex-col gap-2 text-sm font-semibold text-[#14241c]">
-                Owner name
-                <input
-                  type="text"
-                  value={ownerName}
-                  onChange={(e) => {
-                    setOwnerName(e.target.value);
-                    setOwnerMessage("");
-                    setOwnerError("");
-                  }}
-                  required
-                  minLength={2}
-                  autoComplete="name"
-                  className="min-h-12 rounded-2xl border border-[rgba(27,58,47,0.12)] bg-white px-4 py-3 text-base font-normal outline-none focus:border-[#1b3a2f] focus:ring-2 focus:ring-[rgba(27,58,47,0.12)]"
-                />
-              </label>
+              <TextField
+                label="Owner name"
+                name="ownerName"
+                type="text"
+                value={ownerName}
+                onChange={(e) => {
+                  setOwnerName(e.target.value);
+                  setOwnerMessage("");
+                  setOwnerError("");
+                }}
+                required
+                minLength={2}
+                autoComplete="name"
+                className="mt-4 max-w-md"
+              />
 
               {flat.ownerEmail ? (
                 <p className="mt-4 max-w-md text-sm text-[#3d5247]">
@@ -924,33 +876,25 @@ export default function UpdateForm({
               ) : null}
 
               {ownerError ? (
-                <p
-                  role="alert"
-                  className="mt-4 rounded-2xl bg-[rgba(138,47,47,0.08)] px-4 py-3 text-sm text-[#8a2f2f]"
-                >
-                  {ownerError}
-                </p>
+                <div className="mt-4">
+                  <FormAlert tone="error">{ownerError}</FormAlert>
+                </div>
               ) : null}
               {ownerMessage ? (
-                <p
-                  role="status"
-                  className="mt-4 rounded-2xl bg-[rgba(47,90,72,0.1)] px-4 py-3 text-sm font-semibold text-[#2f5a48]"
-                >
-                  {ownerMessage}
-                </p>
+                <div className="mt-4">
+                  <FormAlert tone="ok">{ownerMessage}</FormAlert>
+                </div>
               ) : null}
-            </form>
+            </Form>
 
-            <form
+            <Form
               onSubmit={onSaveOccupancy}
-              className="rounded-[1.75rem] bg-[#fffcf5] p-5 text-[#14241c] shadow-[0_20px_60px_rgba(0,0,0,0.28)] md:p-8"
+              className="field-panel text-[#14241c]"
             >
-              <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[rgba(27,58,47,0.1)] pb-5">
+              <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[rgba(27,58,47,0.08)] pb-3">
                 <div>
-                  <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">
-                    Occupancy
-                  </p>
-                  <h2 className="mt-1 text-3xl font-semibold tracking-tight md:text-4xl">
+                  <p className="eyebrow">Occupancy</p>
+                  <h2 className="mt-0.5 text-xl font-semibold tracking-tight">
                     Sale & stay
                   </h2>
                   <p className="mt-2 text-sm text-[#3d5247]">
@@ -961,111 +905,58 @@ export default function UpdateForm({
                 <button
                   type="submit"
                   disabled={occupancyBusy || !occupancyDirty}
-                  className="min-h-11 rounded-full bg-[#c9a45c] px-5 text-sm font-semibold text-[#14241c] disabled:opacity-45"
+                  className="btn btn-gold"
                 >
                   {occupancyBusy ? "Saving…" : "Save"}
                 </button>
               </div>
 
-              <p className="mt-5 text-xs font-semibold tracking-[0.14em] text-[#3d5247] uppercase">
-                Sale status
-              </p>
-              <div className="mt-2 grid gap-2 sm:grid-cols-2" role="radiogroup">
-                {(
-                  [
-                    ["sold", "Sold"],
-                    ["unsold", "Unsold"],
-                  ] as const
-                ).map(([value, label]) => {
-                  const selected = occupancyForm.saleStatus === value;
-                  return (
-                    <label key={value} className="cursor-pointer">
-                      <input
-                        type="radio"
-                        name="saleStatus"
-                        value={value}
-                        checked={selected}
-                        onChange={() => {
-                          setOccupancyForm((prev) => ({
-                            ...prev,
-                            saleStatus: value,
-                            occupancy:
-                              value === "sold"
-                                ? prev.occupancy ?? "owner_stay"
-                                : null,
-                            tenantName: value === "sold" ? prev.tenantName : "",
-                            tenantPhone:
-                              value === "sold" ? prev.tenantPhone : "",
-                          }));
-                          setOccupancyMessage("");
-                          setOccupancyError("");
-                        }}
-                        className="sr-only"
-                      />
-                      <span
-                        className={`flex min-h-12 items-center justify-between rounded-2xl px-4 text-sm font-semibold ${
-                          selected
-                            ? "bg-[#1b3a2f] text-[#e8d5a3]"
-                            : "bg-[rgba(27,58,47,0.05)] text-[#3d5247] ring-1 ring-[rgba(27,58,47,0.1)]"
-                        }`}
-                      >
-                        {label}
-                        {selected ? <span aria-hidden>✓</span> : null}
-                      </span>
-                    </label>
-                  );
-                })}
+              <div className="mt-4">
+                <ChoiceField
+                  legend="Sale status"
+                  name="saleStatus"
+                  value={occupancyForm.saleStatus}
+                  onChange={(value) => {
+                    setOccupancyForm((prev) => ({
+                      ...prev,
+                      saleStatus: value === "sold" ? "sold" : "unsold",
+                      occupancy:
+                        value === "sold" ? prev.occupancy ?? "owner_stay" : null,
+                      tenantName: value === "sold" ? prev.tenantName : "",
+                      tenantPhone: value === "sold" ? prev.tenantPhone : "",
+                    }));
+                    setOccupancyMessage("");
+                    setOccupancyError("");
+                  }}
+                  options={[
+                    { value: "sold", label: "Sold" },
+                    { value: "unsold", label: "Unsold" },
+                  ]}
+                />
               </div>
 
               {occupancyForm.saleStatus === "sold" ? (
-                <>
-                  <p className="mt-5 text-xs font-semibold tracking-[0.14em] text-[#3d5247] uppercase">
-                    Who lives here
-                  </p>
-                  <div className="mt-2 grid gap-2 sm:grid-cols-2" role="radiogroup">
-                    {(
-                      [
-                        ["owner_stay", "Owner stay"],
-                        ["rented", "Rented"],
-                      ] as const
-                    ).map(([value, label]) => {
-                      const selected = occupancyForm.occupancy === value;
-                      return (
-                        <label key={value} className="cursor-pointer">
-                          <input
-                            type="radio"
-                            name="occupancy"
-                            value={value}
-                            checked={selected}
-                            onChange={() => {
-                              setOccupancyForm((prev) => ({
-                                ...prev,
-                                occupancy: value,
-                                tenantName:
-                                  value === "rented" ? prev.tenantName : "",
-                                tenantPhone:
-                                  value === "rented" ? prev.tenantPhone : "",
-                              }));
-                              setOccupancyMessage("");
-                              setOccupancyError("");
-                            }}
-                            className="sr-only"
-                          />
-                          <span
-                            className={`flex min-h-12 items-center justify-between rounded-2xl px-4 text-sm font-semibold ${
-                              selected
-                                ? "bg-[#1b3a2f] text-[#e8d5a3]"
-                                : "bg-[rgba(27,58,47,0.05)] text-[#3d5247] ring-1 ring-[rgba(27,58,47,0.1)]"
-                            }`}
-                          >
-                            {label}
-                            {selected ? <span aria-hidden>✓</span> : null}
-                          </span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </>
+                <div className="mt-4">
+                  <ChoiceField
+                    legend="Who lives here"
+                    name="occupancy"
+                    value={occupancyForm.occupancy ?? "owner_stay"}
+                    onChange={(value) => {
+                      setOccupancyForm((prev) => ({
+                        ...prev,
+                        occupancy: value === "rented" ? "rented" : "owner_stay",
+                        tenantName: value === "rented" ? prev.tenantName : "",
+                        tenantPhone: value === "rented" ? prev.tenantPhone : "",
+                      }));
+                      setOccupancyMessage("");
+                      setOccupancyError("");
+                    }}
+                    options={[
+                      { value: "owner_stay", label: "Owner stay" },
+                      { value: "rented", label: "Rented" },
+                    ]}
+                  />
+                </div>
               ) : null}
 
               {occupancyForm.saleStatus === "sold" &&
@@ -1077,66 +968,40 @@ export default function UpdateForm({
               ) : null}
 
               {occupancyForm.saleStatus === "sold" ? (
-                <div className="mt-6 space-y-3 border-t border-[rgba(27,58,47,0.1)] pt-5">
-                  <p className="text-xs font-semibold tracking-[0.14em] text-[#3d5247] uppercase">
-                    Listings
-                  </p>
-                  <label className="flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-2xl bg-[rgba(27,58,47,0.05)] px-4 ring-1 ring-[rgba(27,58,47,0.1)]">
-                    <span className="text-sm font-semibold text-[#14241c]">
-                      Open for rent
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={occupancyForm.openForRent}
-                      onChange={(e) => {
-                        setOccupancyForm((prev) => ({
-                          ...prev,
-                          openForRent: e.target.checked,
-                        }));
-                        setOccupancyMessage("");
-                        setOccupancyError("");
-                      }}
-                      className="size-5 accent-[#1b3a2f]"
-                    />
-                  </label>
-                  <label className="flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-2xl bg-[rgba(27,58,47,0.05)] px-4 ring-1 ring-[rgba(27,58,47,0.1)]">
-                    <span className="text-sm font-semibold text-[#14241c]">
-                      Open for resale
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={occupancyForm.openForResale}
-                      onChange={(e) => {
-                        setOccupancyForm((prev) => ({
-                          ...prev,
-                          openForResale: e.target.checked,
-                        }));
-                        setOccupancyMessage("");
-                        setOccupancyError("");
-                      }}
-                      className="size-5 accent-[#1b3a2f]"
-                    />
-                  </label>
+                <div className="mt-4 grid gap-2 border-t border-[rgba(27,58,47,0.08)] pt-4">
+                  <p className="field-label">Listings</p>
+                  <SwitchField
+                    label="Open for rent"
+                    checked={occupancyForm.openForRent}
+                    onChange={(next) => {
+                      setOccupancyForm((prev) => ({ ...prev, openForRent: next }));
+                      setOccupancyMessage("");
+                      setOccupancyError("");
+                    }}
+                  />
+                  <SwitchField
+                    label="Open for resale"
+                    checked={occupancyForm.openForResale}
+                    onChange={(next) => {
+                      setOccupancyForm((prev) => ({ ...prev, openForResale: next }));
+                      setOccupancyMessage("");
+                      setOccupancyError("");
+                    }}
+                  />
                 </div>
               ) : null}
 
               {occupancyError ? (
-                <p
-                  role="alert"
-                  className="mt-4 rounded-2xl bg-[rgba(138,47,47,0.08)] px-4 py-3 text-sm text-[#8a2f2f]"
-                >
-                  {occupancyError}
-                </p>
+                <div className="mt-4">
+                  <FormAlert tone="error">{occupancyError}</FormAlert>
+                </div>
               ) : null}
               {occupancyMessage ? (
-                <p
-                  role="status"
-                  className="mt-4 rounded-2xl bg-[rgba(47,90,72,0.1)] px-4 py-3 text-sm font-semibold text-[#2f5a48]"
-                >
-                  {occupancyMessage}
-                </p>
+                <div className="mt-4">
+                  <FormAlert tone="ok">{occupancyMessage}</FormAlert>
+                </div>
               ) : null}
-            </form>
+            </Form>
 
             <MembersEditor
               flatId={flat.id}

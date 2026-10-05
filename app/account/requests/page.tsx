@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { markNoteRead, replyToNote } from "@/app/actions/updates";
+import { Form, TextAreaField, WorkspaceHeader } from "@/components/form-ui";
 import { canManageAdmin } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
@@ -24,13 +25,11 @@ export default async function RequestsPage({
     .limit(80);
 
   return (
-    <section className="mx-auto max-w-3xl">
-      <h1 className="text-[clamp(2rem,4vw,2.75rem)] font-semibold tracking-tight text-[#14241c]">
-        Requests
-      </h1>
-      <p className="mt-2 text-base text-[#3d5247]">
-        Help requests and feedback from members.
-      </p>
+    <section>
+      <WorkspaceHeader
+        title="Requests"
+        lede="Help requests and feedback from members."
+      />
 
       <div className="mt-4 flex gap-2">
         <a
@@ -53,7 +52,7 @@ export default async function RequestsPage({
 
       {error ? <p className="mt-4 text-[#8a2f2f]">{error.message}</p> : null}
 
-      <ul className="mt-6 flex flex-col gap-3">
+      <ul className="mt-5 grid gap-3 lg:grid-cols-2">
         {(notes ?? []).length === 0 ? (
           <li className="rounded-2xl bg-[#fffcf5] p-4 text-[#3d5247] ring-1 ring-[rgba(27,58,47,0.1)]">
             Nothing here.
@@ -62,7 +61,7 @@ export default async function RequestsPage({
           (notes ?? []).map((note) => (
             <li
               key={note.id}
-              className="rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.1)]"
+              className="rounded-[1.35rem] border-l-4 border-[#c9a45c] bg-[#fffcf5] p-4 shadow-[inset_0_0_0_1px_rgba(27,58,47,0.08)]"
             >
               <p className="text-sm font-semibold text-[#7a5c22]">
                 {note.author_name}
@@ -74,33 +73,24 @@ export default async function RequestsPage({
                 <p className="mt-2 text-sm text-[#3d5247]">Reply: {note.admin_reply}</p>
               ) : null}
               {kind === "request" ? (
-                <form action={replyToNote} className="mt-3 grid gap-2">
+                <Form action={replyToNote} success="Reply sent." className="mt-3 grid gap-2">
                   <input type="hidden" name="noteId" value={note.id} />
-                  <label className="text-sm font-semibold">
-                    Reply
-                    <textarea
-                      name="reply"
-                      required
-                      rows={2}
-                      defaultValue={note.admin_reply || ""}
-                      className="mt-1 w-full rounded-xl border border-[rgba(27,58,47,0.14)] px-3 py-2 font-normal"
-                    />
-                  </label>
-                  <button
-                    type="submit"
-                    className="min-h-11 w-fit rounded-full bg-[#c9a45c] px-4 text-sm font-semibold text-[#14241c]"
-                  >
+                  <TextAreaField
+                    label="Reply"
+                    name="reply"
+                    required
+                    rows={2}
+                    defaultValue={note.admin_reply || ""}
+                    hint="Sending a reply marks this done."
+                  />
+                  <button type="submit" className="btn btn-gold w-full sm:w-fit">
                     Reply
                   </button>
-                  <p className="text-sm text-[#3d5247]">Sending a reply marks this done.</p>
-                </form>
+                </Form>
               ) : note.status === "open" ? (
                 <form action={markNoteRead} className="mt-3">
                   <input type="hidden" name="noteId" value={note.id} />
-                  <button
-                    type="submit"
-                    className="min-h-11 rounded-full bg-[#1b3a2f] px-4 text-sm font-semibold text-[#e8d5a3]"
-                  >
+                  <button type="submit" className="btn btn-forest w-full sm:w-fit">
                     Mark read
                   </button>
                 </form>

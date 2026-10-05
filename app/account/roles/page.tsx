@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { RoleAssignForm } from "@/components/RoleAssignForm";
 import { RolePersonEditor } from "@/components/RolePersonEditor";
+import { WorkspaceHeader } from "@/components/form-ui";
 import { isSuperAdmin } from "@/lib/admin";
 import { accessSummary } from "@/lib/roleLabels";
 import { canManageAdmin } from "@/lib/roles";
@@ -88,12 +89,11 @@ export default async function AdminRolesPage({
   const openPerson = people.find((person) => person.userId === params.person) ?? null;
 
   return (
-    <section className="mx-auto max-w-3xl">
-      <h1 className="text-[clamp(2rem,4vw,2.75rem)] font-semibold tracking-tight text-[#14241c]">
-        Who can sign in
-      </h1>
-      <p className="mt-2 text-lg text-[#3d5247]">Owner, family, or admin.</p>
+    <section>
+      <WorkspaceHeader title="Who can sign in" lede="Owner, family, or admin." />
 
+      <div className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(18rem,24rem)_minmax(0,1fr)]">
+      <div className="grid gap-4 xl:sticky xl:top-3">
       <RoleAssignForm
         defaultFlat={params.flat || ""}
         defaultRole={params.as === "family" ? "family" : "owner"}
@@ -106,37 +106,66 @@ export default async function AdminRolesPage({
           }))}
       />
 
-      <h2 className="mt-8 text-xl font-semibold text-[#14241c]">People</h2>
+      {openPerson && !openPerson.locked ? (
+        <RolePersonEditor key={openPerson.userId} person={openPerson} />
+      ) : null}
+      </div>
+
+      <div>
+      <h2 className="text-lg font-semibold text-[#14241c]">People</h2>
       {people.length === 0 ? (
         <p className="mt-3 text-base text-[#3d5247]">No one has signed in yet.</p>
       ) : (
-        <ul className="mt-3 divide-y divide-[rgba(27,58,47,0.1)]">
-          {people.map((person) => (
-            <li key={person.userId} className="py-3">
-              <p className="text-lg font-semibold text-[#14241c]">
-                {person.displayName || person.email || "Signed-in person"}
-              </p>
-              <p className="text-base text-[#3d5247]">
-                {person.locked ? "Cannot be removed. No flat." : accessSummary(person)}
-              </p>
-              {person.locked ? null : (
-                <Link
-                  href={`/account/roles?person=${person.userId}`}
-                  className="mt-1 inline-flex min-h-11 items-center text-base font-semibold text-[#1b3a2f]"
-                >
-                  {openPerson?.userId === person.userId ? "Editing" : "Change"}
-                </Link>
-              )}
-            </li>
-          ))}
+        <ul className="mt-3 grid gap-2 sm:grid-cols-2 2xl:grid-cols-3">
+          {people.map((person) => {
+            const editing = openPerson?.userId === person.userId;
+            const label = person.displayName || person.email || "Signed-in person";
+            return (
+              <li
+                key={person.userId}
+                className={`flex min-h-24 flex-col justify-between rounded-[1.25rem] px-3.5 py-3 ring-1 ${
+                  editing
+                    ? "bg-[#1b3a2f] text-[#e8d5a3] ring-transparent"
+                    : "bg-[#fffcf5] text-[#14241c] ring-[rgba(27,58,47,0.1)]"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span
+                    className={`grid size-10 place-items-center rounded-2xl text-sm font-bold ${
+                      editing ? "bg-[#c9a45c] text-[#14241c]" : "bg-[#1b3a2f] text-[#e8d5a3]"
+                    }`}
+                  >
+                    {label.slice(0, 1).toUpperCase()}
+                  </span>
+                  {person.flatNumber ? (
+                    <span className="text-lg font-semibold tracking-tight">{person.flatNumber}</span>
+                  ) : null}
+                </div>
+                <div className="mt-3 min-w-0">
+                  <p className="truncate text-base font-semibold">{label}</p>
+                  <p className={`truncate text-sm ${editing ? "text-[#d8c898]" : "text-[#3d5247]"}`}>
+                    {person.locked ? "Cannot be removed. No flat." : accessSummary(person)}
+                  </p>
+                </div>
+                {person.locked ? (
+                  <span className="shrink-0 rounded-full bg-[#c9a45c] px-2 py-1 text-[10px] font-bold tracking-wide text-[#14241c] uppercase">
+                    Super admin
+                  </span>
+                ) : (
+                  <Link
+                    href={editing ? "/account/roles" : `/account/roles?person=${person.userId}`}
+                    className={`inline-flex min-h-11 shrink-0 items-center rounded-full px-3 text-sm font-semibold ${
+                      editing ? "text-[#e8d5a3]" : "text-[#1b3a2f]"
+                    }`}
+                  >
+                    {editing ? "Close" : "Change"}
+                  </Link>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
-
-      {openPerson && !openPerson.locked ? (
-        <div className="mt-4">
-          <RolePersonEditor person={openPerson} />
-        </div>
-      ) : null}
 
       {unsignedOwners.length ? (
         <div className="mt-10">
@@ -160,6 +189,8 @@ export default async function AdminRolesPage({
           </Link>
         </div>
       ) : null}
+      </div>
+      </div>
     </section>
   );
 }

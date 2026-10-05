@@ -19,6 +19,41 @@ import type { BoardData, PublicFlat } from "@/lib/types";
 
 type CommunityView = "guide" | "floor" | "building";
 
+const COMMUNITY_CHOICES: { id: CommunityView; href: string; label: string }[] = [
+  { id: "guide", href: "/community", label: "About" },
+  { id: "floor", href: "/community?view=floor", label: "Floors" },
+  { id: "building", href: "/community?view=building", label: "The building" },
+];
+
+function CommunityChoices({ view }: { readonly view: CommunityView }) {
+  return (
+    <nav
+      aria-label="Ways to see the building"
+      className={`grid grid-cols-3 gap-2 ${
+        view === "building" ? "px-2 pb-2 md:px-4" : "page-gutter max-w-6xl pt-4"
+      }`}
+    >
+      {COMMUNITY_CHOICES.map((item) => {
+        const active = view === item.id;
+        return (
+          <Link
+            key={item.id}
+            href={item.href}
+            aria-current={active ? "page" : undefined}
+            className={`flex min-h-14 items-center justify-center rounded-2xl px-2 text-center text-base font-semibold sm:text-lg ${
+              active
+                ? "bg-[#1b3a2f] text-[#e8d5a3]"
+                : "bg-[#fffcf5] text-[#14241c] shadow-[inset_0_0_0_1px_rgba(27,58,47,0.14)]"
+            }`}
+          >
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
 export function HomeBoard({
   data,
   error,
@@ -66,30 +101,25 @@ export function HomeBoard({
     <div
       className={
         view === "building"
-          ? "flex h-full min-h-0 flex-col px-2 pt-2 md:px-4 md:pt-3 md:pb-3"
+          ? "flex h-full min-h-0 flex-col pt-2 md:pt-3 md:pb-3"
           : view === "guide"
             ? ""
-            : "page-gutter max-w-6xl py-5 md:py-8"
+            : ""
       }
     >
+      <CommunityChoices view={view} />
       {view === "guide" ? (
         <BuildingGuide project={project} showVisit={showVisit} signedIn={signedIn} />
       ) : view === "building" ? (
-        <div className="flex min-h-0 flex-1 flex-col">
-          <Link href="/community" className="mb-2 text-sm font-semibold text-[#1b3a2f]">
-            Back to Building
-          </Link>
+        <div className="flex min-h-0 flex-1 flex-col px-2 md:px-4">
           <div className="min-h-0 flex-1">
             <Building3DLoader flats={modelFlats} myFlatNumber={myFlatNumber} />
           </div>
         </div>
       ) : (
-        <section>
-          <Link href="/community" className="text-sm font-semibold text-[#1b3a2f]">
-            Back to Building
-          </Link>
-          <h1 className="mt-3 text-3xl font-semibold text-[#14241c]">Floor plan</h1>
-          <p className="mt-2 text-[#3d5247]">Tap a flat to see its type and size.</p>
+        <section className="page-gutter max-w-6xl py-4 md:py-6">
+          <h1 className="text-3xl font-semibold text-[#14241c]">Floors</h1>
+          <p className="mt-2 text-lg text-[#3d5247]">Choose a floor, then tap a home.</p>
           {data ? (
             <>
               <div className="mb-4 mt-4">

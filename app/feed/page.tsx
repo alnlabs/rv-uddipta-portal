@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { postBuilderUpdate } from "@/app/actions/activity";
+import { Form, TextAreaField, TextField } from "@/components/form-ui";
 import { UpdatesBoard, type FeedPost } from "@/components/UpdatesBoard";
 import { isSuperAdmin } from "@/lib/admin";
 import { canEditBuilder, canManageAdmin, isCommunityRole } from "@/lib/roles";
@@ -44,41 +45,34 @@ export default async function FeedPage() {
   }));
 
   return (
-    <section className="page-gutter max-w-3xl py-8 md:py-12">
-      <p className="text-sm font-semibold text-[#7a5c22]">Updates</p>
-      <h1 className="mt-2 font-semibold tracking-tight text-[#14241c] text-[clamp(2rem,5vw,3.25rem)] leading-[1.05]">
+    <section className="page-gutter max-w-6xl py-5 md:py-8">
+      <p className="eyebrow">Updates</p>
+      <h1 className="mt-1 text-[clamp(1.6rem,6vw,2.2rem)] font-semibold leading-none tracking-tight text-[#14241c]">
         Updates
       </h1>
-      <p className="mt-3 max-w-xl text-base text-[#3d5247]">
+      <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#3d5247] sm:text-base">
         News from the building. You can post, send a request, or send feedback.
       </p>
 
       {canEditBuilder(profile.role, user) ? (
-        <form
+        <Form
           action={postBuilderUpdate}
-          className="mt-8 space-y-3 border-y border-[rgba(27,58,47,0.1)] py-6"
+          success="Notice posted."
+          resetOnSuccess
+          className="field-panel mt-5 grid gap-3"
         >
-          <p className="text-sm font-semibold text-[#14241c]">Notice</p>
-          <p className="text-sm text-[#3d5247]">
-            A notice is from the admin or the builder. Members cannot post a notice.
-          </p>
-          <input
-            name="title"
-            required
-            minLength={3}
-            placeholder="Title"
-            className="min-h-12 w-full border-b border-[rgba(27,58,47,0.14)] bg-transparent px-0 text-base outline-none"
-          />
-          <textarea
-            name="body"
-            rows={3}
-            placeholder="Details"
-            className="w-full border-b border-[rgba(27,58,47,0.14)] bg-transparent px-0 py-2 text-base outline-none"
-          />
-          <button type="submit" className="min-h-12 text-base font-semibold text-[#1b3a2f]">
+          <div>
+            <h2 className="text-lg font-semibold text-[#14241c]">Notice</h2>
+            <p className="mt-1 text-sm text-[#3d5247]">
+              A notice is from the admin or the builder. Members cannot post a notice.
+            </p>
+          </div>
+          <TextField label="Title" name="title" required minLength={3} placeholder="Title" />
+          <TextAreaField label="Details" name="body" rows={3} placeholder="Details" />
+          <button type="submit" className="btn btn-forest w-full sm:w-fit">
             Post notice
           </button>
-        </form>
+        </Form>
       ) : null}
 
       <UpdatesBoard

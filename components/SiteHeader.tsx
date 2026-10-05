@@ -25,7 +25,7 @@ export function SiteHeader({ signedIn = false }: { signedIn?: boolean; isAdmin?:
       {!signedIn ? (
         <Link
           href="/login"
-          className="inline-flex min-h-10 items-center rounded-full bg-[#1b3a2f] px-4 text-sm font-semibold text-[#e8d5a3]"
+          className="inline-flex min-h-14 items-center rounded-full bg-[#1b3a2f] px-6 text-lg font-semibold text-[#e8d5a3]"
         >
           Sign in
         </Link>

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { adminResetProfile } from "@/app/actions/admin-manage";
+import { Form, FormAlert } from "@/components/form-ui";
 
 export function ProfileDangerZone({
   userId,
@@ -19,7 +20,7 @@ export function ProfileDangerZone({
   if (!email) return null;
 
   return (
-    <form
+    <Form
       className="mt-3 space-y-2 rounded-xl border border-[rgba(138,47,47,0.18)] bg-[#fff8f6] p-3 sm:col-span-4"
       onSubmit={(event) => {
         event.preventDefault();
@@ -46,22 +47,22 @@ export function ProfileDangerZone({
         still works. Type{" "}
         <code className="rounded bg-[#efe8d8] px-1">{email}</code> to confirm.
       </p>
-      {error ? <p className="text-sm text-[#8a2f2f]">{error}</p> : null}
-      {notice ? <p className="text-sm text-[#1b3a2f]">{notice}</p> : null}
+      {error ? <FormAlert tone="error">{error}</FormAlert> : null}
+      {notice ? <FormAlert tone="ok">{notice}</FormAlert> : null}
       <input
         name="confirm"
         autoComplete="off"
         disabled={pending}
         placeholder={email}
-        className="min-h-10 w-full rounded-xl border border-[rgba(27,58,47,0.12)] px-3 text-sm"
+        data-match={email}
+        data-field="confirm"
+        data-label="email"
+        aria-label="Confirm email"
+        className="field-control"
       />
-      <button
-        type="submit"
-        disabled={pending}
-        className="min-h-10 rounded-full border border-[rgba(138,47,47,0.3)] px-4 text-sm font-semibold text-[#8a2f2f] disabled:opacity-60"
-      >
+      <button type="submit" disabled={pending} className="btn btn-danger w-full sm:w-fit">
         Remove flat access
       </button>
-    </form>
+    </Form>
   );
 }

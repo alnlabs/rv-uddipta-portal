@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { DateField, Form, FormAlert, TextField } from "@/components/form-ui";
 import { cleanError } from "@/lib/auth";
 import { mapFlatRenter } from "@/lib/flats";
 import { normalizePhone } from "@/lib/phone";
@@ -79,7 +80,7 @@ export default function RentersEditor({
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [openAdd, setOpenAdd] = useState(initialRenters.length === 0);
-  const stage = presentation === "stage";
+  void presentation;
 
   async function addRenter(e: React.FormEvent) {
     e.preventDefault();
@@ -232,78 +233,56 @@ export default function RentersEditor({
   ) {
     return (
       <>
-        <label className="flex flex-col gap-1.5 text-sm font-semibold">
-          Name
-          <input
+        <div className="grid gap-3 sm:grid-cols-2">
+          <TextField
+            label="Name"
+            name="name"
             type="text"
             value={value.name}
             onChange={(e) => onChange({ ...value, name: e.target.value })}
             required
             minLength={2}
-            className="min-h-11 rounded-xl border border-[rgba(27,58,47,0.12)] bg-white px-3 py-2 text-base font-normal outline-none focus:border-[#1b3a2f] focus:ring-2 focus:ring-[rgba(27,58,47,0.12)]"
           />
-        </label>
-        <label className="flex flex-col gap-1.5 text-sm font-semibold">
-          Phone
-          <input
+          <TextField
+            label="Phone"
+            name="phone"
             type="tel"
             inputMode="numeric"
             value={value.phone}
             onChange={(e) => onChange({ ...value, phone: e.target.value })}
             placeholder="Optional"
-            className="min-h-11 rounded-xl border border-[rgba(27,58,47,0.12)] bg-white px-3 py-2 text-base font-normal outline-none focus:border-[#1b3a2f] focus:ring-2 focus:ring-[rgba(27,58,47,0.12)]"
           />
-        </label>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="flex flex-col gap-1.5 text-sm font-semibold">
-            Start date
-            <input
-              type="date"
-              value={value.startDate}
-              onChange={(e) =>
-                onChange({ ...value, startDate: e.target.value })
-              }
-              className="min-h-11 rounded-xl border border-[rgba(27,58,47,0.12)] bg-white px-3 py-2 text-base font-normal outline-none focus:border-[#1b3a2f] focus:ring-2 focus:ring-[rgba(27,58,47,0.12)]"
-            />
-          </label>
-          <label className="flex flex-col gap-1.5 text-sm font-semibold">
-            End date
-            <input
-              type="date"
-              value={value.endDate}
-              onChange={(e) => onChange({ ...value, endDate: e.target.value })}
-              className="min-h-11 rounded-xl border border-[rgba(27,58,47,0.12)] bg-white px-3 py-2 text-base font-normal outline-none focus:border-[#1b3a2f] focus:ring-2 focus:ring-[rgba(27,58,47,0.12)]"
-            />
-          </label>
+          <DateField
+            label="Start date"
+            name="startDate"
+            value={value.startDate}
+            onChange={(next) => onChange({ ...value, startDate: next })}
+          />
+          <DateField
+            label="End date"
+            name="endDate"
+            after="startDate"
+            value={value.endDate}
+            onChange={(next) => onChange({ ...value, endDate: next })}
+          />
         </div>
-        <label className="flex flex-col gap-1.5 text-sm font-semibold">
-          Notes
-          <input
-            type="text"
-            value={value.notes}
-            onChange={(e) => onChange({ ...value, notes: e.target.value })}
-            placeholder="Optional"
-            className="min-h-11 rounded-xl border border-[rgba(27,58,47,0.12)] bg-white px-3 py-2 text-base font-normal outline-none focus:border-[#1b3a2f] focus:ring-2 focus:ring-[rgba(27,58,47,0.12)]"
-          />
-        </label>
+        <TextField
+          label="Notes"
+          type="text"
+          value={value.notes}
+          onChange={(e) => onChange({ ...value, notes: e.target.value })}
+          placeholder="Optional"
+        />
       </>
     );
   }
 
   return (
-    <section
-      className={
-        stage
-          ? "rounded-[1.75rem] bg-[#fffcf5] p-5 text-[#14241c] shadow-[0_20px_60px_rgba(0,0,0,0.28)] md:p-8"
-          : "rounded-3xl border border-[rgba(27,58,47,0.12)] bg-[#fffcf5]/95 p-5 shadow-lg md:p-6"
-      }
-    >
-      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[rgba(27,58,47,0.1)] pb-5">
+    <section className="field-panel text-[#14241c]">
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[rgba(27,58,47,0.08)] pb-3">
         <div>
-          <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">
-            Profile
-          </p>
-          <h2 className="mt-1 text-3xl font-semibold tracking-tight md:text-4xl">
+          <p className="eyebrow">Profile</p>
+          <h2 className="mt-0.5 text-xl font-semibold tracking-tight">
             Renters
           </h2>
           <p className="mt-2 max-w-md text-sm text-[#3d5247]">
@@ -331,26 +310,22 @@ export default function RentersEditor({
                 key={renter.id}
                 className="rounded-2xl bg-[rgba(27,58,47,0.04)] p-4 ring-1 ring-[rgba(27,58,47,0.1)] sm:col-span-2"
               >
-                <form onSubmit={saveEdit} className="space-y-3">
+                <Form onSubmit={saveEdit} className="space-y-3">
                   {draftFields(editDraft, setEditDraft)}
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="submit"
-                      disabled={busy}
-                      className="min-h-10 rounded-full bg-[#1b3a2f] px-4 text-sm font-semibold text-[#e8d5a3] disabled:opacity-65"
-                    >
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="submit" disabled={busy} className="btn btn-forest">
                       {busy ? "Saving…" : "Save"}
                     </button>
                     <button
                       type="button"
                       disabled={busy}
                       onClick={() => setEditingId(null)}
-                      className="min-h-10 rounded-full px-4 text-sm font-semibold text-[#3d5247]"
+                      className="btn btn-ghost"
                     >
                       Cancel
                     </button>
                   </div>
-                </form>
+                </Form>
               </li>
             ) : (
               <li
@@ -402,7 +377,7 @@ export default function RentersEditor({
       )}
 
       {openAdd ? (
-        <form
+        <Form
           onSubmit={addRenter}
           className="mt-6 space-y-3 rounded-2xl bg-[rgba(27,58,47,0.04)] p-4 ring-1 ring-[rgba(27,58,47,0.08)]"
         >
@@ -421,14 +396,10 @@ export default function RentersEditor({
             ) : null}
           </div>
           {draftFields(draft, setDraft)}
-          <button
-            type="submit"
-            disabled={busy}
-            className="min-h-11 w-full rounded-full bg-[#1b3a2f] px-4 text-sm font-semibold text-[#e8d5a3] disabled:opacity-65"
-          >
+          <button type="submit" disabled={busy} className="btn btn-forest w-full">
             {busy ? "Saving…" : "Add renter"}
           </button>
-        </form>
+        </Form>
       ) : (
         <button
           type="button"
@@ -443,12 +414,9 @@ export default function RentersEditor({
       )}
 
       {error ? (
-        <p
-          role="alert"
-          className="mt-4 rounded-2xl bg-[rgba(138,47,47,0.08)] px-4 py-3 text-sm text-[#8a2f2f]"
-        >
-          {error}
-        </p>
+        <div className="mt-4">
+          <FormAlert tone="error">{error}</FormAlert>
+        </div>
       ) : null}
       {message ? (
         <p

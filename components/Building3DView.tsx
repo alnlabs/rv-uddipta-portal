@@ -3731,7 +3731,7 @@ function LabelPicker({
         onClick={() => setOpen((next) => !next)}
         className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#14241c]/80 px-4 text-sm font-semibold text-[#e8d5a3] backdrop-blur-sm"
       >
-        Labels
+        Names
         <span className="rounded-full bg-[#c9a45c]/25 px-1.5 text-[11px] font-bold text-[#e8d5a3]">
           {activeCount}
         </span>
@@ -4119,6 +4119,8 @@ export default function Building3DView({
       >
         <div className="absolute top-3 left-3 z-10">{floorControl}</div>
         <div className="absolute top-3 right-3 z-10 flex flex-col items-end gap-2 sm:flex-row">
+          {IS_DEV ? (
+            <>
           <div className="relative">
             <button
               type="button"
@@ -4166,7 +4168,9 @@ export default function Building3DView({
           >
             Dimensions
           </button>
-          {measure ? (
+            </>
+          ) : null}
+          {IS_DEV && measure ? (
             <>
               <button
                 type="button"
@@ -4257,15 +4261,10 @@ export default function Building3DView({
           }}
         >
           <div className="flex flex-col gap-1.5 text-[#e8d5a3] md:flex-row md:items-center md:justify-between">
-            <p className="text-sm text-[#d0c090]">
-              {measure
-                ? "Dimensions. 0′ is the east–south corner. Across grows west. Down grows north."
-                : walkMode
-                  ? "At the gate · drag to look · WASD walk (walls block, stairs climb) · Esc releases mouse"
-                  : selected
-                    ? "Click empty space or × to close details"
-                    : "Click a flat for details · Drag to orbit"}
-              {fullScreen && !walkMode ? " · Esc to exit" : ""}
+            <p className="text-base text-[#e8d5a3]">
+              {selected
+                ? "Tap the empty ground, or ×, to close."
+                : "Drag to turn the building. Tap a home to see it."}
             </p>
           </div>
           <div className="mt-1.5">

@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { bookVisit, type VisitState } from "@/app/actions/visit";
+import { Form, FormAlert, TextAreaField, TextField } from "@/components/form-ui";
 
 const initial: VisitState = { ok: false, message: "" };
 
@@ -9,53 +10,37 @@ export function VisitRequestForm() {
   const [state, action, pending] = useActionState(bookVisit, initial);
 
   return (
-    <form action={action} className="mt-4 grid gap-3">
-      <label className="block text-sm font-semibold text-[#14241c]">
-        Your name
-        <input
+    <Form handled action={action} className="mt-4 grid gap-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <TextField
+          label="Your name"
           name="name"
           required
           minLength={2}
           autoComplete="name"
-          className="mt-1 min-h-12 w-full rounded-2xl border border-[rgba(27,58,47,0.14)] bg-white px-4 text-base font-normal"
         />
-      </label>
-      <label className="block text-sm font-semibold text-[#14241c]">
-        Phone
-        <input
+        <TextField
+          label="Phone"
           name="phone"
           type="tel"
           inputMode="numeric"
           required
           autoComplete="tel"
           placeholder="10-digit mobile"
-          className="mt-1 min-h-12 w-full rounded-2xl border border-[rgba(27,58,47,0.14)] bg-white px-4 text-base font-normal"
         />
-      </label>
-      <label className="block text-sm font-semibold text-[#14241c]">
-        When you want to visit
-        <textarea
-          name="note"
-          rows={3}
-          placeholder="A day and a time, if you have one"
-          className="mt-1 w-full rounded-2xl border border-[rgba(27,58,47,0.14)] bg-white px-4 py-3 text-base font-normal"
-        />
-      </label>
+      </div>
+      <TextAreaField
+        label="When you want to visit"
+        name="note"
+        rows={3}
+        placeholder="A day and a time, if you have one"
+      />
       {state.message ? (
-        <p
-          role={state.ok ? "status" : "alert"}
-          className={state.ok ? "text-sm font-semibold text-[#2f5a48]" : "text-sm text-[#8a2f2f]"}
-        >
-          {state.message}
-        </p>
+        <FormAlert tone={state.ok ? "ok" : "error"}>{state.message}</FormAlert>
       ) : null}
-      <button
-        type="submit"
-        disabled={pending}
-        className="min-h-12 w-fit rounded-full bg-[#c9a45c] px-5 text-base font-semibold text-[#14241c] disabled:opacity-60"
-      >
+      <button type="submit" disabled={pending} className="btn btn-gold w-full sm:w-fit">
         {pending ? "Sending…" : "Book a visit"}
       </button>
-    </form>
+    </Form>
   );
 }

@@ -2,6 +2,15 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { adminSaveFlat } from "@/app/actions/admin-manage";
 import { OwnerDangerZone } from "@/components/OwnerDangerZone";
+import {
+  Disclosure,
+  FieldGrid,
+  Form,
+  SelectField,
+  SwitchField,
+  TextField,
+  WorkspaceHeader,
+} from "@/components/form-ui";
 import { canManageAdmin } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
@@ -149,35 +158,9 @@ export default async function AdminOwnersPage({
     renterCount = renters.count ?? 0;
   }
 
-  return (
-    <section>
-      <h1 className="text-[clamp(2rem,4vw,2.75rem)] font-semibold tracking-tight text-[#14241c]">
-        Flats
-      </h1>
-      <p className="mt-2 text-lg text-[#3d5247]">Each apartment and its owner.</p>
-      <p className="mt-2 text-base text-[#14241c]">
-        {needsOwner.length === 0
-          ? "Every sold flat has an owner with email and phone."
-          : `${needsOwner.length} sold ${needsOwner.length === 1 ? "flat needs" : "flats need"} an owner with email and phone.`}
-      </p>
-
-      <form className="mt-4 flex gap-2">
-        <input
-          name="q"
-          defaultValue={params.q || ""}
-          placeholder="Search flat or owner"
-          className="min-h-11 flex-1 rounded-xl border border-[rgba(27,58,47,0.14)] px-3"
-        />
-        <button
-          type="submit"
-          className="min-h-11 rounded-full bg-[#1b3a2f] px-4 text-sm font-semibold text-[#e8d5a3]"
-        >
-          Search
-        </button>
-      </form>
-
-      <div className="mt-6 grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)]">
-        <ul className="max-h-[min(36rem,calc(100dvh-14rem))] overflow-auto rounded-2xl border border-[rgba(27,58,47,0.12)] bg-[#fffcf5]">
+  function renderFlatList() {
+    return (
+    <ul className="max-h-[min(28rem,50dvh)] overflow-auto rounded-2xl border border-[rgba(27,58,47,0.12)] bg-[#fffcf5] lg:max-h-[min(36rem,calc(100dvh-12rem))]">
           {rows.length === 0 ? (
             <li className="px-3 py-4 text-base text-[#3d5247]">
               {term ? "No flats match." : "Nothing to fix."}
@@ -207,136 +190,162 @@ export default async function AdminOwnersPage({
               </Link>
             </li>
           ))}
-        </ul>
+    </ul>
+    );
+  }
+
+  return (
+    <section>
+      <WorkspaceHeader
+        title="Flats"
+        lede={
+          needsOwner.length === 0
+            ? "Every sold flat has an owner with email and phone."
+            : `${needsOwner.length} sold ${needsOwner.length === 1 ? "flat needs" : "flats need"} an owner with email and phone.`
+        }
+      />
+
+      <form className="mt-4 flex gap-2">
+        <label className="min-w-0 flex-1">
+          <span className="sr-only">Search flats</span>
+          <input
+            name="q"
+            defaultValue={params.q || ""}
+            placeholder="Flat, owner, or email"
+            className="field-control"
+          />
+        </label>
+        <button type="submit" className="btn btn-forest shrink-0">
+          Search
+        </button>
+      </form>
+
+      {editing ? (
+        <Disclosure
+          title={`Change flat · ${editing.flat_number}`}
+          className="field-panel mt-3 lg:hidden"
+          titleClassName="text-[#14241c]"
+        >
+          {renderFlatList()}
+        </Disclosure>
+      ) : (
+        <div className="mt-4 lg:hidden">
+          {renderFlatList()}
+        </div>
+      )}
+
+      <div
+        className={`mt-4 min-w-0 items-start gap-4 lg:grid lg:grid-cols-[minmax(15rem,20rem)_minmax(0,1fr)] ${
+          editing ? "grid" : "hidden"
+        }`}
+      >
+        <div className="hidden lg:block">
+          {renderFlatList()}
+        </div>
 
         {editing ? (
-          <div className="min-w-0 max-w-xl rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.12)]">
-          <form
+          <div className="field-panel min-w-0">
+          <Form
+            key={editing.flat_number}
             action={adminSaveFlat}
-            className="space-y-3"
+            success="Flat saved."
+            className="grid gap-3"
           >
             <input type="hidden" name="flatNumber" value={editing.flat_number} />
-            <h3 className="text-xl font-semibold">{editing.flat_number}</h3>
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href={`/account/roles?flat=${editing.flat_number}&as=owner`}
-                className="min-h-11 rounded-full bg-[#1b3a2f] px-4 py-2 text-sm font-semibold text-[#e8d5a3]"
-              >
-                Add owner
-              </Link>
-              <Link
-                href={`/account/roles?flat=${editing.flat_number}&as=family`}
-                className="min-h-11 rounded-full px-4 py-2 text-sm font-semibold text-[#14241c] ring-1 ring-[rgba(27,58,47,0.16)]"
-              >
-                Add family
-              </Link>
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[rgba(27,58,47,0.08)] pb-3">
+              <div>
+                <h2 className="text-xl font-semibold tracking-tight">{editing.flat_number}</h2>
+                <p className="mt-1 text-sm text-[#3d5247]">
+                  Wing {editing.wing} · Floor {editing.floor} · {editing.type}
+                  {editing.user_id ? " · Linked Google account" : ""}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Link
+                  href={`/account/roles?flat=${editing.flat_number}&as=owner`}
+                  className="btn btn-forest"
+                >
+                  Add owner
+                </Link>
+                <Link
+                  href={`/account/roles?flat=${editing.flat_number}&as=family`}
+                  className="btn btn-ghost ring-1 ring-[rgba(27,58,47,0.16)]"
+                >
+                  Add family
+                </Link>
+              </div>
             </div>
-            <p className="text-sm text-[#3d5247]">
-              Wing {editing.wing} · Floor {editing.floor} · {editing.type}
-              {editing.user_id ? " · Linked Google account" : ""}
-            </p>
 
-            <label className="block text-sm font-semibold">
-              Owner name
-              <input
+            <FieldGrid>
+              <TextField
+                label="Owner name"
                 name="ownerName"
                 defaultValue={editing.owner_name || ""}
-                className="mt-1 min-h-11 w-full rounded-xl border border-[rgba(27,58,47,0.12)] px-3 font-normal"
+                className="sm:col-span-2"
               />
-            </label>
-            <label className="block text-sm font-semibold">
-              Phone
-              <input
-                name="phone"
-                defaultValue={editing.phone || ""}
-                className="mt-1 min-h-11 w-full rounded-xl border border-[rgba(27,58,47,0.12)] px-3 font-normal"
-              />
-            </label>
-            {useEmail ? (
-            <label className="block text-sm font-semibold">
-              Email
-              <input
-                name="email"
-                type="email"
-                defaultValue={editing.email || ""}
-                className="mt-1 min-h-11 w-full rounded-xl border border-[rgba(27,58,47,0.12)] px-3 font-normal"
-              />
-            </label>
-            ) : null}
-            <details className="rounded-xl bg-white/70 p-3">
-              <summary className="cursor-pointer text-base font-semibold">
-                More about this flat
-              </summary>
-              <div className="mt-3 space-y-3">
-            <label className="block text-sm font-semibold">
-              Sold or not
-              <select
-                name="saleStatus"
-                defaultValue={editing.sale_status || "unsold"}
-                className="mt-1 min-h-11 w-full rounded-xl border border-[rgba(27,58,47,0.12)] px-3 font-normal"
-              >
-                <option value="sold">Sold</option>
-                <option value="unsold">Not sold</option>
-              </select>
-            </label>
-            <label className="block text-sm font-semibold">
-              Who stays here
-              <select
-                name="occupancy"
-                defaultValue={editing.occupancy || "owner_stay"}
-                className="mt-1 min-h-11 w-full rounded-xl border border-[rgba(27,58,47,0.12)] px-3 font-normal"
-              >
-                <option value="owner_stay">The owner</option>
-                <option value="rented">A tenant</option>
-              </select>
-            </label>
-            <label className="block text-sm font-semibold">
-              Tenant name
-              <input
-                name="tenantName"
-                defaultValue={editing.tenant_name || ""}
-                className="mt-1 min-h-11 w-full rounded-xl border border-[rgba(27,58,47,0.12)] px-3 font-normal"
-              />
-            </label>
-            <label className="block text-sm font-semibold">
-              Tenant phone
-              <input
-                name="tenantPhone"
-                defaultValue={editing.tenant_phone || ""}
-                className="mt-1 min-h-11 w-full rounded-xl border border-[rgba(27,58,47,0.12)] px-3 font-normal"
-              />
-            </label>
-            <label className="flex min-h-11 items-center gap-2 text-base font-semibold">
-              <input
-                type="checkbox"
-                name="openForRent"
-                defaultChecked={Boolean(editing.open_for_rent)}
-              />
-              Open for rent
-            </label>
-            <label className="flex min-h-11 items-center gap-2 text-base font-semibold">
-              <input
-                type="checkbox"
-                name="openForResale"
-                defaultChecked={Boolean(editing.open_for_resale)}
-              />
-              Open for resale
-            </label>
+              <TextField label="Phone" name="phone" type="tel" inputMode="numeric" defaultValue={editing.phone || ""} />
+              {useEmail ? (
+                <TextField
+                  label="Email"
+                  name="email"
+                  type="email"
+                  defaultValue={editing.email || ""}
+                />
+              ) : null}
+            </FieldGrid>
+            <Disclosure
+              title="More about this flat"
+              className="rounded-2xl bg-white/70 p-3"
+              titleClassName="text-[#14241c]"
+            >
+              <div className="grid gap-3">
+                <FieldGrid>
+                  <SelectField
+                    label="Sold or not"
+                    name="saleStatus"
+                    defaultValue={editing.sale_status || "unsold"}
+                    options={[
+                      { value: "sold", label: "Sold" },
+                      { value: "unsold", label: "Not sold" },
+                    ]}
+                  />
+                  <SelectField
+                    label="Who stays here"
+                    name="occupancy"
+                    defaultValue={editing.occupancy || "owner_stay"}
+                    options={[
+                      { value: "owner_stay", label: "The owner" },
+                      { value: "rented", label: "A tenant" },
+                    ]}
+                  />
+                  <TextField
+                    label="Tenant name"
+                    name="tenantName"
+                    defaultValue={editing.tenant_name || ""}
+                  />
+                  <TextField
+                    label="Tenant phone"
+                    name="tenantPhone"
+                    defaultValue={editing.tenant_phone || ""}
+                  />
+                </FieldGrid>
+                <SwitchField
+                  label="Open for rent"
+                  name="openForRent"
+                  defaultChecked={Boolean(editing.open_for_rent)}
+                />
+                <SwitchField
+                  label="Open for resale"
+                  name="openForResale"
+                  defaultChecked={Boolean(editing.open_for_resale)}
+                />
               </div>
-            </details>
-            <div className="flex flex-wrap gap-2 pt-2">
-              <button
-                type="submit"
-                className="min-h-11 rounded-full bg-[#c9a45c] px-5 text-sm font-semibold text-[#14241c]"
-              >
-                Save
-              </button>
-            </div>
-          </form>
-          <details className="mt-4">
-            <summary className="cursor-pointer text-base font-semibold text-[#8a2f2f]">
-              Clear this flat
-            </summary>
+            </Disclosure>
+            <button type="submit" className="btn btn-gold w-full sm:w-fit">
+              Save
+            </button>
+          </Form>
+          <Disclosure title="Clear this flat" className="mt-4" titleClassName="text-[#8a2f2f]">
           <OwnerDangerZone
             flatNumber={editing.flat_number}
             hasLinkedUser={Boolean(editing.user_id)}
@@ -344,10 +353,10 @@ export default async function AdminOwnersPage({
             memberCount={memberCount}
             renterCount={renterCount}
           />
-          </details>
+          </Disclosure>
           </div>
         ) : (
-          <div className="rounded-2xl bg-[#fffcf5] p-6 ring-1 ring-[rgba(27,58,47,0.12)]">
+          <div className="field-panel hidden lg:block">
             <p className="text-lg font-semibold text-[#14241c]">Choose a flat</p>
             <p className="mt-1 text-base text-[#3d5247]">
               Pick one from the list. Search if you already know the number.

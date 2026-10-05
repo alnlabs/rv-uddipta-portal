@@ -4,6 +4,14 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { adminSaveProfile } from "@/app/actions/admin-manage";
 import { ProfileDangerZone } from "@/components/ProfileDangerZone";
+import {
+  Button,
+  Disclosure,
+  FieldGrid,
+  FormAlert,
+  SelectField,
+  TextField,
+} from "@/components/form-ui";
 import { accessSummary, ROLE_GUIDE } from "@/lib/roleLabels";
 
 export type RolePerson = {
@@ -22,7 +30,7 @@ export function RolePersonEditor({ person }: { readonly person: RolePerson }) {
   const [pending, startTransition] = useTransition();
 
   return (
-    <div className="rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.12)]">
+    <div className="field-panel">
       <p className="text-base font-semibold text-[#14241c]">
         {person.displayName || person.email || "Unnamed account"}
         {person.locked ? (
@@ -39,7 +47,7 @@ export function RolePersonEditor({ person }: { readonly person: RolePerson }) {
       </p>
 
       <form
-        className="mt-4 grid gap-3 sm:grid-cols-2"
+        className="mt-4"
         onSubmit={(event) => {
           event.preventDefault();
           setError(null);
@@ -57,65 +65,47 @@ export function RolePersonEditor({ person }: { readonly person: RolePerson }) {
         }}
       >
         <input type="hidden" name="userId" value={person.userId} />
-        <label className="block text-sm font-semibold text-[#14241c]">
-          Access
-          <select
+        <FieldGrid>
+          <SelectField
+            label="Access"
             name="role"
             defaultValue={person.role}
-            className="mt-1 min-h-11 w-full rounded-xl border border-[rgba(27,58,47,0.12)] px-3 text-sm font-normal text-[#14241c] disabled:opacity-60"
-          >
-            {ROLE_GUIDE.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="block text-sm font-semibold text-[#14241c]">
-          Flat
-          <input
+            options={ROLE_GUIDE.map((item) => ({ value: item.value, label: item.label }))}
+          />
+          <TextField
+            label="Flat"
             name="flatNumber"
             defaultValue={person.flatNumber || ""}
             placeholder="A101"
-            className="mt-1 min-h-11 w-full rounded-xl border border-[rgba(27,58,47,0.12)] px-3 text-base font-normal text-[#14241c]"
+            hint="Needed for owner or family."
           />
-          <span className="mt-1 block text-sm font-normal text-[#3d5247]">
-            Needed for owner or family.
-          </span>
-        </label>
-
-        <label className="block text-sm font-semibold text-[#14241c] sm:col-span-2">
-          Name shown in the portal
-          <input
+          <TextField
+            label="Name shown in the portal"
             name="displayName"
             defaultValue={person.displayName}
-            className="mt-1 min-h-11 w-full rounded-xl border border-[rgba(27,58,47,0.12)] px-3 text-sm font-normal text-[#14241c]"
+            className="sm:col-span-2"
           />
-        </label>
+        </FieldGrid>
 
         {error ? (
-          <p className="text-sm text-[#8a2f2f] sm:col-span-2">{error}</p>
+          <div className="mt-3">
+            <FormAlert tone="error">{error}</FormAlert>
+          </div>
         ) : null}
         {notice ? (
-          <p className="text-sm text-[#1b3a2f] sm:col-span-2">{notice}</p>
+          <div className="mt-3">
+            <FormAlert tone="ok">{notice}</FormAlert>
+          </div>
         ) : null}
 
-        <button
-          type="submit"
-          disabled={pending}
-          className="min-h-11 rounded-full bg-[#1b3a2f] px-5 text-sm font-semibold text-[#e8d5a3] disabled:opacity-60 sm:w-fit"
-        >
+        <Button tone="forest" disabled={pending} className="mt-4 w-full sm:w-auto">
           {pending ? "Saving…" : "Save changes"}
-        </button>
+        </Button>
       </form>
 
-      <details className="mt-4">
-        <summary className="cursor-pointer text-base font-semibold text-[#8a2f2f]">
-          Remove this person
-        </summary>
+      <Disclosure title="Remove this person" className="mt-4" titleClassName="text-[#8a2f2f]">
         <ProfileDangerZone userId={person.userId} email={person.email} />
-      </details>
+      </Disclosure>
     </div>
   );
 }

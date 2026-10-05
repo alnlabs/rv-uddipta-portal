@@ -9,6 +9,7 @@ import {
   sendNote,
   type UpdateState,
 } from "@/app/actions/updates";
+import { Form, FormAlert, TextAreaField } from "@/components/form-ui";
 
 const initial: UpdateState = { ok: false, message: "" };
 
@@ -43,74 +44,49 @@ function Composer({
     mode === "post" ? "Post" : mode === "request" ? "Send a request" : "Send feedback";
 
   return (
-    <form action={formAction} className="mt-4 grid gap-3">
+    <Form handled action={formAction} className="field-panel mt-4 grid gap-3">
       {mode !== "post" ? <input type="hidden" name="kind" value={mode} /> : null}
-      <label className="block text-sm font-semibold text-[#14241c]">
-        {mode === "post"
-          ? "What do you want to tell the building?"
-          : mode === "request"
-            ? "What do you need?"
-            : "What do you want the admin to know?"}
-        <textarea
-          name="body"
-          required
-          minLength={2}
-          rows={4}
-          className="mt-1 w-full rounded-2xl border border-[rgba(27,58,47,0.14)] bg-white px-4 py-3 text-base font-normal"
-        />
-      </label>
+      <TextAreaField
+        label={
+          mode === "post"
+            ? "What do you want to tell the building?"
+            : mode === "request"
+              ? "What do you need?"
+              : "What do you want the admin to know?"
+        }
+        name="body"
+        required
+        minLength={2}
+        rows={4}
+      />
       {state.message ? (
-        <p className={state.ok ? "text-sm font-semibold text-[#2f5a48]" : "text-sm text-[#8a2f2f]"}>
-          {state.message}
-        </p>
+        <FormAlert tone={state.ok ? "ok" : "error"}>{state.message}</FormAlert>
       ) : null}
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="submit"
-          disabled={pending}
-          className="min-h-12 rounded-full bg-[#c9a45c] px-5 text-base font-semibold text-[#14241c] disabled:opacity-60"
-        >
+      <div className="grid grid-cols-2 gap-2 sm:flex">
+        <button type="submit" disabled={pending} className="btn btn-gold">
           {pending ? "Sending…" : label}
         </button>
-        <button
-          type="button"
-          onClick={onDone}
-          className="min-h-12 rounded-full px-4 text-base font-semibold text-[#3d5247]"
-        >
+        <button type="button" onClick={onDone} className="btn btn-ghost">
           Cancel
         </button>
       </div>
-    </form>
+    </Form>
   );
 }
 
 function ReplyBox({ postId }: { postId: number }) {
   const [state, action, pending] = useActionState(replyToPost, initial);
   return (
-    <form action={action} className="mt-3 grid gap-2">
+    <Form handled action={action} className="mt-3 grid gap-2">
       <input type="hidden" name="postId" value={postId} />
-      <label className="block text-sm font-semibold text-[#14241c]">
-        Reply
-        <textarea
-          name="body"
-          required
-          rows={2}
-          className="mt-1 w-full rounded-2xl border border-[rgba(27,58,47,0.14)] bg-white px-3 py-2 text-base font-normal"
-        />
-      </label>
+      <TextAreaField label="Reply" name="body" required rows={2} />
       {state.message ? (
-        <p className={state.ok ? "text-sm text-[#2f5a48]" : "text-sm text-[#8a2f2f]"}>
-          {state.message}
-        </p>
+        <FormAlert tone={state.ok ? "ok" : "error"}>{state.message}</FormAlert>
       ) : null}
-      <button
-        type="submit"
-        disabled={pending}
-        className="min-h-11 w-fit rounded-full bg-[#1b3a2f] px-4 text-sm font-semibold text-[#e8d5a3] disabled:opacity-60"
-      >
+      <button type="submit" disabled={pending} className="btn btn-forest w-full sm:w-fit">
         {pending ? "Sending…" : "Reply"}
       </button>
-    </form>
+    </Form>
   );
 }
 
@@ -129,27 +105,33 @@ export function UpdatesBoard({
 
   return (
     <div>
-      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+      <div className="mt-5 grid grid-cols-3 gap-2">
         <button
           type="button"
-          onClick={() => setMode("post")}
-          className="min-h-16 rounded-2xl bg-[#1b3a2f] px-4 text-base font-semibold text-[#e8d5a3]"
+          onClick={() => setMode(mode === "post" ? null : "post")}
+          className={`min-h-12 rounded-2xl px-2 text-sm font-semibold ${
+            mode === "post" ? "bg-[#14241c] text-[#e8d5a3]" : "bg-[#1b3a2f] text-[#e8d5a3]"
+          }`}
         >
           Post
         </button>
         <button
           type="button"
-          onClick={() => setMode("request")}
-          className="min-h-16 rounded-2xl bg-[#c9a45c] px-4 text-base font-semibold text-[#14241c]"
+          onClick={() => setMode(mode === "request" ? null : "request")}
+          className={`min-h-12 rounded-2xl px-2 text-sm font-semibold ${
+            mode === "request" ? "bg-[#14241c] text-[#e8d5a3]" : "bg-[#c9a45c] text-[#14241c]"
+          }`}
         >
-          Send a request
+          Request
         </button>
         <button
           type="button"
-          onClick={() => setMode("feedback")}
-          className="min-h-16 rounded-2xl px-4 text-base font-semibold text-[#14241c] ring-1 ring-[rgba(27,58,47,0.2)]"
+          onClick={() => setMode(mode === "feedback" ? null : "feedback")}
+          className={`min-h-12 rounded-2xl px-2 text-sm font-semibold ring-1 ring-[rgba(27,58,47,0.2)] ${
+            mode === "feedback" ? "bg-[#1b3a2f] text-[#e8d5a3]" : "text-[#14241c]"
+          }`}
         >
-          Send feedback
+          Feedback
         </button>
       </div>
       {mode ? <Composer mode={mode} onDone={() => setMode(null)} /> : null}

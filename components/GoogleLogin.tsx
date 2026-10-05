@@ -28,16 +28,12 @@ export default function GoogleLogin({ error }: { error?: string }) {
   return (
     <section className="page-gutter grid max-w-[1100px] place-items-start py-6 md:min-h-[70vh] md:place-items-center md:py-12">
       <div className="w-full max-w-lg rounded-2xl border border-[rgba(27,58,47,0.14)] bg-[#fffcf5] p-4 shadow-xl md:p-6">
-        <p className="text-xs font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">
-          Owner access
-        </p>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[#14241c]">
-          Sign in with Google
+        <h1 className="text-[clamp(2rem,6vw,2.75rem)] font-semibold leading-tight tracking-tight text-[#14241c]">
+          Sign in
         </h1>
-        <p className="mt-3 text-[#3d5247]">
-          Sign in with Google, then request your flat. After an admin approves
-          you, the portal opens on the community feed. My flat shows your
-          apartment.
+        <p className="mt-3 text-lg leading-relaxed text-[#3d5247]">
+          Use the Google account for your flat. After an admin approves you,
+          you can see your home.
         </p>
         <Link href="/" className="mt-2 inline-block text-sm font-semibold text-[#2f5a48]">
           View public project details
@@ -49,12 +45,12 @@ export default function GoogleLogin({ error }: { error?: string }) {
           type="button"
           onClick={signIn}
           disabled={busy}
-          className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-3 rounded-full bg-[#1b3a2f] px-5 font-semibold text-[#e8d5a3] disabled:opacity-65"
+          className="mt-6 inline-flex min-h-16 w-full items-center justify-center gap-3 rounded-full bg-[#1b3a2f] px-5 text-xl font-semibold text-[#e8d5a3] disabled:opacity-65"
         >
           <span aria-hidden className="text-lg">
             G
           </span>
-          {busy ? "Opening Google…" : "Continue with Google"}
+          {busy ? "Opening Google…" : "Sign in with Google"}
         </button>
       </div>
     </section>

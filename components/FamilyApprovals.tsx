@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { approveFamilyAsOwner } from "@/app/actions/admin";
+import { FormAlert } from "@/components/form-ui";
 
 export function FamilyApprovals({
   requests,
@@ -15,15 +16,21 @@ export function FamilyApprovals({
   if (!waiting.length && !error) return null;
 
   return (
-    <section className="page-gutter max-w-3xl pt-6">
-      <h2 className="text-xl font-semibold text-[#14241c]">Family waiting for you</h2>
-      <p className="mt-1 text-[#3d5247]">Approve a family member for your flat.</p>
-      {error ? <p className="mt-2 text-sm text-[#8a2f2f]">{error}</p> : null}
+    <section className="page-gutter max-w-3xl pt-4">
+      <h2 className="text-xl font-semibold tracking-tight text-[#14241c]">
+        Family waiting for you
+      </h2>
+      <p className="mt-1 text-sm text-[#3d5247]">Approve a family member for your flat.</p>
+      {error ? (
+        <div className="mt-3">
+          <FormAlert tone="error">{error}</FormAlert>
+        </div>
+      ) : null}
       <ul className="mt-3 flex flex-col gap-2">
         {waiting.map((row) => (
           <li
             key={row.id}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.1)]"
+            className="field-panel flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
           >
             <p className="text-base text-[#14241c]">
               <strong>{row.owner_name}</strong>
@@ -40,7 +47,7 @@ export function FamilyApprovals({
                   else setDone((current) => [...current, row.id]);
                 });
               }}
-              className="min-h-12 rounded-full bg-[#c9a45c] px-4 text-base font-semibold text-[#14241c] disabled:opacity-60"
+              className="btn btn-gold w-full sm:w-auto"
             >
               Approve
             </button>

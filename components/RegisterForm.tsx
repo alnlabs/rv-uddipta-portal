@@ -1,9 +1,11 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
-import { registerOwner, type RegisterState } from "@/app/actions/register";
+import { useActionState, useEffect, useMemo, useState } from "react";
+import { lookupSavedOwner, registerOwner, type RegisterState } from "@/app/actions/register";
+import { ChoiceField, Form, FormAlert, TextField } from "@/components/form-ui";
 import { facingLabel, typeLabel } from "@/lib/flatDisplay";
 import { INVENTORY } from "@/lib/inventory";
+import { normalizePhone } from "@/lib/phone";
 
 const initial: RegisterState = { ok: false, message: "" };
 
@@ -15,13 +17,41 @@ export default function RegisterForm({
   email: string
 }) {
   const [state, action, pending] = useActionState(registerOwner, initial);
+  const [phone, setPhone] = useState("");
+  const [ownerName, setOwnerName] = useState(defaultName);
   const [flatNumber, setFlatNumber] = useState("");
+  const [savedNote, setSavedNote] = useState("");
+
+  useEffect(() => {
+    const normalized = normalizePhone(phone);
+    if (!normalized) return;
+    let cancelled = false;
+    void lookupSavedOwner(normalized).then((saved) => {
+      if (cancelled) return;
+      if (!saved) {
+        setSavedNote("");
+        return;
+      }
+      if (saved.ownerName) setOwnerName(saved.ownerName);
+      setFlatNumber(saved.flatNumber);
+      setSavedNote("This number is already saved. Name and flat are filled in.");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [phone]);
 
   const selected = useMemo(() => {
     const key = flatNumber.trim().toUpperCase();
     if (!key) return null;
     return INVENTORY.find((flat) => flat.flatNumber === key) ?? null;
   }, [flatNumber]);
+
+  const matches = useMemo(() => {
+    const key = flatNumber.trim().toUpperCase();
+    if (!key || selected) return [];
+    return INVENTORY.filter((flat) => flat.flatNumber.includes(key)).slice(0, 8);
+  }, [flatNumber, selected]);
 
   return (
     <section className="page-gutter grid max-w-[1100px] place-items-start py-6 md:min-h-[70vh] md:place-items-center md:py-12">
@@ -36,65 +66,74 @@ export default function RegisterForm({
           </p>
         </div>
 
-        <form action={action} className="flex flex-col gap-4 p-5 md:p-6">
-          <fieldset className="grid gap-2">
-            <legend className="text-sm font-semibold text-[#14241c]">I am</legend>
-            <label className="flex min-h-12 items-center gap-3 rounded-2xl border border-[rgba(27,58,47,0.12)] px-4 text-base">
-              <input type="radio" name="kind" value="owner" defaultChecked />
-              I am the owner
-            </label>
-            <label className="flex min-h-12 items-center gap-3 rounded-2xl border border-[rgba(27,58,47,0.12)] px-4 text-base">
-              <input type="radio" name="kind" value="family" />
-              I am family
-            </label>
-          </fieldset>
-          <label className="flex flex-col gap-2 text-sm font-semibold text-[#14241c]">
-            Mobile number
-            <input
+        <Form handled action={action} className="grid gap-4 p-4 sm:p-5">
+          <ChoiceField
+            legend="I am"
+            name="kind"
+            defaultValue="owner"
+            options={[
+              { value: "owner", label: "The owner" },
+              { value: "family", label: "Family" },
+            ]}
+          />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <TextField
+              label="Mobile"
               name="phone"
               type="tel"
               inputMode="numeric"
               autoComplete="tel"
               required
               placeholder="10-digit mobile"
-              className="min-h-12 rounded-2xl border border-[rgba(27,58,47,0.12)] bg-white/80 px-4 py-3 text-base font-normal outline-none focus:border-[#1b3a2f] focus:ring-2 focus:ring-[rgba(27,58,47,0.12)]"
+              value={phone}
+              onChange={(event) => {
+                setPhone(event.target.value);
+                if (!normalizePhone(event.target.value)) setSavedNote("");
+              }}
             />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-semibold text-[#14241c]">
-            Your name
-            <input
+            <TextField
+              label="Your name"
               name="ownerName"
               type="text"
-              defaultValue={defaultName}
+              value={ownerName}
+              onChange={(event) => setOwnerName(event.target.value)}
               required
               minLength={2}
               autoComplete="name"
-              className="min-h-12 rounded-2xl border border-[rgba(27,58,47,0.12)] bg-white/80 px-4 py-3 text-base font-normal outline-none focus:border-[#1b3a2f] focus:ring-2 focus:ring-[rgba(27,58,47,0.12)]"
             />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-semibold text-[#14241c]">
-            Flat number
-            <input
-              name="flatNumber"
-              type="text"
-              list="brochure-flats"
-              autoCapitalize="characters"
-              placeholder="A101 or B1004"
-              required
-              value={flatNumber}
-              onChange={(e) => setFlatNumber(e.target.value.toUpperCase())}
-              className="min-h-12 rounded-2xl border border-[rgba(27,58,47,0.12)] bg-white/80 px-4 py-3 text-base font-normal uppercase outline-none focus:border-[#1b3a2f] focus:ring-2 focus:ring-[rgba(27,58,47,0.12)]"
-            />
-            <datalist id="brochure-flats">
-              {INVENTORY.map((flat) => (
-                <option
-                  key={flat.flatNumber}
-                  value={flat.flatNumber}
-                  label={`${flat.flatNumber} · ${flat.type} ${flat.facing} · ${flat.areaSqft} sft`}
-                />
+          </div>
+          <TextField
+            label="Flat number"
+            name="flatNumber"
+            type="text"
+            autoCapitalize="characters"
+            placeholder="A101 or B1004"
+            required
+            value={flatNumber}
+            onChange={(e) => setFlatNumber(e.target.value.toUpperCase())}
+            className="[&_input]:uppercase"
+          />
+          {matches.length > 0 ? (
+            <ul className="grid gap-1.5" aria-label="Matching flats">
+              {matches.map((flat) => (
+                <li key={flat.flatNumber}>
+                  <button
+                    type="button"
+                    onClick={() => setFlatNumber(flat.flatNumber)}
+                    className="flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl bg-white px-3 text-left ring-1 ring-[rgba(27,58,47,0.12)]"
+                  >
+                    <span className="text-base font-semibold text-[#14241c]">
+                      {flat.flatNumber}
+                    </span>
+                    <span className="text-sm text-[#3d5247]">
+                      {typeLabel(flat.type)} · {facingLabel(flat.facing)} ·{" "}
+                      {flat.areaSqft.toLocaleString()} sft
+                    </span>
+                  </button>
+                </li>
               ))}
-            </datalist>
-          </label>
+            </ul>
+          ) : null}
 
           {selected ? (
             <div className="rounded-2xl bg-[rgba(27,58,47,0.05)] px-4 py-3 text-sm text-[#3d5247]">
@@ -105,33 +144,22 @@ export default function RegisterForm({
                 {selected.areaSqft.toLocaleString()} sft
               </p>
             </div>
-          ) : flatNumber.trim() ? (
+          ) : flatNumber.trim() && matches.length === 0 ? (
             <p className="text-sm text-[#9a5b3c]">
               No brochure flat matches that number yet.
             </p>
           ) : null}
 
+          {savedNote ? <FormAlert tone="ok">{savedNote}</FormAlert> : null}
+
           {state.message ? (
-            <p
-              role={state.ok ? "status" : "alert"}
-              className={`rounded-xl px-3 py-2 text-sm ${
-                state.ok
-                  ? "bg-[rgba(47,90,72,0.1)] font-semibold text-[#2f5a48]"
-                  : "bg-[rgba(138,47,47,0.08)] text-[#8a2f2f]"
-              }`}
-            >
-              {state.message}
-            </p>
+            <FormAlert tone={state.ok ? "ok" : "error"}>{state.message}</FormAlert>
           ) : null}
 
-          <button
-            className="min-h-12 rounded-full bg-[#c9a45c] px-5 py-3 font-semibold text-[#14241c] disabled:opacity-65"
-            type="submit"
-            disabled={pending}
-          >
+          <button className="btn btn-gold w-full" type="submit" disabled={pending}>
             {pending ? "Submitting…" : "Submit for approval"}
           </button>
-        </form>
+        </Form>
       </div>
     </section>
   );

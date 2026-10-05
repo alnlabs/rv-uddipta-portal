@@ -16,7 +16,7 @@ export function BuildingGuide({
   const launch = project.launchDate.trim();
 
   return (
-    <div className="page-gutter max-w-3xl py-8 md:py-12">
+    <div className="page-gutter max-w-3xl py-5 md:py-8">
       <p className="text-sm font-semibold text-[#7a5c22]">Building</p>
       <h1 className="mt-2 font-semibold tracking-tight text-[#14241c] text-[clamp(2.4rem,6vw,4rem)] leading-[0.95]">
         {project.name}
@@ -24,6 +24,14 @@ export function BuildingGuide({
       <p className="mt-3 max-w-xl text-lg text-[#3d5247]">
         About this apartment. Amenities, floor plan, and a view of the building.
       </p>
+      {!signedIn ? (
+        <Link
+          href="/login"
+          className="mt-6 flex min-h-16 w-full max-w-md items-center justify-center rounded-full bg-[#1b3a2f] px-6 text-xl font-semibold text-[#e8d5a3]"
+        >
+          Sign in
+        </Link>
+      ) : null}
 
       <section className="mt-8 border-t border-[rgba(27,58,47,0.1)] pt-6">
         <h2 className="text-2xl font-semibold text-[#14241c]">About the building</h2>
@@ -81,15 +89,15 @@ export function BuildingGuide({
       <section className="mt-10 grid gap-3 sm:grid-cols-2">
         <Link
           href="/community?view=floor"
-          className="flex min-h-24 items-center justify-center rounded-2xl bg-[#1b3a2f] px-4 text-center text-lg font-semibold text-[#e8d5a3]"
+          className="flex min-h-16 items-center justify-center rounded-2xl bg-[#1b3a2f] px-4 text-center text-lg font-semibold text-[#e8d5a3]"
         >
-          Floor plan
+          Floors
         </Link>
         <Link
           href="/community?view=building"
-          className="flex min-h-24 items-center justify-center rounded-2xl px-4 text-center text-lg font-semibold text-[#1b3a2f] ring-1 ring-[rgba(27,58,47,0.2)]"
+          className="flex min-h-16 items-center justify-center rounded-2xl px-4 text-center text-lg font-semibold text-[#1b3a2f] ring-1 ring-[rgba(27,58,47,0.2)]"
         >
-          See the building
+          The building
         </Link>
       </section>
 
@@ -100,13 +108,6 @@ export function BuildingGuide({
             Tell us your name and phone. We will call you.
           </p>
           <VisitRequestForm />
-          {!signedIn ? (
-            <p className="mt-4">
-              <Link href="/login" className="text-base font-semibold text-[#1b3a2f] underline">
-                Sign in with Google
-              </Link>
-            </p>
-          ) : null}
         </section>
       ) : null}
 

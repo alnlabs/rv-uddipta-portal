@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { createClient } from "@/utils/supabase/client";
+import { usePathname } from "next/navigation";
+import { useFormStatus } from "react-dom";
+import { signOut } from "@/app/actions/auth";
 
 type NavItem = {
   href: string
   label: string
+  short?: string
   match: (p: string) => boolean
   icon: "home" | "feed" | "floors" | "model" | "flat" | "admin" | "bell" | "people"
 };
@@ -90,79 +92,19 @@ function NavIcon({
   }
 }
 
-function PanelSwitcher({
-  inAdmin,
-  adminHref,
-  pendingApprovals,
-  compact = false,
-}: {
-  readonly inAdmin: boolean
-  readonly adminHref: string
-  readonly pendingApprovals: number
-  readonly compact?: boolean
-}) {
-  const pill = (active: boolean) =>
-    `relative flex min-h-10 flex-1 items-center justify-center rounded-xl text-xs font-semibold ${
-      active
-        ? "bg-[#c9a45c] text-[#14241c]"
-        : compact
-          ? "text-[#3d5247]"
-          : "text-[#cbb98a] hover:text-[#f7f2e6]"
-    }`;
-
-  return (
-    <div
-      className={`grid grid-cols-2 gap-1 rounded-2xl p-1 ${
-        compact ? "bg-[rgba(27,58,47,0.08)]" : "mb-5 bg-black/25"
-      }`}
-      role="tablist"
-      aria-label="Workspace"
-    >
-      <Link href="/feed" className={pill(!inAdmin)} role="tab" aria-selected={!inAdmin}>
-        Members
-      </Link>
-      <Link href={adminHref} className={pill(inAdmin)} role="tab" aria-selected={inAdmin}>
-        Admin
-        {pendingApprovals > 0 ? (
-          <span
-            className={`ml-1 grid min-w-4 place-items-center rounded-full px-1 text-[10px] font-bold ${
-              inAdmin ? "bg-[#14241c] text-[#e8d5a3]" : "bg-[#c9a45c] text-[#14241c]"
-            }`}
-          >
-            {pendingApprovals > 9 ? "9+" : pendingApprovals}
-          </span>
-        ) : null}
-      </Link>
-    </div>
-  );
-}
-
 function SidebarAccountCard({
-  inAdmin,
   isSuperAdmin,
+  canManage,
   accountLabel,
   flatNumber,
   pendingApproval,
 }: {
-  readonly inAdmin: boolean
   readonly isSuperAdmin: boolean
+  readonly canManage: boolean
   readonly accountLabel: string | null
   readonly flatNumber: string | null
   readonly pendingApproval: boolean
 }) {
-  if (inAdmin) {
-    return (
-      <div className="relative mb-5 overflow-hidden rounded-2xl bg-gradient-to-br from-[rgba(201,164,92,0.22)] to-[rgba(255,255,255,0.04)] px-3.5 py-3.5 ring-1 ring-[rgba(232,213,163,0.16)]">
-        <p className="text-sm font-semibold text-[#c9a45c]">
-          {isSuperAdmin ? "Cannot be removed" : "Admin"}
-        </p>
-        <p className="mt-1 truncate text-sm font-semibold">
-          {accountLabel || "Account"}
-        </p>
-      </div>
-    );
-  }
-
   if (flatNumber) {
     return (
       <Link
@@ -194,20 +136,16 @@ function SidebarAccountCard({
     );
   }
 
-  if (isSuperAdmin) {
+  if (isSuperAdmin || canManage) {
     return (
-      <Link
-        href="/account"
-        className="relative mb-5 block rounded-2xl bg-[rgba(255,255,255,0.04)] px-3.5 py-3.5 ring-1 ring-[rgba(232,213,163,0.16)]"
-      >
-        <p className="text-sm font-semibold text-[#c9a45c]">Admin</p>
+      <div className="relative mb-5 rounded-2xl bg-[rgba(255,255,255,0.04)] px-3.5 py-3.5 ring-1 ring-[rgba(232,213,163,0.16)]">
+        <p className="text-sm font-semibold text-[#c9a45c]">
+          {isSuperAdmin ? "Super admin" : "Admin"}
+        </p>
         <p className="mt-1 truncate text-sm font-semibold">
           {accountLabel || "Account"}
         </p>
-        <span className="mt-1 block text-xs font-semibold text-[#cbb98a]">
-          Back to admin
-        </span>
-      </Link>
+      </div>
     );
   }
 
@@ -218,6 +156,23 @@ function SidebarAccountCard({
     >
       Link your flat →
     </Link>
+  );
+}
+
+function SignOutSubmit({ className }: { readonly className: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <button type="submit" disabled={pending} className={className}>
+      {pending ? "Signing out…" : "Sign out"}
+    </button>
+  );
+}
+
+function SignOutForm({ className }: { readonly className: string }) {
+  return (
+    <form action={signOut}>
+      <SignOutSubmit className={className} />
+    </form>
   );
 }
 
@@ -245,18 +200,10 @@ export function OwnersShell({
   accountLabel?: string | null
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const canSwitch = isSuperAdmin || isAdmin || canEditBuilder;
   const inAdmin = pathname.startsWith("/account");
   const adminHref = isSuperAdmin || isAdmin ? "/account" : "/account/builder";
   const ownersHome = showPrivateCommunity ? "/feed" : "/";
-
-  async function logout() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.refresh();
-    router.push("/");
-  }
 
   const ownerNav: NavItem[] = [];
   if (!isSuperAdmin) {
@@ -295,6 +242,7 @@ export function OwnersShell({
       {
         href: "/account",
         label: "New members",
+        short: "Join",
         match: (p) => p === "/account",
         icon: "admin",
       },
@@ -307,6 +255,7 @@ export function OwnersShell({
       {
         href: "/account/roles",
         label: "Who can sign in",
+        short: "Access",
         match: (p) => p.startsWith("/account/roles"),
         icon: "people",
       },
@@ -324,99 +273,45 @@ export function OwnersShell({
     adminNav.push({
       href: "/account/builder",
       label: "Building details",
+      short: "Details",
       match: (p) => p.startsWith("/account/builder"),
       icon: "model",
     });
   }
 
-  const navItems = inAdmin ? adminNav : ownerNav;
   const homeItem = ownerNav.find((item) => item.href === "/");
   const communityItem = ownerNav.find((item) => item.href === "/community")!;
   const feedItem = ownerNav.find((item) => item.href === "/feed");
   const directoryItem = ownerNav.find((item) => item.href === "/members");
   const alertsItem = ownerNav.find((item) => item.href === "/notifications")!;
 
-  const mobileItems = inAdmin
-    ? adminNav
+  const mobileItems: NavItem[] = inAdmin
+    ? [
+        {
+          href: ownersHome,
+          label: "Updates",
+          match: (p) => p === ownersHome || p.startsWith("/feed"),
+          icon: "feed",
+        },
+        ...adminNav,
+      ]
     : [
         ...(homeItem ? [homeItem] : []),
         ...(feedItem ? [feedItem] : []),
         communityItem,
         ...(directoryItem ? [directoryItem] : []),
         alertsItem,
+        ...(canSwitch
+          ? [
+              {
+                href: adminHref,
+                label: "Manage",
+                match: (p: string) => p.startsWith("/account"),
+                icon: "admin" as const,
+              },
+            ]
+          : []),
       ];
-
-  if (inAdmin) {
-    return (
-      <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#efe8d8]">
-        <header className="shrink-0 border-b border-[rgba(27,58,47,0.12)] bg-[#fffcf5]">
-          <div
-            className="flex items-center justify-between gap-3 px-4 py-3"
-            style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
-          >
-            <div className="min-w-0">
-              <p className="text-lg font-semibold text-[#14241c]">Admin</p>
-              <p className="truncate text-base text-[#3d5247]">
-                {accountLabel || "Account"}
-                {isSuperAdmin ? " · This account stays. No flat." : ""}
-              </p>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <Link
-                href="/feed"
-                className="hidden min-h-11 items-center rounded-full px-3 text-base font-semibold text-[#1b3a2f] sm:inline-flex"
-              >
-                See members
-              </Link>
-              <button
-                type="button"
-                onClick={logout}
-                className="min-h-11 rounded-full bg-[#1b3a2f] px-4 text-base font-semibold text-[#e8d5a3]"
-              >
-                Sign out
-              </button>
-            </div>
-          </div>
-          <nav
-            className="flex gap-2 overflow-x-auto px-4 pb-3"
-            aria-label="Admin"
-          >
-            {adminNav.map((item) => {
-              const active = item.match(pathname);
-              const badgeCount = item.href === "/account" ? pendingApprovals : 0;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`inline-flex min-h-12 shrink-0 items-center gap-2 rounded-xl px-4 text-base font-semibold ${
-                    active
-                      ? "bg-[#1b3a2f] text-[#e8d5a3]"
-                      : "bg-[rgba(27,58,47,0.06)] text-[#14241c]"
-                  }`}
-                >
-                  {item.label}
-                  {badgeCount > 0 ? (
-                    <span className="grid min-w-5 place-items-center rounded-full bg-[#c9a45c] px-1.5 text-sm font-bold text-[#14241c]">
-                      {badgeCount > 9 ? "9+" : badgeCount}
-                    </span>
-                  ) : null}
-                </Link>
-              );
-            })}
-            <Link
-              href="/feed"
-              className="inline-flex min-h-12 shrink-0 items-center rounded-xl px-4 text-base font-semibold text-[#1b3a2f] sm:hidden"
-            >
-              See members
-            </Link>
-          </nav>
-        </header>
-        <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain">
-          {children}
-        </main>
-      </div>
-    );
-  }
 
   function sideLink(item: NavItem) {
     const active = item.match(pathname);
@@ -465,13 +360,7 @@ export function OwnersShell({
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden md:flex-row">
-      <aside
-        className={`relative z-30 hidden h-full w-[min(16.5rem,100%)] shrink-0 flex-col border-r px-3 py-4 text-[#f7f2e6] md:flex ${
-          inAdmin
-            ? "border-[rgba(201,164,92,0.16)] bg-[#0c1612]"
-            : "border-[rgba(232,213,163,0.1)] bg-[#102018]"
-        }`}
-      >
+      <aside className="relative z-30 hidden h-full w-[min(16.5rem,100%)] shrink-0 flex-col border-r border-[rgba(232,213,163,0.1)] bg-[#102018] px-3 py-4 text-[#f7f2e6] md:flex">
         <div
           className="pointer-events-none absolute inset-x-0 top-0 h-40 opacity-80"
           aria-hidden
@@ -481,7 +370,7 @@ export function OwnersShell({
           }}
         />
 
-        <Link href={inAdmin ? adminHref : ownersHome} className="relative mb-4 flex items-center gap-3 px-2">
+        <Link href={ownersHome} className="relative mb-4 flex items-center gap-3 px-2">
           <span className="grid h-10 w-10 place-items-center rounded-2xl bg-[#c9a45c] text-xs font-bold tracking-wide text-[#14241c] shadow-[0_8px_24px_rgba(0,0,0,0.25)]">
             RV
           </span>
@@ -490,52 +379,33 @@ export function OwnersShell({
               UDDIIPTA
             </strong>
             <span className="text-[0.68rem] font-medium tracking-[0.14em] text-[#b0a070] uppercase">
-              {inAdmin ? "Admin" : "Members"}
+              Owners
             </span>
           </span>
         </Link>
 
-        {canSwitch ? (
-          <PanelSwitcher
-            inAdmin={inAdmin}
-            adminHref={adminHref}
-            pendingApprovals={pendingApprovals}
-          />
-        ) : null}
-
         <SidebarAccountCard
-          inAdmin={inAdmin}
           isSuperAdmin={isSuperAdmin}
+          canManage={canSwitch}
           accountLabel={accountLabel}
           flatNumber={flatNumber}
           pendingApproval={pendingApproval}
         />
 
-        <nav className="relative flex min-h-0 flex-1 flex-col overflow-y-auto pr-0.5">
-          <div className="flex flex-col gap-0.5">{navItems.map(sideLink)}</div>
+        <nav className="relative flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-0.5">
+          <div className="flex flex-col gap-0.5">{ownerNav.map(sideLink)}</div>
+          {adminNav.length ? (
+            <div className="flex flex-col gap-0.5">
+              <p className="px-3 pb-1 text-[0.65rem] font-semibold tracking-[0.16em] text-[#8a7350] uppercase">
+                Manage
+              </p>
+              {adminNav.map(sideLink)}
+            </div>
+          ) : null}
         </nav>
 
         <div className="relative mt-2 border-t border-[rgba(232,213,163,0.1)] pt-3">
-          <button
-            type="button"
-            onClick={logout}
-            className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold text-[#b0a070] transition-colors hover:bg-white/6 hover:text-[#f7f2e6]"
-          >
-            <span className="grid size-8 place-items-center rounded-lg bg-white/5">
-              <svg
-                viewBox="0 0 24 24"
-                className="size-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.75"
-                aria-hidden
-              >
-                <path d="M10 7V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-2" />
-                <path d="M14 12H4m0 0 3-3m-3 3 3 3" />
-              </svg>
-            </span>
-            Sign out
-          </button>
+          <SignOutForm className="flex min-h-14 w-full items-center justify-center rounded-2xl bg-[#c9a45c] px-4 text-lg font-semibold text-[#14241c] disabled:opacity-60" />
         </div>
       </aside>
 
@@ -545,12 +415,12 @@ export function OwnersShell({
           style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}
         >
           <div className="flex items-center justify-between gap-3">
-            <Link href={inAdmin ? adminHref : ownersHome} className="flex items-center gap-2">
+            <Link href={ownersHome} className="flex items-center gap-2">
               <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#1b3a2f] text-[10px] font-bold text-[#e8d5a3]">
                 RV
               </span>
               <span className="text-sm font-semibold text-[#14241c]">
-                {inAdmin ? "Admin" : flatNumber ? flatNumber : "UDDIIPTA"}
+                {flatNumber || "UDDIIPTA"}
               </span>
             </Link>
             <div className="flex items-center gap-1">
@@ -570,25 +440,9 @@ export function OwnersShell({
                   </span>
                 ) : null}
               </Link>
-              <button
-                type="button"
-                onClick={logout}
-                className="min-h-10 rounded-full px-3 text-sm font-semibold text-[#3d5247]"
-              >
-                Sign out
-              </button>
+              <SignOutForm className="inline-flex min-h-12 items-center rounded-full bg-[#1b3a2f] px-4 text-base font-semibold text-[#e8d5a3] disabled:opacity-60" />
             </div>
           </div>
-          {canSwitch ? (
-            <div className="mt-2">
-              <PanelSwitcher
-                inAdmin={inAdmin}
-                adminHref={adminHref}
-                pendingApprovals={pendingApprovals}
-                compact
-              />
-            </div>
-          ) : null}
         </header>
 
         <main className="relative min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-0">
@@ -600,32 +454,25 @@ export function OwnersShell({
           style={{ paddingBottom: "max(0.55rem, env(safe-area-inset-bottom))" }}
           aria-label="Primary"
         >
-          <div className={`flex gap-1 px-2 py-2 ${inAdmin ? "overflow-x-auto" : ""}`}>
+          <div className="flex gap-1 overflow-x-auto px-2 py-2">
             {mobileItems.map((item) => {
               const active = item.match(pathname);
               const showBadge =
                 (item.href === "/notifications" && unreadNotifications > 0) ||
-                (item.href === "/account" && pendingApprovals > 0);
+                (item.href === "/account" && pendingApprovals > 0) ||
+                (item.href === adminHref && pendingApprovals > 0 && !inAdmin);
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`relative flex min-h-12 items-center justify-center rounded-xl font-semibold ${
-                    inAdmin
-                      ? "shrink-0 px-3 text-sm"
-                      : "min-w-0 flex-1 flex-col gap-0.5 px-1 text-[10px]"
-                  } ${active ? "bg-[#1b3a2f] text-[#e8d5a3]" : "text-[#3d5247]"}`}
+                  className={`relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-[10px] font-semibold ${
+                    active ? "bg-[#1b3a2f] text-[#e8d5a3]" : "text-[#3d5247]"
+                  }`}
                 >
-                  {inAdmin ? null : <NavIcon name={item.icon} className="size-4" />}
-                  <span className={inAdmin ? "whitespace-nowrap" : "truncate"}>
-                    {item.label}
-                  </span>
+                  <NavIcon name={item.icon} className="size-4" />
+                  <span className="max-w-full truncate">{item.short ?? item.label}</span>
                   {showBadge ? (
-                    <span
-                      className={`ml-1 size-2 rounded-full bg-[#c9a45c] ${
-                        inAdmin ? "" : "absolute top-1.5 right-[28%]"
-                      }`}
-                    />
+                    <span className="absolute top-1.5 right-[22%] size-2 rounded-full bg-[#c9a45c]" />
                   ) : null}
                 </Link>
               );

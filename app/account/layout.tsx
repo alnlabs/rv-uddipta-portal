@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { isSuperAdmin } from "@/lib/admin";
 import { canEditBuilder, canManageAdmin } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
 
@@ -14,7 +15,12 @@ export default async function AccountLayout({
   const builder = canEditBuilder(profile.role, user);
   if (!admin && !builder) redirect("/");
 
+  const workspace = user && isSuperAdmin(user) ? "Super admin" : admin ? "Admin" : "Builder";
+
   return (
-    <div className="page-gutter w-full py-5 md:py-8">{children}</div>
+    <div className="page-gutter w-full py-4 md:py-6">
+      <p className="eyebrow mb-3">{workspace}</p>
+      {children}
+    </div>
   );
 }

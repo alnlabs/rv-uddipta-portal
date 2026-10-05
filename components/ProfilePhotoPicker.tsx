@@ -89,16 +89,16 @@ export function ProfilePhotoPicker({
             type="button"
             disabled={busy}
             onClick={() => inputRef.current?.click()}
-            className="min-h-9 rounded-full bg-[#1b3a2f] px-3.5 text-xs font-semibold text-[#e8d5a3] disabled:opacity-65"
+            className="min-h-12 rounded-full bg-[#1b3a2f] px-4 text-sm font-semibold text-[#e8d5a3] disabled:opacity-65"
           >
-            {busy ? "Uploading…" : photoUrl ? "Change photo" : "Add photo"}
+            {busy ? "Uploading…" : "Choose photo"}
           </button>
           {photoUrl ? (
             <button
               type="button"
               disabled={busy}
               onClick={onRemove}
-              className="min-h-9 rounded-full px-3.5 text-xs font-semibold text-[#8a2f2f] disabled:opacity-65"
+              className="min-h-12 rounded-full px-4 text-sm font-semibold text-[#8a2f2f] disabled:opacity-65"
             >
               Remove
             </button>
