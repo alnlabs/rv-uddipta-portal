@@ -222,3 +222,43 @@ export function getLiftOpenings() {
 export function findWalkLift(id: string) {
   return WALK_LIFTS.find((l) => l.id === id) ?? null;
 }
+
+/** Lift the walker is standing in. Walls around it fade while this is set. */
+let occupiedLiftId: string | null = null;
+const occupiedListeners = new Set<() => void>();
+
+export function setOccupiedLift(id: string | null) {
+  if (occupiedLiftId === id) return;
+  occupiedLiftId = id;
+  occupiedListeners.forEach((listener) => listener());
+}
+
+export function getOccupiedLift() {
+  return occupiedLiftId;
+}
+
+export function subscribeOccupiedLift(listener: () => void) {
+  occupiedListeners.add(listener);
+  return () => {
+    occupiedListeners.delete(listener);
+  };
+}
+
+/** True when a wall's plan overlaps the occupied lift plus a lobby margin. */
+export function planNearOccupiedLift(
+  occupiedId: string | null,
+  x0: number,
+  z0: number,
+  x1: number,
+  z1: number,
+) {
+  const lift = occupiedId ? findWalkLift(occupiedId) : null;
+  if (!lift) return false;
+  const pad = ftToScene(4);
+  return (
+    x0 <= lift.x1 + pad &&
+    x1 >= lift.x0 - pad &&
+    z0 <= lift.z1 + pad &&
+    z1 >= lift.z0 - pad
+  );
+}

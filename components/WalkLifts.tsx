@@ -7,6 +7,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type CSSProperties,
   type Dispatch,
   type RefObject,
@@ -26,7 +27,10 @@ import {
   liftShaftSign,
   nearLiftCall,
   nearestLiftFloor,
+  getOccupiedLift,
   setLiftOpening,
+  setOccupiedLift,
+  subscribeOccupiedLift,
   type LiftPhase,
   type WalkLiftDef,
 } from "@/lib/liftRide";
@@ -133,26 +137,32 @@ function cabinPanelRotation(lift: WalkLiftDef): [number, number, number] {
 
 function exteriorCamPose(lift: WalkLiftDef, cabinY: number) {
   const c = liftCenter(lift);
-  const side = ftToScene(14);
-  const up = ftToScene(3.5);
+  const back = ftToScene(14);
+  const aside = ftToScene(4);
+  const eyeY = cabinY + LIFT_DOOR_H * 0.62;
   const intoLobby = -liftShaftSign(lift);
+  const look = new Vector3(c.x, eyeY, c.z);
   if (lift.doorAxis === "x") {
     return {
-      cam: new Vector3(
-        c.x + intoLobby * side,
-        cabinY + up,
-        c.z + side * 0.35,
-      ),
-      look: new Vector3(c.x, cabinY + LIFT_CABIN_H * 0.45, c.z),
+      cam: new Vector3(c.x + intoLobby * back, eyeY, c.z + aside),
+      look,
     };
   }
   return {
-    cam: new Vector3(
-      c.x + side * 0.35,
-      cabinY + up,
-      c.z + intoLobby * side,
-    ),
-    look: new Vector3(c.x, cabinY + LIFT_CABIN_H * 0.45, c.z),
+    cam: new Vector3(c.x + aside, eyeY, c.z + intoLobby * back),
+    look,
+  };
+}
+
+export function useOccupiedLiftId() {
+  return useSyncExternalStore(subscribeOccupiedLift, getOccupiedLift, () => null);
+}
+
+function ghostProps(seeThrough: boolean) {
+  return {
+    transparent: seeThrough,
+    opacity: seeThrough ? 0.34 : 1,
+    depthWrite: !seeThrough,
   };
 }
 
@@ -346,6 +356,7 @@ function LandingFacade({
   cabinHere,
   hallLit,
   showHallCall = true,
+  seeThrough = false,
   onCall,
 }: {
   lift: WalkLiftDef
@@ -354,6 +365,7 @@ function LandingFacade({
   cabinHere: boolean
   hallLit: boolean
   showHallCall?: boolean
+  seeThrough?: boolean
   onCall: () => void
 }) {
   const c = liftCenter(lift);
@@ -456,7 +468,12 @@ function LandingFacade({
                 : [lift.opening + 0.02, doorH + 0.02, 0.05]
             }
           />
-          <meshStandardMaterial color="#9aa39f" roughness={0.55} metalness={0.15} />
+          <meshStandardMaterial
+            color="#9aa39f"
+            roughness={0.55}
+            metalness={0.15}
+            {...ghostProps(seeThrough)}
+          />
         </mesh>
       ) : null}
 
@@ -475,7 +492,12 @@ function LandingFacade({
               : [jamb, doorH + sillH + 0.02, frameDepth]
           }
         />
-        <meshStandardMaterial color="#c9a45c" roughness={0.32} metalness={0.62} />
+        <meshStandardMaterial
+          color="#c9a45c"
+          roughness={0.32}
+          metalness={0.62}
+          {...ghostProps(seeThrough)}
+        />
       </mesh>
       <mesh
         position={
@@ -491,7 +513,12 @@ function LandingFacade({
               : [jamb, doorH + sillH + 0.02, frameDepth]
           }
         />
-        <meshStandardMaterial color="#c9a45c" roughness={0.32} metalness={0.62} />
+        <meshStandardMaterial
+          color="#c9a45c"
+          roughness={0.32}
+          metalness={0.62}
+          {...ghostProps(seeThrough)}
+        />
       </mesh>
 
       {/* Header bar */}
@@ -509,7 +536,12 @@ function LandingFacade({
               : [lift.opening + jamb * 2, headerH, frameDepth]
           }
         />
-        <meshStandardMaterial color="#c9a45c" roughness={0.32} metalness={0.62} />
+        <meshStandardMaterial
+          color="#c9a45c"
+          roughness={0.32}
+          metalness={0.62}
+          {...ghostProps(seeThrough)}
+        />
       </mesh>
 
       {/* Sill */}
@@ -533,11 +565,21 @@ function LandingFacade({
       {/* Sliding door leaves — brushed metal + window panels */}
       <mesh position={[...leafAPos]}>
         <boxGeometry args={[...leafSize]} />
-        <meshStandardMaterial color="#7a8480" roughness={0.28} metalness={0.72} />
+        <meshStandardMaterial
+          color="#7a8480"
+          roughness={0.28}
+          metalness={0.72}
+          {...ghostProps(seeThrough)}
+        />
       </mesh>
       <mesh position={[...leafBPos]}>
         <boxGeometry args={[...leafSize]} />
-        <meshStandardMaterial color="#7a8480" roughness={0.28} metalness={0.72} />
+        <meshStandardMaterial
+          color="#7a8480"
+          roughness={0.28}
+          metalness={0.72}
+          {...ghostProps(seeThrough)}
+        />
       </mesh>
       <mesh position={[...panelAPos]}>
         <boxGeometry args={[...panelInset]} />
@@ -546,7 +588,8 @@ function LandingFacade({
           roughness={0.15}
           metalness={0.35}
           transparent
-          opacity={0.55}
+          opacity={seeThrough ? 0.12 : 0.55}
+          depthWrite={!seeThrough}
         />
       </mesh>
       <mesh position={[...panelBPos]}>
@@ -556,7 +599,8 @@ function LandingFacade({
           roughness={0.15}
           metalness={0.35}
           transparent
-          opacity={0.55}
+          opacity={seeThrough ? 0.12 : 0.55}
+          depthWrite={!seeThrough}
         />
       </mesh>
       {/* Center seam highlight when closed */}
@@ -716,6 +760,8 @@ function LiftCabinVisual({
   onOpen: () => void
   onClose: () => void
 }>) {
+  const occupiedId = useOccupiedLiftId();
+  const seeThrough = occupiedId === lift.id;
   const c = liftCenter(lift);
   const shaft = liftShaftSign(lift);
   // Inset from shaft AABB so cabin panels never share a plane with the outer shell.
@@ -801,7 +847,12 @@ function LiftCabinVisual({
       {/* Ceiling + recessed light */}
       <mesh position={[c.x, cabinY + LIFT_CABIN_H - 0.015, c.z]}>
         <boxGeometry args={[Math.max(0.08, w), 0.03, Math.max(0.08, d)]} />
-        <meshStandardMaterial color="#d8ddd9" roughness={0.55} metalness={0.12} />
+        <meshStandardMaterial
+          color="#d8ddd9"
+          roughness={0.55}
+          metalness={0.12}
+          {...ghostProps(seeThrough)}
+        />
       </mesh>
       <mesh position={[c.x, cabinY + LIFT_CABIN_H - 0.028, c.z]}>
         <boxGeometry
@@ -836,7 +887,12 @@ function LiftCabinVisual({
               : [wallT, LIFT_CABIN_H - 0.06, Math.max(0.08, d)]
           }
         />
-        <meshStandardMaterial color="#6e7672" roughness={0.48} metalness={0.28} />
+        <meshStandardMaterial
+          color="#6e7672"
+          roughness={0.48}
+          metalness={0.28}
+          {...ghostProps(seeThrough)}
+        />
       </mesh>
       <mesh
         position={
@@ -872,22 +928,42 @@ function LiftCabinVisual({
         <>
           <mesh position={[x0 + wallT / 2, cabinMidY, c.z]}>
             <boxGeometry args={[wallT, LIFT_CABIN_H - 0.06, Math.max(0.08, d)]} />
-            <meshStandardMaterial color="#c4b8a4" roughness={0.62} metalness={0.08} />
+            <meshStandardMaterial
+              color="#c4b8a4"
+              roughness={0.62}
+              metalness={0.08}
+              {...ghostProps(seeThrough)}
+            />
           </mesh>
           <mesh position={[x1 - wallT / 2, cabinMidY, c.z]}>
             <boxGeometry args={[wallT, LIFT_CABIN_H - 0.06, Math.max(0.08, d)]} />
-            <meshStandardMaterial color="#c4b8a4" roughness={0.62} metalness={0.08} />
+            <meshStandardMaterial
+              color="#c4b8a4"
+              roughness={0.62}
+              metalness={0.08}
+              {...ghostProps(seeThrough)}
+            />
           </mesh>
         </>
       ) : (
         <>
           <mesh position={[c.x, cabinMidY, z0 + wallT / 2]}>
             <boxGeometry args={[Math.max(0.08, w), LIFT_CABIN_H - 0.06, wallT]} />
-            <meshStandardMaterial color="#c4b8a4" roughness={0.62} metalness={0.08} />
+            <meshStandardMaterial
+              color="#c4b8a4"
+              roughness={0.62}
+              metalness={0.08}
+              {...ghostProps(seeThrough)}
+            />
           </mesh>
           <mesh position={[c.x, cabinMidY, z1 - wallT / 2]}>
             <boxGeometry args={[Math.max(0.08, w), LIFT_CABIN_H - 0.06, wallT]} />
-            <meshStandardMaterial color="#c4b8a4" roughness={0.62} metalness={0.08} />
+            <meshStandardMaterial
+              color="#c4b8a4"
+              roughness={0.62}
+              metalness={0.08}
+              {...ghostProps(seeThrough)}
+            />
           </mesh>
         </>
       )}
@@ -903,7 +979,12 @@ function LiftCabinVisual({
             ]}
           >
             <boxGeometry args={[0.06, doorH + 0.04, 0.08]} />
-            <meshStandardMaterial color="#8a918d" roughness={0.45} metalness={0.4} />
+            <meshStandardMaterial
+              color="#8a918d"
+              roughness={0.45}
+              metalness={0.4}
+              {...ghostProps(seeThrough)}
+            />
           </mesh>
           <mesh
             position={[
@@ -913,7 +994,12 @@ function LiftCabinVisual({
             ]}
           >
             <boxGeometry args={[0.06, doorH + 0.04, 0.08]} />
-            <meshStandardMaterial color="#8a918d" roughness={0.45} metalness={0.4} />
+            <meshStandardMaterial
+              color="#8a918d"
+              roughness={0.45}
+              metalness={0.4}
+              {...ghostProps(seeThrough)}
+            />
           </mesh>
         </>
       ) : (
@@ -926,7 +1012,12 @@ function LiftCabinVisual({
             ]}
           >
             <boxGeometry args={[0.08, doorH + 0.04, 0.06]} />
-            <meshStandardMaterial color="#8a918d" roughness={0.45} metalness={0.4} />
+            <meshStandardMaterial
+              color="#8a918d"
+              roughness={0.45}
+              metalness={0.4}
+              {...ghostProps(seeThrough)}
+            />
           </mesh>
           <mesh
             position={[
@@ -936,7 +1027,12 @@ function LiftCabinVisual({
             ]}
           >
             <boxGeometry args={[0.08, doorH + 0.04, 0.06]} />
-            <meshStandardMaterial color="#8a918d" roughness={0.45} metalness={0.4} />
+            <meshStandardMaterial
+              color="#8a918d"
+              roughness={0.45}
+              metalness={0.4}
+              {...ghostProps(seeThrough)}
+            />
           </mesh>
         </>
       )}
@@ -951,6 +1047,7 @@ function LiftCabinVisual({
           polygonOffset
           polygonOffsetFactor={1}
           polygonOffsetUnits={1}
+          {...ghostProps(seeThrough)}
         />
       </mesh>
       <mesh position={[...leafB]}>
@@ -962,6 +1059,7 @@ function LiftCabinVisual({
           polygonOffset
           polygonOffsetFactor={1}
           polygonOffsetUnits={1}
+          {...ghostProps(seeThrough)}
         />
       </mesh>
 
@@ -1044,6 +1142,7 @@ function LiftCabinVisual({
           cabinHere={floor === cabinFloor}
           hallLit={hallLitFloor === floor}
           showHallCall
+          seeThrough={seeThrough}
           onCall={() => onHallCall(floor)}
         />
       ))}
@@ -1115,6 +1214,7 @@ export function WalkLifts({
     let holdRider = false;
     let cabinHold: LiftRideControl["cabinHold"] = null;
     let activeTravelId: string | null = null;
+    let occupiedId: string | null = null;
     let promptText: string | null = null;
     let showPanel: string | null = null;
     let hallNear: { liftId: string; floor: number } | null = null;
@@ -1245,6 +1345,7 @@ export function WalkLifts({
         insideLiftCabin(lift, player.x, player.z, player.y, ride.cabinY)
       ) {
         inCabin = true;
+        occupiedId = lift.id;
         cabinBounds = {
           x0: lift.x0 + 0.04,
           x1: lift.x1 - 0.04,
@@ -1275,18 +1376,21 @@ export function WalkLifts({
       cabinBounds,
     };
 
-    if (traveling && activeTravelId) {
-      const lift = WALK_LIFTS.find((l) => l.id === activeTravelId)!;
-      const ride = rides.current[activeTravelId];
+    const viewLiftId = occupiedId ?? activeTravelId;
+    setOccupiedLift(viewLiftId);
+
+    if (viewLiftId) {
+      const lift = WALK_LIFTS.find((l) => l.id === viewLiftId)!;
+      const ride = rides.current[viewLiftId];
       const pose = exteriorCamPose(lift, ride.cabinY);
+      camGoal.copy(pose.cam);
       if (!extCam.current) {
         camera.position.copy(pose.cam);
         extCam.current = true;
       } else {
-        camGoal.copy(pose.cam);
-        camera.position.x = MathUtils.damp(camera.position.x, camGoal.x, 4, dt);
-        camera.position.y = MathUtils.damp(camera.position.y, camGoal.y, 4, dt);
-        camera.position.z = MathUtils.damp(camera.position.z, camGoal.z, 4, dt);
+        camera.position.x = MathUtils.damp(camera.position.x, camGoal.x, 3.2, dt);
+        camera.position.y = MathUtils.damp(camera.position.y, camGoal.y, 3.2, dt);
+        camera.position.z = MathUtils.damp(camera.position.z, camGoal.z, 3.2, dt);
       }
       look.copy(pose.look);
       camera.lookAt(look);
@@ -1315,6 +1419,7 @@ export function WalkLifts({
   useEffect(() => {
     return () => {
       for (const lift of WALK_LIFTS) setLiftOpening(null, lift.id);
+      setOccupiedLift(null);
     };
   }, []);
 

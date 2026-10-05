@@ -9,6 +9,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type ComponentProps,
   type ErrorInfo,
   type ReactNode,
@@ -49,6 +50,11 @@ import { FlatTextFacts, FlatViews, toPlanInput } from "@/components/FlatViews";
 import { facingLabel, typeLabel } from "@/lib/flatDisplay";
 import { BUILDING } from "@/lib/building";
 import { getWalkFlatFloorHint, isWalkableFlat } from "@/lib/walkFlatInterior";
+import {
+  getOccupiedLift,
+  planNearOccupiedLift,
+  subscribeOccupiedLift,
+} from "@/lib/liftRide";
 import {
   BUILDING_CENTER,
   CAMERA_START,
@@ -1854,6 +1860,46 @@ function GroundLabels({
   );
 }
 
+function useOccupiedLiftId() {
+  return useSyncExternalStore(subscribeOccupiedLift, getOccupiedLift, () => null);
+}
+
+function WallFinish({
+  x0,
+  z0,
+  x1,
+  z1,
+  color = "#8d9391",
+  dimmed = false,
+}: {
+  x0: number
+  z0: number
+  x1: number
+  z1: number
+  color?: string
+  dimmed?: boolean
+}) {
+  const occupied = useOccupiedLiftId();
+  const ghost = planNearOccupiedLift(
+    occupied,
+    Math.min(x0, x1),
+    Math.min(z0, z1),
+    Math.max(x0, x1),
+    Math.max(z0, z1),
+  );
+  const fade = ghost || dimmed;
+  return (
+    <meshStandardMaterial
+      color={color}
+      transparent={fade}
+      opacity={ghost ? 0.34 : dimmed ? 0.22 : 1}
+      depthWrite={!fade}
+      roughness={0.88}
+      metalness={0.02}
+    />
+  );
+}
+
 function Corridors({ focusFloor }: { focusFloor: number }) {
   const geometry = useMemo(() => new BoxGeometry(1, 1, 1), []);
   useEffect(() => () => geometry.dispose(), [geometry]);
@@ -1894,13 +1940,13 @@ function Corridors({ focusFloor }: { focusFloor: number }) {
             renderOrder={dimmed ? 0 : 1}
             onClick={(event) => event.stopPropagation()}
           >
-            <meshStandardMaterial
+            <WallFinish
+              x0={wall.x - wall.size[0] / 2}
+              z0={wall.z - wall.size[1] / 2}
+              x1={wall.x + wall.size[0] / 2}
+              z1={wall.z + wall.size[1] / 2}
               color={dimmed ? "#6f7472" : "#8d9391"}
-              transparent={dimmed}
-              opacity={dimmed ? 0.22 : 1}
-              depthWrite={!dimmed}
-              roughness={0.88}
-              metalness={0.02}
+              dimmed={dimmed}
             />
           </mesh>
         ));
@@ -1942,6 +1988,11 @@ function LiftShaft({
   const wallT = 0.05;
   const stop = (event: { stopPropagation: () => void }) => event.stopPropagation();
   const along = (offset: number) => wallFace + doorDir * offset;
+  const occupied = useOccupiedLiftId();
+  const ghost = !!walkMode && planNearOccupiedLift(occupied, x0, z0, x1, z1);
+  const shell = ghost
+    ? { transparent: true, opacity: 0.34, depthWrite: false }
+    : { transparent: false, opacity: 1, depthWrite: true };
 
   return (
     <group>
@@ -1954,25 +2005,45 @@ function LiftShaft({
           {(doorAxis === "z" || Math.abs(x0 - wallFace) > Math.abs(x1 - wallFace)) && (
             <mesh position={[x0 - wallT / 2, top / 2, cz]} onClick={stop}>
               <boxGeometry args={[wallT, top, z1 - z0 + wallT * 2]} />
-              <meshStandardMaterial color="#6a7270" roughness={0.85} metalness={0.06} />
+              <meshStandardMaterial
+                color="#6a7270"
+                roughness={0.85}
+                metalness={0.06}
+                {...shell}
+              />
             </mesh>
           )}
           {(doorAxis === "z" || Math.abs(x1 - wallFace) > Math.abs(x0 - wallFace)) && (
             <mesh position={[x1 + wallT / 2, top / 2, cz]} onClick={stop}>
               <boxGeometry args={[wallT, top, z1 - z0 + wallT * 2]} />
-              <meshStandardMaterial color="#6a7270" roughness={0.85} metalness={0.06} />
+              <meshStandardMaterial
+                color="#6a7270"
+                roughness={0.85}
+                metalness={0.06}
+                {...shell}
+              />
             </mesh>
           )}
           {(doorAxis === "x" || Math.abs(z0 - wallFace) > Math.abs(z1 - wallFace)) && (
             <mesh position={[cx, top / 2, z0 - wallT / 2]} onClick={stop}>
               <boxGeometry args={[x1 - x0 + wallT * 2, top, wallT]} />
-              <meshStandardMaterial color="#6a7270" roughness={0.85} metalness={0.06} />
+              <meshStandardMaterial
+                color="#6a7270"
+                roughness={0.85}
+                metalness={0.06}
+                {...shell}
+              />
             </mesh>
           )}
           {(doorAxis === "x" || Math.abs(z1 - wallFace) > Math.abs(z0 - wallFace)) && (
             <mesh position={[cx, top / 2, z1 + wallT / 2]} onClick={stop}>
               <boxGeometry args={[x1 - x0 + wallT * 2, top, wallT]} />
-              <meshStandardMaterial color="#6a7270" roughness={0.85} metalness={0.06} />
+              <meshStandardMaterial
+                color="#6a7270"
+                roughness={0.85}
+                metalness={0.06}
+                {...shell}
+              />
             </mesh>
           )}
         </>
@@ -2510,7 +2581,7 @@ function UStairAtLift({
       onClick={stop}
     >
       <boxGeometry args={[xb - xa, wallTop - wallBase, zb - za]} />
-      <meshStandardMaterial color="#8d9391" roughness={0.88} metalness={0.02} />
+      <WallFinish x0={xa} z0={za} x1={xb} z1={zb} />
     </mesh>
   );
 
@@ -2718,7 +2789,7 @@ function StairAtB3({
         onClick={stop}
       >
         <boxGeometry args={[xb - xa, wallTop - wallBase, zb - za]} />
-        <meshStandardMaterial color="#8d9391" roughness={0.88} metalness={0.02} />
+        <WallFinish x0={xa} z0={za} x1={xb} z1={zb} />
       </mesh>
     );
   };
@@ -2902,7 +2973,7 @@ function StairAtAWing({
         onClick={stop}
       >
         <boxGeometry args={[xb - xa, wallTop - wallBase, zb - za]} />
-        <meshStandardMaterial color="#8d9391" roughness={0.88} metalness={0.02} />
+        <WallFinish x0={xa} z0={za} x1={xb} z1={zb} />
       </mesh>
     );
   };
@@ -3075,16 +3146,13 @@ function StairAtBN7({
         onClick={stop}
       >
         <boxGeometry args={[xb - xa, y1 - y0, zb - za]} />
-        <meshStandardMaterial
+        <WallFinish
+          x0={xa}
+          z0={za}
+          x1={xb}
+          z1={zb}
           color={dimmed && !walkMode ? "#8d8882" : "#8d9391"}
-          transparent={dimmed && !walkMode}
-          opacity={dimmed && !walkMode ? 0.28 : 1}
-          depthWrite={!(dimmed && !walkMode)}
-          roughness={0.88}
-          metalness={0.02}
-          polygonOffset
-          polygonOffsetFactor={1}
-          polygonOffsetUnits={1}
+          dimmed={dimmed && !walkMode}
         />
       </mesh>
     );

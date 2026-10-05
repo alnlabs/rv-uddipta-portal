@@ -526,8 +526,8 @@ function PlayerWalker({
         y: ride.cabinHold.y,
         z: ride.cabinHold.z,
       };
-      // Exterior camera owned by WalkLifts while traveling.
-      if (ride.traveling) {
+      // Exterior camera stays outside the cabin once the walker is in.
+      if (ride.inCabin || ride.traveling) {
         camReady.current = false;
         smoothHeadY.current = null;
         smoothCamDist.current = null;
@@ -594,30 +594,25 @@ function PlayerWalker({
     const px = root.current.position.x;
     const py = root.current.position.y;
     const pz = root.current.position.z;
-    const inCabin = ride.inCabin && !ride.traveling && !!ride.cabinBounds;
-    // Cabin: frame from head/shoulders (top half). Else: near crown for full-body orbit.
-    const rawHeadY = py + MAN_HEIGHT * (inCabin ? 0.88 : 0.82);
+    if (ride.inCabin) {
+      camReady.current = false;
+      smoothHeadY.current = null;
+      smoothCamDist.current = null;
+      return;
+    }
+
+    const rawHeadY = py + MAN_HEIGHT * 0.82;
     if (smoothHeadY.current == null) smoothHeadY.current = rawHeadY;
     smoothHeadY.current = MathUtils.damp(
       smoothHeadY.current,
       rawHeadY,
-      inCabin ? 10 : onStairs ? 7 : 14,
+      onStairs ? 7 : 14,
       dt,
     );
     const headY = smoothHeadY.current;
-    const maxDist = inCabin
-      ? MAN_HEIGHT * 0.95
-      : onStairs
-        ? ftToScene(8.5)
-        : ftToScene(11);
-    // Cabin: slight downward look from behind the head so the top half fills the frame.
-    // Corridor/stairs: higher pitch keeps more of the person in frame.
-    const pitchBias = inCabin ? 0.12 : onStairs ? 0.22 : 0.1;
-    const usePitch = MathUtils.clamp(
-      pitch.current + pitchBias,
-      inCabin ? -0.2 : -1.2,
-      inCabin ? 0.45 : 1.25,
-    );
+    const maxDist = onStairs ? ftToScene(8.5) : ftToScene(11);
+    const pitchBias = onStairs ? 0.22 : 0.1;
+    const usePitch = MathUtils.clamp(pitch.current + pitchBias, -1.2, 1.25);
     const cosP = Math.cos(usePitch);
     const sinP = Math.sin(usePitch);
     const fx = Math.sin(yaw.current);
@@ -626,62 +621,29 @@ function PlayerWalker({
     const ox = -fx * cosP;
     const oy = sinP;
     const oz = -fz * cosP;
-    // Inside the cabin: short orbit framing the top half. Outside: wall-aware distance.
-    const rawDist = inCabin
-      ? MAN_HEIGHT * 0.7
-      : walkCameraDistance(px, headY, pz, ox, oy, oz, maxDist);
+    const rawDist = walkCameraDistance(px, headY, pz, ox, oy, oz, maxDist);
     if (smoothCamDist.current == null) smoothCamDist.current = rawDist;
     smoothCamDist.current = MathUtils.damp(
       smoothCamDist.current,
       rawDist,
-      inCabin ? 8 : onStairs ? 5 : 10,
+      onStairs ? 5 : 10,
       dt,
     );
-    const dist = inCabin
-      ? MathUtils.clamp(smoothCamDist.current, MAN_HEIGHT * 0.5, MAN_HEIGHT * 0.88)
-      : smoothCamDist.current;
+    const dist = smoothCamDist.current;
     desiredCam.set(px + ox * dist, headY + oy * dist, pz + oz * dist);
-    if (inCabin && ride.cabinBounds) {
-      const b = ride.cabinBounds;
-      // Keep the camera inside the cabin volume (not outside looking in).
-      desiredCam.x = MathUtils.clamp(desiredCam.x, b.x0, b.x1);
-      desiredCam.z = MathUtils.clamp(desiredCam.z, b.z0, b.z1);
-      desiredCam.y = MathUtils.clamp(
-        desiredCam.y,
-        b.y0 + MAN_HEIGHT * 0.72,
-        b.y1 - 0.03,
-      );
-      // If clamping crushed the orbit, nudge back so head/shoulders stay framed.
-      const hx = desiredCam.x - px;
-      const hz = desiredCam.z - pz;
-      const hDist = Math.hypot(hx, hz);
-      const minHalf = MAN_HEIGHT * 0.42;
-      if (hDist < minHalf && hDist > 1e-4) {
-        const s = minHalf / hDist;
-        let nx = px + hx * s;
-        let nz = pz + hz * s;
-        nx = MathUtils.clamp(nx, b.x0, b.x1);
-        nz = MathUtils.clamp(nz, b.z0, b.z1);
-        desiredCam.x = nx;
-        desiredCam.z = nz;
-      }
-    } else {
-      // Keep camera above the walk surface; bias up when orbit is shortened.
-      const minCamY =
-        py + MAN_HEIGHT * 0.55 + (dist < maxDist * 0.75 ? ftToScene(0.6) : 0);
-      desiredCam.y = Math.max(desiredCam.y, minCamY);
-    }
+    const minCamY =
+      py + MAN_HEIGHT * 0.55 + (dist < maxDist * 0.75 ? ftToScene(0.6) : 0);
+    desiredCam.y = Math.max(desiredCam.y, minCamY);
     if (!camReady.current) {
       camera.position.copy(desiredCam);
       camReady.current = true;
     } else {
       // Soft follow — pull in quickly when entering the cabin.
       const pullIn =
-        inCabin ||
-        (!onStairs &&
-          Math.hypot(desiredCam.x - px, desiredCam.z - pz) + 0.05 <
-            Math.hypot(camera.position.x - px, camera.position.z - pz));
-      const follow = inCabin ? 16 : onStairs ? 7 : pullIn ? 14 : 11;
+        !onStairs &&
+        Math.hypot(desiredCam.x - px, desiredCam.z - pz) + 0.05 <
+          Math.hypot(camera.position.x - px, camera.position.z - pz);
+      const follow = onStairs ? 7 : pullIn ? 14 : 11;
       camera.position.x = MathUtils.damp(
         camera.position.x,
         desiredCam.x,
@@ -697,12 +659,11 @@ function PlayerWalker({
       camera.position.y = MathUtils.damp(
         camera.position.y,
         desiredCam.y,
-        inCabin ? 12 : onStairs ? 5 : follow,
+        onStairs ? 5 : follow,
         dt,
       );
     }
-    // Cabin: aim upper chest so the top half (head → waist) fills the frame.
-    lookTarget.set(px, py + MAN_HEIGHT * (inCabin ? 0.72 : 0.42), pz);
+    lookTarget.set(px, py + MAN_HEIGHT * 0.42, pz);
     camera.lookAt(lookTarget);
   });
 

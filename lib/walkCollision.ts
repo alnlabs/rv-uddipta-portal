@@ -25,9 +25,13 @@ import {
 } from "@/lib/layout3d";
 import {
   LIFT_CABIN_H,
+  LIFT_DOOR_H,
   WALK_LIFTS,
   findWalkLift,
   getLiftOpenings,
+  liftFloorY,
+  liftShaftSign,
+  nearestLiftFloor,
   type WalkLiftDef,
 } from "@/lib/liftRide";
 import {
@@ -261,56 +265,98 @@ function buildLiftSolids(): Solid[] {
   return [];
 }
 
-function liftDoorGap(lift: WalkLiftDef, x: number, z: number, doorOpen: number) {
-  if (doorOpen < 0.35) return false;
+function between(value: number, a: number, b: number) {
+  return value >= Math.min(a, b) && value <= Math.max(a, b);
+}
+
+/** Door slab across the opening. Closed leaves stay solid; an open gap is the only way in. */
+function closedDoorBlocks(
+  lift: WalkLiftDef,
+  x: number,
+  z: number,
+  y: number,
+  doorOpen: number,
+  cabinY: number,
+) {
+  const floor = nearestLiftFloor(y);
+  const base = liftFloorY(floor);
+  if (y < base - 0.08 || y > base + LIFT_DOOR_H + 0.22) return false;
+
+  const sign = liftShaftSign(lift);
+  const face = lift.wallFace;
+  const intoShaft = face + sign * (0.16 + WALK_RADIUS);
+  const intoLobby = face - sign * (0.05 + WALK_RADIUS * 0.35);
   const midX = (lift.x0 + lift.x1) / 2;
   const midZ = (lift.z0 + lift.z1) / 2;
-  const half = lift.opening * 0.5 * Math.min(1, doorOpen);
-  const throat = 0.28;
-  if (lift.doorAxis === "x") {
-    const doorX = lift.wallFace;
-    const shaft = doorX + lift.doorDir * throat;
-    const lobby = doorX - lift.doorDir * throat;
-    const lo = Math.min(shaft, lobby);
-    const hi = Math.max(shaft, lobby);
-    return x >= lo && x <= hi && z >= midZ - half && z <= midZ + half;
-  }
-  const doorZ = lift.wallFace;
-  const shaft = doorZ + lift.doorDir * throat;
-  const lobby = doorZ - lift.doorDir * throat;
-  const lo = Math.min(shaft, lobby);
-  const hi = Math.max(shaft, lobby);
-  return z >= lo && z <= hi && x >= midX - half && x <= midX + half;
+  const half = lift.opening * 0.5;
+  const onSlab =
+    lift.doorAxis === "x"
+      ? between(x, intoLobby, intoShaft) && between(z, midZ - half, midZ + half)
+      : between(z, intoLobby, intoShaft) && between(x, midX - half, midX + half);
+  if (!onSlab) return false;
+
+  const cabinHere = nearestLiftFloor(cabinY) === floor;
+  const openHere = cabinHere ? doorOpen : 0;
+  if (openHere < 0.55) return true;
+  const gap = half * Math.min(1, openHere);
+  const across = lift.doorAxis === "x" ? Math.abs(z - midZ) : Math.abs(x - midX);
+  return across > gap;
+}
+
+/** Skin around the shaft so the walker cannot pass the side, back, or jamb walls. */
+function shaftWallBlocks(lift: WalkLiftDef, x: number, z: number, y: number) {
+  if (y < -0.2 || y > buildingTopY() + 0.2) return false;
+  const lip = 0.07 + WALK_RADIUS;
+  const skin = 0.1 + WALK_RADIUS;
+  const inOuter =
+    x >= lift.x0 - lip &&
+    x <= lift.x1 + lip &&
+    z >= lift.z0 - lip &&
+    z <= lift.z1 + lip;
+  const inInner =
+    x > lift.x0 + skin &&
+    x < lift.x1 - skin &&
+    z > lift.z0 + skin &&
+    z < lift.z1 - skin;
+  if (!inOuter || inInner) return false;
+
+  const sign = liftShaftSign(lift);
+  const midX = (lift.x0 + lift.x1) / 2;
+  const midZ = (lift.z0 + lift.z1) / 2;
+  const half = lift.opening * 0.5;
+  const along =
+    lift.doorAxis === "x"
+      ? (x - lift.wallFace) * sign
+      : (z - lift.wallFace) * sign;
+  const across =
+    lift.doorAxis === "x" ? Math.abs(z - midZ) : Math.abs(x - midX);
+  if (across <= half && along > -0.12 && along < 0.5) return false;
+  return true;
 }
 
 function liftBlocksWalker(x: number, z: number, y: number) {
   const live = getLiftOpenings();
   for (const lift of WALK_LIFTS) {
-    const pad = SOLID_INSET;
     const opening = live.get(lift.id);
     const doorOpen = opening?.doorOpen ?? 0;
-    const inPlan =
-      x >= lift.x0 + pad &&
-      x <= lift.x1 - pad &&
-      z >= lift.z0 + pad &&
-      z <= lift.z1 - pad;
-
-    if (!inPlan) {
-      // Open door throat in the lobby is walkable.
-      if (liftDoorGap(lift, x, z, doorOpen)) return false;
-      continue;
-    }
-
     const cabinY = opening?.cabinY ?? 0;
     const rider = opening?.rider ?? false;
-    if (
-      (doorOpen > 0.45 || rider) &&
-      y >= cabinY - 0.05 &&
-      y <= cabinY + LIFT_CABIN_H
-    ) {
-      return false;
-    }
-    if (liftDoorGap(lift, x, z, doorOpen)) return false;
+
+    if (shaftWallBlocks(lift, x, z, y)) return true;
+    if (closedDoorBlocks(lift, x, z, y, doorOpen, cabinY)) return true;
+
+    const inCabin =
+      x >= lift.x0 + SOLID_INSET &&
+      x <= lift.x1 - SOLID_INSET &&
+      z >= lift.z0 + SOLID_INSET &&
+      z <= lift.z1 - SOLID_INSET;
+    if (!inCabin) continue;
+
+    const doorsOpenHere =
+      doorOpen > 0.72 &&
+      y >= cabinY - 0.08 &&
+      y <= cabinY + LIFT_CABIN_H;
+    if (doorsOpenHere || rider) continue;
     return true;
   }
   return false;
