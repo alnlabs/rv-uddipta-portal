@@ -11,8 +11,9 @@ import { AddQuestionForm } from "@/components/AddQuestionForm";
 import { CopyLink } from "@/components/CopyLink";
 import { EnquiryResults } from "@/components/EnquiryResults";
 import { EnquirySettingsFields } from "@/components/EnquirySettingsFields";
+import { FormBuilder } from "@/components/FormBuilder";
 import { Form, SwitchField, TextAreaField, TextField, WorkspaceHeader } from "@/components/form-ui";
-import { FIELD_KINDS } from "@/lib/enquiries";
+import { FIELD_KINDS, RESULT_VIEWS } from "@/lib/enquiries";
 import { loadAnswers, loadEnquiryById } from "@/lib/enquiryData";
 import { canManageAdmin } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
@@ -36,6 +37,13 @@ export default async function EnquiryAdminPage({
     answers.flatMap((answer) => Object.keys(answer.values).map(Number)),
   );
   const link = `https://uddipta.vercel.app/f/${enquiry.slug}`;
+  const audience = enquiry.visibility === "private" ? "Residents only" : "Anyone with the link";
+  const resultsLabel = RESULT_VIEWS.find((item) => item.value === enquiry.resultsView)?.label ?? "The community";
+  const settingsSummary = `${audience} · ${resultsLabel}${enquiry.closedAt ? " · Closed" : ""}`;
+  const questionWord = fields.length === 1 ? "question" : "questions";
+  const questionCount = fields.length
+    ? `${fields.length} ${questionWord}. The order here is the order on the form.`
+    : "No questions yet. Add the first one below.";
 
   return (
     <section className="w-full">
@@ -58,59 +66,59 @@ export default async function EnquiryAdminPage({
         <CopyLink href={link} previewHref={`/f/${enquiry.slug}`} />
       </div>
 
-      <div className="mt-6 grid items-start gap-6 xl:grid-cols-[minmax(22rem,32rem)_minmax(0,1fr)]">
-        <div className="grid gap-4">
-          <Form action={saveEnquirySettings} className="form-sheet grid gap-5">
-            <div>
-              <p className="eyebrow">Settings</p>
-              <h2 className="mt-1 text-2xl font-semibold tracking-tight text-[#14241c]">
-                About this form
-              </h2>
-            </div>
-            <input type="hidden" name="id" value={enquiry.id} />
-            <EnquirySettingsFields
-              defaults={{
-                title: enquiry.title,
-                note: enquiry.note,
-                visibility: enquiry.visibility,
-                askSignin: enquiry.askSignin,
-                resultsView: enquiry.resultsView,
-              }}
-            />
-            <button type="submit" className="btn btn-gold w-full sm:w-fit">
-              Save settings
-            </button>
-          </Form>
-
-          <form action={setEnquiryClosed.bind(null, enquiry.id, !enquiry.closedAt)} className="form-sheet">
-            <h2 className="text-lg font-semibold text-[#14241c]">
-              {enquiry.closedAt ? "Open it again" : "Stop new answers"}
-            </h2>
-            <p className="mt-2 text-sm leading-relaxed text-[#3d5247]">
-              {enquiry.closedAt
-                ? "Opening the form lets people send answers again."
-                : "Closing keeps every answer and stops new ones. You can open it later."}
-            </p>
-            <button type="submit" className="btn btn-ghost mt-4 ring-1 ring-[rgba(27,58,47,0.14)]">
-              {enquiry.closedAt ? "Open the form" : "Close the form"}
-            </button>
-          </form>
-        </div>
-
-        <div className="grid gap-4">
+      <FormBuilder
+        summary={settingsSummary}
+        heading={
           <div>
             <p className="eyebrow">Questions</p>
             <h2 className="mt-1 text-2xl font-semibold tracking-tight text-[#14241c]">
               What people answer
             </h2>
-            <p className="mt-2 text-sm leading-relaxed text-[#3d5247]">
-              {fields.length
-                ? `${fields.length} ${fields.length === 1 ? "question" : "questions"}. The order here is the order on the form.`
-                : "No questions yet. Add the first one below."}
-            </p>
+            <p className="mt-2 text-sm leading-relaxed text-[#3d5247]">{questionCount}</p>
           </div>
+        }
+        settings={
+          <>
+            <Form action={saveEnquirySettings} className="form-sheet grid gap-5">
+              <div>
+                <p className="eyebrow">Settings</p>
+                <h2 className="mt-1 text-2xl font-semibold tracking-tight text-[#14241c]">
+                  About this form
+                </h2>
+              </div>
+              <input type="hidden" name="id" value={enquiry.id} />
+              <EnquirySettingsFields
+                defaults={{
+                  title: enquiry.title,
+                  note: enquiry.note,
+                  visibility: enquiry.visibility,
+                  askSignin: enquiry.askSignin,
+                  resultsView: enquiry.resultsView,
+                }}
+              />
+              <button type="submit" className="btn btn-gold w-full sm:w-fit">
+                Save settings
+              </button>
+            </Form>
 
-          <ol className="grid gap-4 md:grid-cols-2">
+            <form action={setEnquiryClosed.bind(null, enquiry.id, !enquiry.closedAt)} className="form-sheet">
+              <h2 className="text-lg font-semibold text-[#14241c]">
+                {enquiry.closedAt ? "Open it again" : "Stop new answers"}
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-[#3d5247]">
+                {enquiry.closedAt
+                  ? "Opening the form lets people send answers again."
+                  : "Closing keeps every answer and stops new ones. You can open it later."}
+              </p>
+              <button type="submit" className="btn btn-ghost mt-4 ring-1 ring-[rgba(27,58,47,0.14)]">
+                {enquiry.closedAt ? "Open the form" : "Close the form"}
+              </button>
+            </form>
+          </>
+        }
+      >
+        <div className="grid gap-4">
+          <ol className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {fields.map((field, index) => (
               <li key={field.id} className="form-sheet">
                 <Form action={updateEnquiryField} className="grid gap-4">
@@ -187,7 +195,7 @@ export default async function EnquiryAdminPage({
 
           <AddQuestionForm enquiryId={enquiry.id} />
         </div>
-      </div>
+      </FormBuilder>
 
       <EnquiryResults fields={fields} answers={answers} />
     </section>
