@@ -100,6 +100,7 @@ import {
   STILT_STRUCTURE,
   buildingTopY,
   floorBaseY,
+  ftToScene,
   COMPOUND_FACE_MARKS,
   clubhouseMarkPosition,
   compoundExtraMarks,
@@ -194,15 +195,10 @@ export type ModelFlat = {
 };
 
 const TONE = {
-  grey: "#b0b5b2",
-  greyDim: "#6e7471",
-  floor: "#6d8fb8",
-  bought: "#2f9a66",
-  boughtDim: "#247a52",
   mine: "#c9a45c",
-  selected: "#e8d5a3",
-  hover: "#f4ead0",
   clubhouse: "#e2d4c2",
+  whiteBay: "#f6f3ee",
+  charcoalBay: "#2a2f33",
 } as const;
 
 const ZOOM_STEP = 1.03;
@@ -342,23 +338,6 @@ function SceneHtml({
   );
 }
 
-function colorFor(
-  flat: ModelFlat,
-  selected: boolean,
-  hovered: boolean,
-  dimmed: boolean,
-  mine: boolean,
-  onFocusFloor: boolean,
-) {
-  if (mine) return TONE.mine;
-  if (selected) return TONE.selected;
-  if (hovered) return TONE.hover;
-  if (isBought(flat)) return dimmed ? TONE.boughtDim : TONE.bought;
-  if (onFocusFloor) return TONE.floor;
-  if (dimmed) return TONE.greyDim;
-  return TONE.grey;
-}
-
 class CanvasErrorBoundary extends Component<
   { children: ReactNode; onReset: () => void },
   { error: string | null }
@@ -403,7 +382,6 @@ function UnitMesh({
   dimmed,
   mine,
   showMyLabel,
-  onFocusFloor,
   geometry,
   onSelect,
   walkMode,
@@ -414,101 +392,141 @@ function UnitMesh({
   dimmed: boolean
   mine: boolean
   showMyLabel: boolean
-  onFocusFloor: boolean
   geometry: BoxGeometry
   onSelect: (flat: ModelFlat) => void
   walkMode?: boolean
   walkFloor?: number
 }) {
-  const meshRef = useRef<Mesh>(null);
   const [hovered, setHovered] = useState(false);
   const position = unitPosition(flat.wing, flat.unit, flat.floor);
   const size = unitBoxSize(flat.wing, flat.unit);
   const bought = isBought(flat);
   const keepBright = selected || hovered || mine || bought;
   const faded = dimmed && !keepBright;
-  // Hollow CAD stacks on the walker's floor — WalkFlatInteriors draws them.
   const hideForWalkInterior =
     !!walkMode &&
     walkFloor != null &&
     flat.floor === walkFloor &&
     isWalkableFlat(flat.wing, flat.unit);
 
-  useFrame(({ clock }) => {
-    if (!meshRef.current || hideForWalkInterior) return;
-    const mat = meshRef.current.material as MeshStandardMaterial;
-    if (mine) {
-      const pulse = 0.28 + Math.sin(clock.elapsedTime * 2.2) * 0.14;
-      mat.emissive.set(TONE.mine);
-      mat.emissiveIntensity = pulse;
-      return;
-    }
-    if (bought && !selected && !hovered) {
-      mat.emissive.set(TONE.bought);
-      mat.emissiveIntensity = 0.16;
-    }
-  });
-
   if (hideForWalkInterior) return null;
+
+  const [w, h, d] = size;
+  const face = flat.facing.toUpperCase().startsWith("W") ? 1 : -1;
+  const charcoal = flat.unit % 2 === 1;
+  const plaster = charcoal ? "#2a2f33" : "#f6f3ee";
+  const opacity = faded ? 0.18 : dimmed && !keepBright ? 0.45 : 1;
+  const ghost = opacity < 1;
+  const band = mine ? "#c9a45c" : selected || hovered ? "#e8d5a3" : "#f7f4ef";
+  const balDepth = Math.min(ftToScene(4.5), w * 0.28);
+  const balSpan = d * 0.68;
+  const balThick = 0.045;
+  const railH = ftToScene(3.4);
+  const faceX = face * (w / 2);
+  const balX = faceX + face * (balDepth / 2);
+  const pick = faded
+    ? { raycast: () => null as never }
+    : {
+        onClick: (event: { stopPropagation: () => void }) => {
+          event.stopPropagation();
+          onSelect(flat);
+        },
+        onPointerOver: (event: { stopPropagation: () => void }) => {
+          event.stopPropagation();
+          setHovered(true);
+          document.body.style.cursor = "pointer";
+        },
+        onPointerOut: () => {
+          setHovered(false);
+          document.body.style.cursor = "auto";
+        },
+      };
+  const plasterMat = {
+    color: plaster,
+    transparent: ghost,
+    opacity,
+    depthWrite: !faded,
+    roughness: charcoal ? 0.72 : 0.58,
+    metalness: 0.04,
+    emissive: mine ? "#c9a45c" : selected ? "#e8d5a3" : "#000000",
+    emissiveIntensity: mine ? 0.14 : selected ? 0.16 : hovered ? 0.06 : 0,
+  };
+  const glassMat = {
+    color: "#c5e4ea",
+    transparent: true,
+    opacity: ghost ? opacity * 0.45 : 0.42,
+    depthWrite: false,
+    roughness: 0.08,
+    metalness: 0.2,
+  };
 
   return (
     <group position={position}>
-      <mesh
-        ref={meshRef}
-        scale={
-          mine
-            ? ([size[0] * 1.04, size[1] * 1.03, size[2] * 1.04] as [
-                number,
-                number,
-                number,
-              ])
-            : bought
-              ? ([size[0] * 1.015, size[1] * 1.01, size[2] * 1.015] as [
-                  number,
-                  number,
-                  number,
-                ])
-              : size
-        }
-        geometry={geometry}
-        renderOrder={faded ? 0 : mine ? 3 : bought ? 2 : 1}
-        raycast={faded ? () => null : undefined}
-        onClick={
-          faded
-            ? undefined
-            : (event) => {
-                event.stopPropagation();
-                onSelect(flat);
-              }
-        }
-        onPointerOver={
-          faded
-            ? undefined
-            : (event) => {
-                event.stopPropagation();
-                setHovered(true);
-                document.body.style.cursor = "pointer";
-              }
-        }
-        onPointerOut={
-          faded
-            ? undefined
-            : () => {
-                setHovered(false);
-                document.body.style.cursor = "auto";
-              }
-        }
-      >
+      <mesh geometry={geometry} scale={size} renderOrder={faded ? 0 : 1} {...pick}>
+        <meshStandardMaterial {...plasterMat} />
+      </mesh>
+      <mesh position={[0, -h / 2 + 0.03, 0]} {...pick}>
+        <boxGeometry args={[w + 0.07, 0.06, d + 0.07]} />
         <meshStandardMaterial
-          color={colorFor(flat, selected, hovered, dimmed, mine, onFocusFloor)}
-          transparent={dimmed && !keepBright}
-          opacity={faded ? 0.18 : dimmed && !keepBright ? 0.45 : 1}
+          color={band}
+          transparent={ghost}
+          opacity={opacity}
           depthWrite={!faded}
-          roughness={mine || bought ? 0.4 : dimmed && !keepBright ? 0.78 : 0.55}
-          metalness={mine ? 0.18 : bought ? 0.12 : dimmed && !keepBright ? 0.02 : 0.08}
-          emissive={mine ? TONE.mine : bought ? TONE.bought : "#000000"}
-          emissiveIntensity={mine ? 0.28 : bought ? 0.16 : 0}
+          roughness={0.5}
         />
+      </mesh>
+      <mesh position={[balX, -h / 2 + balThick / 2, 0]} {...pick}>
+        <boxGeometry args={[balDepth, balThick, balSpan]} />
+        <meshStandardMaterial
+          color="#f7f4ef"
+          transparent={ghost}
+          opacity={opacity}
+          depthWrite={!faded}
+          roughness={0.48}
+        />
+      </mesh>
+      <mesh position={[balX + face * (balDepth / 2 - 0.012), -h / 2 + balThick + railH / 2, 0]}>
+        <boxGeometry args={[0.018, railH, balSpan]} />
+        <meshStandardMaterial {...glassMat} />
+      </mesh>
+      {([-1, 1] as const).map((side) => (
+        <mesh
+          key={side}
+          position={[
+            balX,
+            -h / 2 + balThick + railH / 2,
+            side * (balSpan / 2 - 0.01),
+          ]}
+        >
+          <boxGeometry args={[balDepth, railH, 0.018]} />
+          <meshStandardMaterial {...glassMat} />
+        </mesh>
+      ))}
+      <mesh
+        position={[
+          balX + face * (balDepth / 2 - 0.02),
+          -h / 2 + balThick + railH - 0.015,
+          0,
+        ]}
+      >
+        <boxGeometry args={[0.03, 0.028, balSpan]} />
+        <meshStandardMaterial color="#d5dbe0" roughness={0.35} metalness={0.45} transparent={ghost} opacity={opacity} />
+      </mesh>
+      <mesh position={[faceX + face * 0.02, h * 0.04, 0]}>
+        <boxGeometry args={[0.03, h * 0.58, balSpan * 0.78]} />
+        <meshStandardMaterial color="#1c2126" roughness={0.4} metalness={0.15} transparent={ghost} opacity={opacity} />
+      </mesh>
+      <mesh position={[faceX + face * 0.038, h * 0.04, 0]}>
+        <boxGeometry args={[0.012, h * 0.5, balSpan * 0.68]} />
+        <meshStandardMaterial {...glassMat} />
+      </mesh>
+      <mesh position={[faceX + face * 0.03, h * 0.08, balSpan * 0.62]}>
+        <boxGeometry args={[0.03, h * 0.32, d * 0.16]} />
+        <meshStandardMaterial color="#1c2126" roughness={0.4} metalness={0.15} transparent={ghost} opacity={opacity} />
+      </mesh>
+      <mesh position={[faceX + face * 0.046, h * 0.08, balSpan * 0.62]}>
+        <boxGeometry args={[0.012, h * 0.24, d * 0.11]} />
+        <meshStandardMaterial {...glassMat} />
       </mesh>
       {mine && showMyLabel ? (
         <SceneHtml
@@ -3668,7 +3686,6 @@ function Scene({
             dimmed={focusFloor !== 0 && flat.floor !== focusFloor}
             mine={flat.flatNumber === myFlatNumber}
             showMyLabel={labels.myFlat}
-            onFocusFloor={focusFloor !== 0 && flat.floor === focusFloor}
             geometry={geometry}
             onSelect={onSelect}
             walkMode={walkMode}
@@ -3977,10 +3994,9 @@ function FloorPicker({
 
 function ColorKey({ invert = false }: { invert?: boolean }) {
   const items = [
-    { color: TONE.grey, label: "Unsold" },
-    { color: TONE.bought, label: "Sold" },
+    { color: TONE.whiteBay, label: "White bay" },
+    { color: TONE.charcoalBay, label: "Charcoal bay" },
     { color: TONE.mine, label: "Your flat" },
-    { color: TONE.floor, label: "Selected floor" },
     { color: TONE.clubhouse, label: "Clubhouse" },
   ];
   return (
