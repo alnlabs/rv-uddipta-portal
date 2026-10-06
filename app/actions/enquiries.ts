@@ -49,6 +49,56 @@ async function uniqueSlug(title: string) {
   return `${base}-${Date.now()}`;
 }
 
+function parseChoices(raw: string) {
+  return raw
+    .split(/\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 12);
+}
+
+function readQuestion(
+  labelRaw: FormDataEntryValue | null,
+  kindRaw: FormDataEntryValue | null,
+  choicesRaw: FormDataEntryValue | null,
+  required: boolean,
+) {
+  const label = String(labelRaw || "").trim().slice(0, 160);
+  const kind = fieldKind(String(kindRaw || ""));
+  if (label.length < 2 || !kind) {
+    return { ok: false as const, message: "Each question needs a label and a way to answer." };
+  }
+  const choices = kind === "choice" ? parseChoices(String(choicesRaw || "")) : [];
+  if (kind === "choice" && choices.length < 2) {
+    return { ok: false as const, message: "A choice question needs at least two options." };
+  }
+  return { ok: true as const, row: { kind, label, required, choices } };
+}
+
+function questionsFromCreate(formData: FormData) {
+  const ids = new Set<number>();
+  for (const key of formData.keys()) {
+    const match = /^q-(\d+)-label$/.exec(key);
+    if (match) ids.add(Number(match[1]));
+  }
+  const ordered = [...ids].sort((a, b) => a - b);
+  if (!ordered.length) {
+    return { ok: false as const, message: "Write at least one question. That is the form." };
+  }
+  const questions = [];
+  for (const id of ordered) {
+    const read = readQuestion(
+      formData.get(`q-${id}-label`),
+      formData.get(`q-${id}-kind`),
+      formData.get(`q-${id}-choices`),
+      formData.get(`q-${id}-required`) === "on",
+    );
+    if (!read.ok) return read;
+    questions.push(read.row);
+  }
+  return { ok: true as const, questions };
+}
+
 export async function createEnquiry(
   _prev: EnquiryState,
   formData: FormData,
@@ -57,6 +107,8 @@ export async function createEnquiry(
   if (!user) return { ok: false, message: "Only an admin can create a form." };
   const title = cleanTitle(formData.get("title"));
   if (title.length < 2) return { ok: false, message: "Give the form a title." };
+  const drafted = questionsFromCreate(formData);
+  if (!drafted.ok) return { ok: false, message: drafted.message };
   const note = String(formData.get("note") || "").trim().slice(0, 500);
   const slug = await uniqueSlug(title);
   const admin = createAdminClient();
@@ -74,8 +126,23 @@ export async function createEnquiry(
     .select("id")
     .single();
   if (error || !data) return { ok: false, message: "Could not create that form." };
+  const { error: fieldError } = await admin.from("enquiry_fields").insert(
+    drafted.questions.map((question, index) => ({
+      enquiry_id: data.id,
+      sort_order: index + 1,
+      kind: question.kind,
+      label: question.label,
+      required: question.required,
+      choices: question.choices,
+    })),
+  );
+  if (fieldError) {
+    await admin.from("enquiries").delete().eq("id", data.id);
+    return { ok: false, message: "Could not create that form." };
+  }
   revalidatePath("/account/forms");
   revalidatePath("/forms");
+  revalidatePath(`/f/${slug}`);
   redirect(`/account/forms/${data.id}`);
 }
 
@@ -121,27 +188,19 @@ export async function setEnquiryClosed(id: number, closed: boolean) {
   if (data?.slug) revalidatePath(`/f/${data.slug}`);
 }
 
-function parseChoices(raw: string) {
-  return raw
-    .split(/\n|,/)
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .slice(0, 12);
-}
-
 export async function addEnquiryField(formData: FormData): Promise<EnquiryState> {
   const user = await requireAdmin();
   if (!user) return { ok: false, message: "Only an admin can add a question." };
   const enquiryId = Number(formData.get("enquiryId"));
-  const label = String(formData.get("label") || "").trim().slice(0, 160);
-  const kind = fieldKind(String(formData.get("kind") || ""));
-  if (!enquiryId || label.length < 2 || !kind) {
-    return { ok: false, message: "Add a label and a type." };
-  }
-  const choices = kind === "choice" ? parseChoices(String(formData.get("choices") || "")) : [];
-  if (kind === "choice" && choices.length < 2) {
-    return { ok: false, message: "A choice question needs at least two options." };
-  }
+  if (!enquiryId) return { ok: false, message: "Add a label and a type." };
+  const read = readQuestion(
+    formData.get("label"),
+    formData.get("kind"),
+    formData.get("choices"),
+    formData.get("required") === "on",
+  );
+  if (!read.ok) return { ok: false, message: read.message };
+  const { label, kind, choices, required } = read.row;
   const admin = createAdminClient();
   const { data: last } = await admin
     .from("enquiry_fields")
@@ -155,7 +214,7 @@ export async function addEnquiryField(formData: FormData): Promise<EnquiryState>
     sort_order: (last?.sort_order ?? 0) + 1,
     kind,
     label,
-    required: formData.get("required") === "on",
+    required,
     choices,
   });
   if (error) return { ok: false, message: "Could not add that question." };
@@ -217,6 +276,11 @@ export async function deleteEnquiryField(enquiryId: number, fieldId: number) {
     .select("field_id", { count: "exact", head: true })
     .eq("field_id", fieldId);
   if (count) return;
+  const { count: fieldCount } = await admin
+    .from("enquiry_fields")
+    .select("id", { count: "exact", head: true })
+    .eq("enquiry_id", enquiryId);
+  if ((fieldCount ?? 0) <= 1) return;
   await admin.from("enquiry_fields").delete().eq("id", fieldId).eq("enquiry_id", enquiryId);
   const { data: enquiry } = await admin
     .from("enquiries")

@@ -181,13 +181,19 @@ export default async function EnquiryAdminPage({
                     <p className="text-sm leading-relaxed text-[#3d5247]">
                       This question stays, because people have already answered it.
                     </p>
-                  ) : (
+                  ) : null}
+                  {!answeredFieldIds.has(field.id) && fields.length === 1 ? (
+                    <p className="text-sm leading-relaxed text-[#3d5247]">
+                      This question stays. A form is the questions people answer.
+                    </p>
+                  ) : null}
+                  {!answeredFieldIds.has(field.id) && fields.length > 1 ? (
                     <form action={deleteEnquiryField.bind(null, enquiry.id, field.id)}>
                       <button type="submit" className="btn btn-danger">
                         Remove
                       </button>
                     </form>
-                  )}
+                  ) : null}
                 </div>
               </li>
             ))}
