@@ -24,7 +24,27 @@ type FieldFrame = {
   hint?: string
   error?: string
   className?: string
+  tone?: "meta" | "question"
 };
+
+function FieldLabel({
+  id,
+  label,
+  tone = "meta",
+  required,
+}: {
+  readonly id?: string
+  readonly label: string
+  readonly tone?: "meta" | "question"
+  readonly required?: boolean
+}) {
+  return (
+    <span id={id} className={tone === "question" ? "field-label-question" : "field-label"}>
+      {label}
+      {required && tone === "question" ? <span className="field-required">Required</span> : null}
+    </span>
+  );
+}
 
 const FieldErrorContext = createContext<{
   errors: Record<string, string>
@@ -118,6 +138,8 @@ export function TextField({
   className = "",
   name,
   onChange,
+  tone = "meta",
+  required,
   ...props
 }: FieldFrame & InputHTMLAttributes<HTMLInputElement>) {
   const { clear } = useContext(FieldErrorContext);
@@ -125,8 +147,8 @@ export function TextField({
   const message = error || formError;
   const errorId = useId();
   return (
-    <label className={`flex min-w-0 flex-col gap-1.5 ${className}`}>
-      <span className="field-label">{label}</span>
+    <label className={`flex min-w-0 flex-col gap-2 ${className}`}>
+      <FieldLabel label={label} tone={tone} required={required} />
       <input
         name={name}
         data-label={label}
@@ -134,6 +156,7 @@ export function TextField({
         aria-invalid={message ? true : undefined}
         aria-describedby={message ? errorId : undefined}
         className={`field-control${message ? " field-control-bad" : ""}`}
+        required={required}
         onChange={(event) => {
           if (name) clear(name);
           onChange?.(event);
@@ -148,6 +171,7 @@ export function TextField({
 export type SelectOption = {
   value: string
   label: string
+  hint?: string
 };
 
 export function SelectField({
@@ -163,6 +187,7 @@ export function SelectField({
   disabled,
   required,
   error,
+  tone = "meta",
 }: FieldFrame & {
   readonly name?: string
   readonly options: readonly SelectOption[]
@@ -196,10 +221,8 @@ export function SelectField({
   }
 
   return (
-    <div ref={rootRef} className={`flex min-w-0 flex-col gap-1.5 ${open ? "relative z-30" : ""} ${className}`}>
-      <span className="field-label" id={`${listId}-label`}>
-        {label}
-      </span>
+    <div ref={rootRef} className={`flex min-w-0 flex-col gap-2 ${open ? "relative z-30" : ""} ${className}`}>
+      <FieldLabel id={`${listId}-label`} label={label} tone={tone} required={required} />
       {name ? (
         <input
           type="hidden"
@@ -274,6 +297,7 @@ export function DateField({
   disabled,
   required,
   after,
+  tone = "meta",
 }: FieldFrame & {
   readonly name?: string
   readonly value?: string
@@ -325,10 +349,8 @@ export function DateField({
   const today = todayParts();
 
   return (
-    <div ref={rootRef} className={`flex min-w-0 flex-col gap-1.5 ${open ? "relative z-30" : ""} ${className}`}>
-      <span className="field-label" id={labelId}>
-        {label}
-      </span>
+    <div ref={rootRef} className={`flex min-w-0 flex-col gap-2 ${open ? "relative z-30" : ""} ${className}`}>
+      <FieldLabel id={labelId} label={label} tone={tone} required={required} />
       {name ? (
         <input
           type="hidden"
@@ -575,6 +597,8 @@ export function TextAreaField({
   className = "",
   name,
   onChange,
+  tone = "meta",
+  required,
   ...props
 }: FieldFrame & TextareaHTMLAttributes<HTMLTextAreaElement>) {
   const { clear } = useContext(FieldErrorContext);
@@ -582,8 +606,8 @@ export function TextAreaField({
   const message = error || formError;
   const errorId = useId();
   return (
-    <label className={`flex min-w-0 flex-col gap-1.5 ${className}`}>
-      <span className="field-label">{label}</span>
+    <label className={`flex min-w-0 flex-col gap-2 ${className}`}>
+      <FieldLabel label={label} tone={tone} required={required} />
       <textarea
         name={name}
         data-label={label}
@@ -591,6 +615,7 @@ export function TextAreaField({
         aria-invalid={message ? true : undefined}
         aria-describedby={message ? errorId : undefined}
         className={`field-control${message ? " field-control-bad" : ""}`}
+        required={required}
         onChange={(event) => {
           if (name) clear(name);
           onChange?.(event);
@@ -609,35 +634,68 @@ export function ChoiceField({
   value,
   defaultValue,
   onChange,
+  layout = "grid",
+  required = false,
+  tone = "meta",
 }: {
   readonly legend?: string
   readonly name: string
-  readonly options: readonly { value: string; label: string }[]
+  readonly options: readonly { value: string; label: string; hint?: string }[]
   readonly value?: string
   readonly defaultValue?: string
   readonly onChange?: (next: string) => void
+  readonly layout?: "grid" | "stack"
+  readonly required?: boolean
+  readonly tone?: "meta" | "question"
 }) {
+  const { clear } = useContext(FieldErrorContext);
+  const message = useFieldError(name);
+  const errorId = useId();
   const controlled = value !== undefined;
   return (
     <fieldset>
-      {legend ? <legend className="field-label mb-2">{legend}</legend> : null}
-      <div className="grid grid-cols-2 gap-2">
+      {legend ? (
+        <legend className="mb-2">
+          <FieldLabel label={legend} tone={tone} required={required} />
+        </legend>
+      ) : null}
+      <div className={layout === "stack" ? "choice-stack grid gap-2" : "grid grid-cols-2 gap-2"}>
         {options.map((option) => (
           <label key={option.value} className="cursor-pointer">
             <input
               type="radio"
               name={name}
               value={option.value}
-              onChange={onChange ? () => onChange(option.value) : undefined}
+              data-field={name}
+              data-label={legend}
+              required={required}
+              onChange={() => {
+                clear(name);
+                onChange?.(option.value);
+              }}
               className="peer sr-only"
               {...(controlled
                 ? { checked: value === option.value }
                 : { defaultChecked: defaultValue === option.value })}
             />
-            <span className="choice-face">{option.label}</span>
+            <span className="choice-face">
+              <span className="min-w-0">
+                <span className="block">{option.label}</span>
+                {option.hint ? (
+                  <span className="mt-0.5 block text-sm font-medium leading-snug opacity-80">
+                    {option.hint}
+                  </span>
+                ) : null}
+              </span>
+            </span>
           </label>
         ))}
       </div>
+      {message ? (
+        <div className="mt-2">
+          <FieldNote id={errorId} message={message} />
+        </div>
+      ) : null}
     </fieldset>
   );
 }
@@ -889,6 +947,19 @@ function collectFieldErrors(form: HTMLFormElement) {
         errors[name] = `${label} is before ${otherLabel}.`;
       }
     }
+  });
+  const radios = new Map<string, HTMLInputElement[]>();
+  form.querySelectorAll<HTMLInputElement>("input[type='radio'][name]").forEach((field) => {
+    const group = radios.get(field.name) ?? [];
+    group.push(field);
+    radios.set(field.name, group);
+  });
+  radios.forEach((group, name) => {
+    if (errors[name]) return;
+    if (!group.some((field) => field.required && !field.disabled)) return;
+    if (group.some((field) => field.checked)) return;
+    const label = group[0]?.dataset.label || "an option";
+    errors[name] = `Choose ${label}.`;
   });
   return errors;
 }

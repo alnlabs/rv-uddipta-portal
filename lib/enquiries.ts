@@ -1,15 +1,44 @@
 export const FIELD_KINDS = [
-  { value: "text", label: "Short text" },
-  { value: "long", label: "Long text" },
-  { value: "date", label: "Date" },
-  { value: "choice", label: "Choice" },
+  { value: "text", label: "Short answer", hint: "One line, such as a name or a number." },
+  { value: "long", label: "Long answer", hint: "A paragraph they can write in their own words." },
+  { value: "date", label: "Date", hint: "They pick a day on a calendar." },
+  { value: "choice", label: "Pick one", hint: "They choose one option from a list you write." },
 ] as const;
 
 export const RESULT_VIEWS = [
-  { value: "community", label: "Signed-in community members see every answer" },
-  { value: "admins", label: "Admins only" },
-  { value: "own", label: "Each person sees only their own answers" },
-  { value: "link", label: "Anyone with the link sees every answer" },
+  {
+    value: "community",
+    label: "The community",
+    hint: "Signed-in residents can read every answer.",
+  },
+  {
+    value: "admins",
+    label: "Admins only",
+    hint: "Only admins can open the answers.",
+  },
+  {
+    value: "own",
+    label: "Each flat, its own",
+    hint: "People see only the answer from their flat.",
+  },
+  {
+    value: "link",
+    label: "Anyone with the link",
+    hint: "Answers are shown on the form page itself.",
+  },
+] as const;
+
+export const VISIBILITY_OPTIONS = [
+  {
+    value: "public",
+    label: "Anyone with the link",
+    hint: "No account needed. Share the link anywhere.",
+  },
+  {
+    value: "private",
+    label: "Residents only",
+    hint: "They must sign in as a community member.",
+  },
 ] as const;
 
 export type FieldKind = (typeof FIELD_KINDS)[number]["value"];

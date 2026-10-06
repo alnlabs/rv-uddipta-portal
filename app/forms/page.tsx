@@ -15,27 +15,39 @@ export default async function OpenFormsPage() {
   });
 
   return (
-    <div className="page-gutter max-w-xl py-6 md:py-10">
-      <h1 className="text-3xl font-semibold tracking-tight text-[#14241c]">Forms</h1>
-      <p className="mt-2 text-lg text-[#3d5247]">Open forms you can answer.</p>
+    <div className="page-gutter mx-auto max-w-3xl py-8 md:py-14">
+      <header>
+        <p className="eyebrow">Community</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#14241c] md:text-4xl">
+          Forms
+        </h1>
+        <p className="mt-3 max-w-2xl text-base leading-relaxed text-[#3d5247]">
+          Open forms you can answer. Each one asks a few questions and keeps one answer per flat.
+        </p>
+      </header>
       {forms.length ? (
-        <ul className="mt-5 grid gap-2">
+        <ul className="mt-6 grid gap-4">
           {forms.map((form) => (
             <li key={form.id}>
-              <Link
-                href={`/f/${form.slug}`}
-                className="block rounded-2xl bg-[#fffcf5] px-4 py-3 ring-1 ring-[rgba(27,58,47,0.1)]"
-              >
-                <span className="block font-semibold text-[#14241c]">{form.title}</span>
-                {form.note ? (
-                  <span className="mt-1 block text-sm text-[#3d5247]">{form.note}</span>
-                ) : null}
+              <Link href={`/f/${form.slug}`} className="form-sheet block transition hover:-translate-y-0.5">
+                <p className="text-xs font-semibold tracking-[0.14em] text-[#7a5c22] uppercase">
+                  {form.visibility === "private" ? "Residents only" : "Open form"}
+                </p>
+                <span className="mt-2 block text-xl font-semibold text-[#14241c]">{form.title}</span>
+                <span className="mt-2 block text-sm leading-relaxed text-[#3d5247]">
+                  {form.note || "Tap to read the questions and send your answer."}
+                </span>
+                <span className="mt-4 inline-flex text-sm font-semibold text-[#1b3a2f]">
+                  Fill this form
+                </span>
               </Link>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-5 text-[#3d5247]">No open forms right now.</p>
+        <p className="form-sheet mt-6 text-base leading-relaxed text-[#3d5247]">
+          No open forms right now. When an admin shares one, it will show up here.
+        </p>
       )}
     </div>
   );

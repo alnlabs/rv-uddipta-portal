@@ -26,9 +26,16 @@ export default async function EnquiryPage({
   }
   if (enquiry.visibility === "private" && !isCommunityRole(profile?.role)) {
     return (
-      <div className="page-gutter max-w-xl py-6 md:py-10">
-        <h1 className="text-3xl font-semibold tracking-tight text-[#14241c]">{enquiry.title}</h1>
-        <p className="mt-3 text-lg text-[#3d5247]">This form is for community members.</p>
+      <div className="page-gutter mx-auto max-w-3xl py-8 md:py-14">
+        <header className="form-sheet">
+          <p className="eyebrow">Form</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#14241c] md:text-4xl">
+            {enquiry.title}
+          </h1>
+          <p className="mt-3 text-base leading-relaxed text-[#3d5247]">
+            This form is for residents. Sign in with a community account to open it.
+          </p>
+        </header>
       </div>
     );
   }
@@ -62,28 +69,34 @@ export default async function EnquiryPage({
   const visible = visibleAnswers(enquiry.resultsView, admin, community, user?.id ?? null, knownFlat, answers);
 
   return (
-    <div className="page-gutter max-w-xl py-6 md:py-10">
-      <p className="text-sm font-semibold text-[#7a5c22]">Form</p>
-      <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#14241c]">{enquiry.title}</h1>
-      {enquiry.note ? <p className="mt-2 text-lg text-[#3d5247]">{enquiry.note}</p> : null}
-      {enquiry.askSignin && !user ? (
-        <p className="mt-4 text-sm text-[#3d5247]">
-          <Link href={`/login?next=${encodeURIComponent(next)}`} className="font-semibold text-[#1b3a2f]">
-            Sign in
-          </Link>{" "}
-          to confirm it is you. You can also fill in your name, phone, and flat below.
-        </p>
-      ) : null}
-      {mine && !enquiry.closedAt ? (
-        <p className="mt-4 text-sm text-[#3d5247]">
-          This flat already has an answer. Sending again updates it.
-        </p>
-      ) : null}
+    <div className="page-gutter mx-auto max-w-3xl py-8 md:py-14">
+      <header className="form-sheet">
+        <p className="eyebrow">Form</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#14241c] md:text-4xl">
+          {enquiry.title}
+        </h1>
+        {enquiry.note ? (
+          <p className="mt-3 max-w-2xl text-base leading-relaxed text-[#3d5247]">{enquiry.note}</p>
+        ) : (
+          <p className="mt-3 max-w-2xl text-base leading-relaxed text-[#3d5247]">
+            Answer each question below. Required questions are marked.
+          </p>
+        )}
+        {enquiry.askSignin && !user ? (
+          <p className="mt-4 rounded-2xl bg-[rgba(201,164,92,0.18)] px-4 py-3 text-sm leading-relaxed text-[#14241c]">
+            <Link href={`/login?next=${encodeURIComponent(next)}`} className="font-semibold text-[#1b3a2f]">
+              Sign in
+            </Link>{" "}
+            so your name and flat are filled in. You can also type them below.
+          </p>
+        ) : null}
+      </header>
       <EnquiryFill
         slug={enquiry.slug}
         fields={fields}
         defaults={defaults}
         closed={Boolean(enquiry.closedAt)}
+        updating={Boolean(mine)}
         identity={{ name: knownName, phone: knownPhone, flatNumber: knownFlat }}
       />
       {visible ? <EnquiryResults fields={fields} answers={visible} /> : null}

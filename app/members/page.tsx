@@ -90,7 +90,7 @@ export default async function MembersPage({
     <PageShell>
       <PageTitle
         title="Neighbours"
-        lede="Who lives in each flat. Registered means they can sign in."
+        lede="Who lives in each flat. Signed up means they can sign in."
         action={<p className="text-sm text-[#3d5247]">{sold.length} homes</p>}
       />
       {manage ? (

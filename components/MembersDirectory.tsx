@@ -255,7 +255,7 @@ export function MembersDirectory({
                           {row.name}
                           {row.registered ? (
                             <span className="rounded-full bg-[#c9a45c] px-2 py-0.5 text-[10px] font-bold tracking-wide text-[#14241c] uppercase">
-                              Registered
+                              Signed up
                             </span>
                           ) : null}
                         </span>
