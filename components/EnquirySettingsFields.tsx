@@ -25,7 +25,8 @@ export function EnquirySettingsFields({
   const viewHint = RESULT_VIEWS.find((item) => item.value === view)?.hint;
 
   return (
-    <div className="grid gap-5">
+    <div className="@container">
+    <div className="grid gap-5 @3xl:grid-cols-2">
       <TextField
         label="Form title"
         name="title"
@@ -43,6 +44,7 @@ export function EnquirySettingsFields({
         placeholder="Tell residents what this is for, and when you need the answer."
         hint="A short note under the title. Leave it blank if the title is enough."
       />
+      <div className="@3xl:col-span-2">
       <ChoiceField
         legend="Who can open it"
         name="visibility"
@@ -50,6 +52,7 @@ export function EnquirySettingsFields({
         defaultValue={defaults?.visibility || "public"}
         options={VISIBILITY_OPTIONS}
       />
+      </div>
       <SwitchField
         label="Ask them to sign in"
         hint="Signing in fills their name and flat. If they skip it, the form still asks for name, phone, and flat."
@@ -64,6 +67,7 @@ export function EnquirySettingsFields({
         options={RESULT_VIEWS.map(({ value, label }) => ({ value, label }))}
         hint={viewHint}
       />
+    </div>
     </div>
   );
 }

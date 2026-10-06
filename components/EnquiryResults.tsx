@@ -3,9 +3,13 @@ import type { EnquiryField } from "@/lib/enquiries";
 import type { StoredAnswer } from "@/lib/enquiryData";
 
 function showValue(kind: EnquiryField["kind"], value: string) {
-  if (!value) return "—";
+  if (!value.trim()) return null;
   if (kind === "date") return formatShortDate(value) ?? value;
   return value;
+}
+
+function flatCount(count: number) {
+  return count === 1 ? "1 flat" : `${count} flats`;
 }
 
 export function EnquiryResults({
@@ -16,90 +20,124 @@ export function EnquiryResults({
   readonly answers: StoredAnswer[]
 }) {
   const counted = fields.filter((field) => field.kind === "date" || field.kind === "choice");
+  const people = [...answers].sort((a, b) =>
+    a.flatNumber.localeCompare(b.flatNumber, undefined, { numeric: true }),
+  );
 
   return (
     <section className="mt-10">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="eyebrow">Answers</p>
-          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-[#14241c]">
-            What people sent
-          </h2>
-        </div>
-        <p className="text-sm font-semibold text-[#3d5247]">
-          {answers.length === 1 ? "1 answer" : `${answers.length} answers`}
-        </p>
+      <div>
+        <p className="eyebrow">Answers</p>
+        <h2 className="mt-1 text-2xl font-semibold tracking-tight text-[#14241c]">
+          {answers.length === 0
+            ? "No answers yet"
+            : answers.length === 1
+              ? "1 flat has answered"
+              : `${answers.length} flats have answered`}
+        </h2>
+        {answers.length === 0 ? (
+          <p className="mt-2 max-w-2xl text-base leading-relaxed text-[#3d5247]">
+            Share the link. Each flat’s answers will show up here.
+          </p>
+        ) : (
+          <p className="mt-2 max-w-2xl text-base leading-relaxed text-[#3d5247]">
+            The totals show how many flats chose each option. Below that, every flat is listed with its own answers.
+          </p>
+        )}
       </div>
 
-      {counted.length ? (
-        <div className="mt-4 grid gap-4">
+      {answers.length && counted.length ? (
+        <div className="mt-5 grid gap-4">
           {counted.map((field) => {
-            const counts = new Map<string, number>();
-            for (const answer of answers) {
-              const value = answer.values[field.id];
-              if (!value) continue;
-              counts.set(value, (counts.get(value) ?? 0) + 1);
+            const groups = new Map<string, string[]>();
+            let skipped = 0;
+            for (const answer of people) {
+              const value = answer.values[field.id]?.trim() ?? "";
+              if (!value) {
+                skipped += 1;
+                continue;
+              }
+              const flats = groups.get(value) ?? [];
+              flats.push(answer.flatNumber);
+              groups.set(value, flats);
             }
-            const rows = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-            const max = rows[0]?.[1] ?? 1;
+            const rows = [...groups.entries()].sort(
+              (a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]),
+            );
+            const answered = answers.length - skipped;
             return (
               <div key={field.id} className="form-sheet">
-                <p className="text-base font-semibold text-[#14241c]">{field.label}</p>
+                <p className="text-lg font-semibold leading-snug text-[#14241c]">{field.label}</p>
+                <p className="mt-1 text-sm text-[#3d5247]">
+                  {answered === 0
+                    ? "Nobody has answered this yet."
+                    : `${flatCount(answered)} answered this.`}
+                </p>
                 {rows.length ? (
-                  <ul className="mt-4 grid gap-3">
-                    {rows.map(([value, count]) => (
-                      <li key={value}>
-                        <div className="flex items-baseline justify-between gap-3 text-sm">
-                          <span className="text-[#14241c]">{showValue(field.kind, value)}</span>
-                          <span className="font-semibold tabular-nums text-[#1b3a2f]">{count}</span>
-                        </div>
-                        <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-[rgba(27,58,47,0.08)]">
-                          <div
-                            className="h-full rounded-full bg-[#1b3a2f]"
-                            style={{ width: `${Math.max(8, (count / max) * 100)}%` }}
-                          />
-                        </div>
+                  <ul className="mt-4 grid gap-4 lg:grid-cols-2">
+                    {rows.map(([value, flats]) => (
+                      <li key={value} className="rounded-2xl bg-white px-4 py-3 ring-1 ring-[rgba(27,58,47,0.08)]">
+                        <p className="text-base font-semibold text-[#14241c]">
+                          {showValue(field.kind, value)}
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-[#1b3a2f]">
+                          {flats.length} of {answered} {answered === 1 ? "flat" : "flats"}
+                        </p>
+                        <p className="mt-2 text-sm leading-relaxed text-[#3d5247]">{flats.join(", ")}</p>
                       </li>
                     ))}
                   </ul>
-                ) : (
-                  <p className="mt-3 text-sm text-[#3d5247]">No answers for this question yet.</p>
-                )}
+                ) : null}
+                {skipped > 0 ? (
+                  <p className="mt-3 text-sm text-[#3d5247]">
+                    {flatCount(skipped)} left this blank.
+                  </p>
+                ) : null}
               </div>
             );
           })}
         </div>
       ) : null}
 
-      {answers.length ? (
-        <ul className="mt-4 grid gap-4">
-          {answers.map((answer) => (
-            <li key={answer.responseId} className="form-sheet">
-              <p className="text-lg font-semibold text-[#14241c]">{answer.flatNumber}</p>
-              <p className="text-sm text-[#3d5247]">
-                {answer.name}
-                {answer.phone ? <span className="tabular-nums"> · {answer.phone}</span> : null}
-              </p>
-              <dl className="mt-4 grid gap-3">
-                {fields.map((field) => (
-                  <div key={field.id}>
-                    <dt className="text-xs font-semibold tracking-wide text-[#5a6e62] uppercase">
-                      {field.label}
-                    </dt>
-                    <dd className="mt-0.5 text-base leading-relaxed text-[#14241c]">
-                      {showValue(field.kind, answer.values[field.id] ?? "")}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="form-sheet mt-4 text-sm leading-relaxed text-[#3d5247]">
-          No answers yet. Share the link and they will show up here.
-        </p>
-      )}
+      {people.length ? (
+        <div className="mt-8">
+          <h3 className="text-xl font-semibold tracking-tight text-[#14241c]">Each flat</h3>
+          <ul className="mt-4 grid gap-4 xl:grid-cols-2">
+            {people.map((answer) => {
+              const sent = formatShortDate(answer.updatedAt);
+              return (
+                <li key={answer.responseId} className="form-sheet">
+                  <p className="text-xl font-semibold text-[#14241c]">{answer.flatNumber}</p>
+                  <p className="mt-1 text-sm leading-relaxed text-[#3d5247]">
+                    {answer.name || "Name not given"}
+                    {answer.phone ? <span className="tabular-nums"> · {answer.phone}</span> : null}
+                    {sent ? <span> · sent {sent}</span> : null}
+                  </p>
+                  <dl className="mt-4 grid gap-4">
+                    {fields.map((field) => {
+                      const value = showValue(field.kind, answer.values[field.id] ?? "");
+                      return (
+                        <div key={field.id} className="border-t border-[rgba(27,58,47,0.08)] pt-3">
+                          <dt className="text-sm leading-snug text-[#3d5247]">{field.label}</dt>
+                          <dd
+                            className={
+                              value
+                                ? "mt-1 text-base font-semibold leading-relaxed text-[#14241c]"
+                                : "mt-1 text-base text-[#8a9a90]"
+                            }
+                          >
+                            {value ?? "Not answered"}
+                          </dd>
+                        </div>
+                      );
+                    })}
+                  </dl>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
     </section>
   );
 }

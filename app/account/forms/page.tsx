@@ -13,7 +13,7 @@ export default async function FormsAdminPage() {
   const forms = await listEnquiries();
 
   return (
-    <section className="mx-auto w-full max-w-3xl">
+    <section className="w-full">
       <WorkspaceHeader
         title="Forms"
         lede="Create a form, share the link, and read what people send back."
@@ -22,7 +22,7 @@ export default async function FormsAdminPage() {
         {forms.length ? (
           <div>
             <h2 className="text-xl font-semibold tracking-tight text-[#14241c]">Your forms</h2>
-            <ul className="mt-4 grid gap-4">
+            <ul className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {forms.map((form) => (
                 <li key={form.id}>
                   <Link

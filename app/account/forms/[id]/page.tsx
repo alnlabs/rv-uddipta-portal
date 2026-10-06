@@ -38,7 +38,7 @@ export default async function EnquiryAdminPage({
   const link = `https://uddipta.vercel.app/f/${enquiry.slug}`;
 
   return (
-    <section className="mx-auto w-full max-w-3xl">
+    <section className="w-full">
       <WorkspaceHeader
         kicker={enquiry.closedAt ? "Closed" : "Open"}
         title={enquiry.title}
@@ -58,7 +58,7 @@ export default async function EnquiryAdminPage({
         <CopyLink href={link} previewHref={`/f/${enquiry.slug}`} />
       </div>
 
-      <div className="mt-6 grid gap-6">
+      <div className="mt-6 grid items-start gap-6 xl:grid-cols-[minmax(22rem,32rem)_minmax(0,1fr)]">
         <div className="grid gap-4">
           <Form action={saveEnquirySettings} className="form-sheet grid gap-5">
             <div>
@@ -110,7 +110,7 @@ export default async function EnquiryAdminPage({
             </p>
           </div>
 
-          <ol className="grid gap-4">
+          <ol className="grid gap-4 md:grid-cols-2">
             {fields.map((field, index) => (
               <li key={field.id} className="form-sheet">
                 <Form action={updateEnquiryField} className="grid gap-4">

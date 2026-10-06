@@ -15,7 +15,7 @@ export default async function OpenFormsPage() {
   });
 
   return (
-    <div className="page-gutter mx-auto max-w-3xl py-8 md:py-14">
+    <div className="page-gutter w-full py-8 md:py-14">
       <header>
         <p className="eyebrow">Community</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#14241c] md:text-4xl">
@@ -26,7 +26,7 @@ export default async function OpenFormsPage() {
         </p>
       </header>
       {forms.length ? (
-        <ul className="mt-6 grid gap-4">
+        <ul className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {forms.map((form) => (
             <li key={form.id}>
               <Link href={`/f/${form.slug}`} className="form-sheet block transition hover:-translate-y-0.5">

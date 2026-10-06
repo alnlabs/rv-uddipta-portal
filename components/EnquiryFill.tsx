@@ -92,14 +92,14 @@ export function EnquiryFill({
   }
 
   return (
-    <Form handled action={action} className="mt-5 grid gap-4">
+    <Form handled action={action} className="mt-5 grid items-start gap-4 lg:grid-cols-2">
       <input type="hidden" name="slug" value={slug} />
       {askName ? null : <input type="hidden" name="name" value={identity.name} />}
       {askPhone ? null : <input type="hidden" name="phone" value={identity.phone} />}
       {askFlat ? null : <input type="hidden" name="flatNumber" value={identity.flatNumber} />}
 
       {who ? (
-        <div className="rounded-[1.5rem] bg-[#14241c] px-5 py-4 text-[#f7f2e6] md:px-6">
+        <div className="rounded-[1.5rem] bg-[#14241c] px-5 py-4 text-[#f7f2e6] md:px-6 lg:col-span-2">
           <p className="text-xs font-semibold tracking-[0.14em] text-[#e8d5a3] uppercase">
             Answering as
           </p>
@@ -108,12 +108,12 @@ export function EnquiryFill({
       ) : null}
 
       {askName || askPhone || askFlat ? (
-        <section className="form-sheet">
+        <section className="form-sheet lg:col-span-2">
           <h2 className="text-xl font-semibold tracking-tight text-[#14241c]">Your details</h2>
           <p className="mt-1 text-sm leading-relaxed text-[#3d5247]">
             So the answer is tied to the right flat. One answer is kept per flat.
           </p>
-          <div className="mt-5 grid gap-4">
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {askName ? (
               <TextField
                 label="Your name"
@@ -152,7 +152,10 @@ export function EnquiryFill({
       ) : null}
 
       {fields.map((field, index) => (
-        <section key={field.id} className="form-sheet">
+        <section
+          key={field.id}
+          className={`form-sheet${field.kind === "long" ? " lg:col-span-2" : ""}`}
+        >
           <p className="text-sm font-semibold text-[#7a5c22]">
             Question {index + 1} of {fields.length}
           </p>
@@ -162,9 +165,13 @@ export function EnquiryFill({
         </section>
       ))}
 
-      {state.message ? <FormAlert tone={state.ok ? "ok" : "error"}>{state.message}</FormAlert> : null}
+      {state.message ? (
+        <div className="lg:col-span-2">
+          <FormAlert tone={state.ok ? "ok" : "error"}>{state.message}</FormAlert>
+        </div>
+      ) : null}
 
-      <div className="form-sheet flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="form-sheet flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between lg:col-span-2">
         <p className="text-sm leading-relaxed text-[#3d5247]">
           {updating
             ? "This flat already has an answer. Sending again replaces it."

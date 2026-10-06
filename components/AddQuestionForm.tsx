@@ -10,8 +10,8 @@ export function AddQuestionForm({ enquiryId }: { readonly enquiryId: number }) {
   const kindHint = FIELD_KINDS.find((item) => item.value === kind)?.hint;
 
   return (
-    <Form action={addEnquiryField} resetOnSuccess className="form-sheet grid gap-5">
-      <div>
+    <Form action={addEnquiryField} resetOnSuccess className="form-sheet grid gap-5 md:grid-cols-2">
+      <div className="md:col-span-2">
         <p className="eyebrow">New question</p>
         <h2 className="mt-1 text-2xl font-semibold tracking-tight text-[#14241c]">
           Add a question
@@ -48,14 +48,17 @@ export function AddQuestionForm({ enquiryId }: { readonly enquiryId: number }) {
           tone="question"
           placeholder={"Morning\nEvening\nEither is fine"}
           hint="One option on each line. People can pick one. At least two."
+          className="md:col-span-2"
         />
       ) : null}
-      <SwitchField
-        label="They must answer this"
-        hint="The form will not send until this question is filled in."
-        name="required"
-      />
-      <button type="submit" className="btn btn-gold w-full sm:w-fit">
+      <div className="md:col-span-2">
+        <SwitchField
+          label="They must answer this"
+          hint="The form will not send until this question is filled in."
+          name="required"
+        />
+      </div>
+      <button type="submit" className="btn btn-gold w-full sm:w-fit md:col-span-2">
         Add question
       </button>
     </Form>

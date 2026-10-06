@@ -26,7 +26,7 @@ export default async function EnquiryPage({
   }
   if (enquiry.visibility === "private" && !isCommunityRole(profile?.role)) {
     return (
-      <div className="page-gutter mx-auto max-w-3xl py-8 md:py-14">
+      <div className="page-gutter w-full py-8 md:py-14">
         <header className="form-sheet">
           <p className="eyebrow">Form</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#14241c] md:text-4xl">
@@ -69,7 +69,7 @@ export default async function EnquiryPage({
   const visible = visibleAnswers(enquiry.resultsView, admin, community, user?.id ?? null, knownFlat, answers);
 
   return (
-    <div className="page-gutter mx-auto max-w-3xl py-8 md:py-14">
+    <div className="page-gutter w-full py-8 md:py-14">
       <header className="form-sheet">
         <p className="eyebrow">Form</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#14241c] md:text-4xl">
