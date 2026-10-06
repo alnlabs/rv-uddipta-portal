@@ -4,7 +4,13 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { publishActivity } from "@/lib/activity";
 import { savePostPhoto } from "@/lib/postPhoto";
-import { postKind } from "@/lib/postKinds";
+import {
+  QUOTE_MAX,
+  allowsPhoto,
+  emergencyTopic,
+  postKind,
+} from "@/lib/postKinds";
+import { reachCommunity } from "@/lib/reach";
 import { canManageAdmin, ensureProfile, isCommunityRole } from "@/lib/roles";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
@@ -48,13 +54,23 @@ export async function postUpdate(
 
     const body = String(formData.get("body") || "").trim();
     if (body.length < 2) return { ok: false, message: "Write a few words first." };
+    if (kind.value === "quote" && body.length > QUOTE_MAX) {
+      return { ok: false, message: `Keep a quote under ${QUOTE_MAX} characters.` };
+    }
 
     const choices =
       kind.value === "poll" ? pollChoices(formData) : { ok: true as const, labels: [] as string[] };
     if (!choices.ok) return { ok: false, message: choices.message };
 
+    let topic: string | null = null;
+    if (kind.value === "emergency") {
+      const picked = emergencyTopic(String(formData.get("topic") || ""));
+      if (!picked) return { ok: false, message: "Choose the kind of emergency." };
+      topic = picked.value;
+    }
+
     let startsOn: string | null = null;
-    if (kind.value === "event") {
+    if (kind.value === "event" || kind.value === "celebration") {
       startsOn = String(formData.get("startsOn") || "").trim();
       if (!/^\d{4}-\d{2}-\d{2}$/.test(startsOn)) {
         return { ok: false, message: "Choose the date." };
@@ -63,8 +79,8 @@ export async function postUpdate(
 
     const photo = formData.get("photo");
     const hasPhoto = photo instanceof File && photo.size > 0;
-    if (hasPhoto && kind.value !== "sale" && kind.value !== "lost" && kind.value !== "event") {
-      return { ok: false, message: "A photo fits a sale, a lost item, or an event." };
+    if (hasPhoto && !allowsPhoto(kind.value)) {
+      return { ok: false, message: "This type does not take a photo." };
     }
 
     const { data: created, error } = await admin
@@ -75,6 +91,7 @@ export async function postUpdate(
         flat_number: flatNumber,
         author_name: name,
         kind: kind.value,
+        topic,
         body,
         starts_on: startsOn,
       })
@@ -114,16 +131,27 @@ export async function postUpdate(
     }
 
     const who = flatNumber ? `${name} · ${flatNumber}` : name;
+    const topicLabel = topic ? emergencyTopic(topic)?.label : null;
+    const title = topicLabel ? `Emergency · ${topicLabel} · ${who}` : `${kind.label} · ${who}`;
     await publishActivity({
       actorUserId: user.id,
       flatId: profile.flatId,
       kind: "member_post",
-      title: `${kind.label} · ${who}`,
+      title,
       body,
       visibility: "community",
       href: "/feed",
       notify: "community",
     });
+    if (kind.value === "emergency" && topicLabel) {
+      await reachCommunity({
+        title,
+        body: body || title,
+        exceptUserId: user.id,
+      }).catch((error: unknown) => {
+        console.warn("emergency reach failed", error instanceof Error ? error.message : error);
+      });
+    }
 
     revalidatePath("/feed");
     revalidatePath("/notifications");

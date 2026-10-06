@@ -14,7 +14,20 @@ import {
   type UpdateState,
 } from "@/app/actions/updates";
 import { DateField, Form, FormAlert, TextAreaField, TextField } from "@/components/form-ui";
-import { COMMUNITY_POST_KINDS, POST_KINDS, postKind, type PostKind } from "@/lib/postKinds";
+import {
+  EMERGENCY_TOPICS,
+  FEED_FILTERS,
+  POST_GROUPS,
+  QUOTE_MAX,
+  allowsPhoto,
+  kindsInGroup,
+  matchesFeedFilter,
+  postKind,
+  postTypeLabel,
+  type FeedFilter,
+  type PostGroup,
+  type PostKind,
+} from "@/lib/postKinds";
 
 const initial: UpdateState = { ok: false, message: "" };
 
@@ -44,6 +57,7 @@ export type FeedPost = {
   startsOn?: string | null
   closedAt?: string | null
   soldAt?: string | null
+  topic?: string | null
   replies: Reply[]
   reactions?: {
     helpful: number
@@ -62,10 +76,20 @@ export type FeedPost = {
 };
 
 function Composer() {
+  const [group, setGroup] = useState<PostGroup>("talk");
   const [kind, setKind] = useState<PostKind>("update");
+  const [topic, setTopic] = useState("");
   const [choices, setChoices] = useState(["", ""]);
   const [state, formAction, pending] = useActionState(postUpdate, initial);
-  const spec = postKind(kind) ?? POST_KINDS[0];
+  const spec = postKind(kind) ?? kindsInGroup("talk")[0];
+  const groupKinds = kindsInGroup(group);
+
+  function chooseGroup(next: PostGroup) {
+    setGroup(next);
+    const first = kindsInGroup(next)[0];
+    if (first) setKind(first.value);
+    if (next !== "emergency") setTopic("");
+  }
 
   function setChoice(index: number, value: string) {
     setChoices((current) => current.map((choice, i) => (i === index ? value : choice)));
@@ -74,39 +98,81 @@ function Composer() {
   return (
     <Form handled action={formAction} className="field-panel mt-5 grid gap-3">
       <fieldset>
-        <legend className="field-label mb-2">Type</legend>
+        <legend className="field-label mb-2">Group</legend>
         <div className="flex flex-wrap gap-2">
-          {POST_KINDS.map((option) => (
+          {POST_GROUPS.map((option) => (
             <label key={option.value} className="cursor-pointer">
               <input
                 type="radio"
-                name="kind"
+                name="group"
                 value={option.value}
-                checked={kind === option.value}
-                onChange={() => setKind(option.value)}
+                checked={group === option.value}
+                onChange={() => chooseGroup(option.value)}
                 className="peer sr-only"
               />
               <span className="choice-face min-w-[7.5rem] px-3">{option.label}</span>
             </label>
           ))}
         </div>
-        <p className="field-hint mt-2">
-          {spec.audience === "community"
-            ? "Everyone in the community sees this."
-            : "Only the admin sees this."}
-        </p>
       </fieldset>
+      <input type="hidden" name="kind" value={kind} />
+      {group === "emergency" ? (
+        <fieldset>
+          <legend className="field-label mb-2">Emergency</legend>
+          <div className="flex flex-wrap gap-2">
+            {EMERGENCY_TOPICS.map((option) => (
+              <label key={option.value} className="cursor-pointer">
+                <input
+                  type="radio"
+                  name="topic"
+                  value={option.value}
+                  checked={topic === option.value}
+                  onChange={() => setTopic(option.value)}
+                  className="peer sr-only"
+                />
+                <span className="choice-face min-w-[7.5rem] px-3">{option.label}</span>
+              </label>
+            ))}
+          </div>
+          <p className="field-hint mt-2">Everyone is notified right away, including email and WhatsApp when those are on.</p>
+        </fieldset>
+      ) : (
+        <fieldset>
+          <legend className="field-label mb-2">Type</legend>
+          <div className="flex flex-wrap gap-2">
+            {groupKinds.map((option) => (
+              <label key={option.value} className="cursor-pointer">
+                <input
+                  type="radio"
+                  name="type"
+                  value={option.value}
+                  checked={kind === option.value}
+                  onChange={() => setKind(option.value)}
+                  className="peer sr-only"
+                />
+                <span className="choice-face min-w-[7.5rem] px-3">{option.label}</span>
+              </label>
+            ))}
+          </div>
+          <p className="field-hint mt-2">
+            {spec.audience === "community"
+              ? "Everyone in the community sees this."
+              : "Only the admin sees this."}
+          </p>
+        </fieldset>
+      )}
       <TextAreaField
         label={spec.prompt}
         name="body"
         required
         minLength={2}
-        rows={kind === "poll" ? 2 : 4}
+        maxLength={kind === "quote" ? QUOTE_MAX : undefined}
+        rows={kind === "poll" || kind === "quote" ? 2 : 4}
       />
-      {kind === "event" ? (
+      {kind === "event" || kind === "celebration" ? (
         <DateField label="Date" name="startsOn" required />
       ) : null}
-      {kind === "sale" || kind === "lost" || kind === "event" ? (
+      {allowsPhoto(kind) ? (
         <label className="grid gap-1.5">
           <span className="field-label">Photo</span>
           <input
@@ -165,6 +231,13 @@ function Composer() {
       </button>
     </Form>
   );
+}
+
+function isRecentEmergency(kind: string | null | undefined, createdAt: string) {
+  if (kind !== "emergency") return false;
+  const sent = new Date(createdAt).getTime();
+  if (Number.isNaN(sent)) return false;
+  return Date.now() - sent < 24 * 60 * 60 * 1000;
 }
 
 function formatDay(iso: string) {
@@ -349,28 +422,42 @@ export function UpdatesBoard({
   userId: string
   canModerate: boolean
 }) {
-  const [filter, setFilter] = useState<PostKind | "all">("all");
-  const visible = posts.filter((post) => {
-    if (filter === "sale" && post.soldAt) return false;
-    if (filter === "all") return true;
-    return (post.kind || "update") === filter;
-  });
+  const [filter, setFilter] = useState<FeedFilter>("all");
+  const recentEmergencies = posts.filter((post) => isRecentEmergency(post.kind, post.created_at));
+  const visible = posts.filter((post) => matchesFeedFilter(post.kind, filter));
 
   return (
     <div>
+      {recentEmergencies.length ? (
+        <section className="mt-5 rounded-[1.35rem] bg-[#f8e8e4] p-4 ring-1 ring-[rgba(138,47,47,0.28)]">
+          <h2 className="text-sm font-semibold tracking-wide text-[#8a2f2f] uppercase">
+            Emergencies in the last 24 hours
+          </h2>
+          <ul className="mt-3 grid gap-3">
+            {recentEmergencies.map((post) => (
+              <li key={post.id}>
+                <p className="font-semibold text-[#6d2424]">
+                  {postTypeLabel(post.kind, post.topic)}
+                  {post.flat_number ? ` · ${post.flat_number}` : ""}
+                  {post.author_name ? ` · ${post.author_name}` : ""}
+                </p>
+                <p className="mt-1 text-[#3d2420]">{post.body}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <Composer />
 
       <div className="mt-8 flex gap-2 overflow-x-auto pb-1">
-        <FilterChip active={filter === "all"} onClick={() => setFilter("all")}>
-          All
-        </FilterChip>
-        {COMMUNITY_POST_KINDS.map((kind) => (
+        {FEED_FILTERS.map((item) => (
           <FilterChip
-            key={kind.value}
-            active={filter === kind.value}
-            onClick={() => setFilter(kind.value)}
+            key={item.value}
+            active={filter === item.value}
+            onClick={() => setFilter(item.value)}
           >
-            {kind.label}
+            {item.label}
           </FilterChip>
         ))}
       </div>
@@ -378,14 +465,14 @@ export function UpdatesBoard({
       <ul className="divide-y divide-[rgba(27,58,47,0.08)]">
         {visible.length === 0 ? (
           <li className="py-6 text-[#3d5247]">
-            {filter === "all" ? "No posts yet." : `Nothing in ${postKind(filter)?.label ?? "this list"} yet.`}
+            {filter === "all" ? "No posts yet." : `Nothing in ${FEED_FILTERS.find((item) => item.value === filter)?.label ?? "this list"} yet.`}
           </li>
         ) : (
           visible.map((post) => (
             <li key={post.id} className="py-5">
               <p className="text-sm font-semibold text-[#7a5c22]">
                 <span className="mr-2 inline-flex rounded-full bg-[#1b3a2f] px-2 py-0.5 text-[0.65rem] font-semibold tracking-wide text-[#e8d5a3] uppercase">
-                  {post.soldAt ? "Sold" : post.closedAt ? "Closed" : postKind(post.kind)?.label ?? "Update"}
+                  {post.soldAt ? "Sold" : post.closedAt ? "Closed" : postTypeLabel(post.kind, post.topic)}
                 </span>
                 {post.author_name}
                 {post.flat_number ? ` · ${post.flat_number}` : ""}

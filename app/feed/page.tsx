@@ -1,12 +1,15 @@
 import { redirect } from "next/navigation";
-import { deleteAnnouncement, pinAnnouncement, postAnnouncement } from "@/app/actions/activity";
-import { Form, SwitchField, TextAreaField, TextField } from "@/components/form-ui";
+import { deleteAnnouncement, pinAnnouncement } from "@/app/actions/activity";
+import { AnnouncementComposer } from "@/components/AnnouncementComposer";
 import { outboundChannels } from "@/lib/reach";
 import { UpdatesBoard, type FeedPost } from "@/components/UpdatesBoard";
 import { isSuperAdmin } from "@/lib/admin";
+import { noticeLabel } from "@/lib/postKinds";
 import { canManageAdmin, isCommunityRole } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
+
+const NOTICE_QUERY = ["announcement", "builder_update", "maintenance", "meeting"];
 
 export default async function FeedPage() {
   const { user, profile } = await getAuthState();
@@ -19,7 +22,7 @@ export default async function FeedPage() {
     await Promise.all([
     admin
       .from("member_posts")
-      .select("id, author_user_id, author_name, flat_number, kind, body, created_at, image_url, starts_on, closed_at, sold_at")
+      .select("id, author_user_id, author_name, flat_number, kind, topic, body, created_at, image_url, starts_on, closed_at, sold_at")
       .order("created_at", { ascending: false })
       .limit(40),
     admin
@@ -28,15 +31,15 @@ export default async function FeedPage() {
       .order("created_at", { ascending: true }),
     admin
       .from("activity_events")
-      .select("id, title, body, created_at, kind, pinned")
+      .select("id, title, body, created_at, kind, pinned, payload")
       .eq("pinned", true)
-      .in("kind", ["announcement", "builder_update"])
+      .in("kind", NOTICE_QUERY)
       .order("created_at", { ascending: false }),
     admin
       .from("activity_events")
-      .select("id, title, body, created_at, kind, pinned")
+      .select("id, title, body, created_at, kind, pinned, payload")
       .eq("pinned", false)
-      .in("kind", ["announcement", "builder_update"])
+      .in("kind", NOTICE_QUERY)
       .order("created_at", { ascending: false })
       .limit(10),
   ]);
@@ -132,7 +135,7 @@ export default async function FeedPage() {
         Updates
       </h1>
       <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#3d5247] sm:text-base">
-        Share an update, a question, a poll, something for sale, a lost item, or an event. A request or feedback goes only to the admin.
+        Share news, a question, something neighbours need, or an emergency. A request or feedback goes only to the admin.
       </p>
 
       {notices.length ? (
@@ -146,7 +149,7 @@ export default async function FeedPage() {
               >
                 <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#7a5c22] uppercase">
                   {notice.pinned ? "Pinned · " : ""}
-                  {notice.kind === "announcement" ? "Announcement" : "Notice"}
+                  {noticeLabel(notice.kind)}
                   {" · "}
                   {new Date(notice.created_at).toLocaleDateString("en-IN", {
                     day: "numeric",
@@ -154,6 +157,9 @@ export default async function FeedPage() {
                   })}
                 </p>
                 <p className="mt-1 text-lg font-semibold text-[#14241c]">{notice.title}</p>
+                {meetingDay(notice.payload) ? (
+                  <p className="mt-1 text-sm font-semibold text-[#1b3a2f]">{meetingDay(notice.payload)}</p>
+                ) : null}
                 {notice.body ? <p className="mt-1 text-[#3d5247]">{notice.body}</p> : null}
                 {canManageAdmin(profile.role, user) ? (
                   <div className="mt-2 flex gap-4">
@@ -179,29 +185,7 @@ export default async function FeedPage() {
       ) : null}
 
       {canManageAdmin(profile.role, user) ? (
-        <Form
-          action={postAnnouncement}
-          success="Announcement posted."
-          resetOnSuccess
-          className="field-panel mt-5 grid gap-3"
-        >
-          <div>
-            <h2 className="text-lg font-semibold text-[#14241c]">Post an announcement</h2>
-            <p className="mt-1 text-sm text-[#3d5247]">
-              Everyone in the community gets this in Notifications.
-              {channels.email ? " It is also emailed." : ""}
-              {channels.whatsapp ? " It is also sent on WhatsApp." : ""}
-              {" "}
-              Only an admin can post one. Pin it to keep it at the top.
-            </p>
-          </div>
-          <TextField label="Title" name="title" required minLength={3} placeholder="Title" />
-          <TextAreaField label="Details" name="body" rows={3} placeholder="Details" />
-          <SwitchField name="pin" label="Pin at the top" hint="It stays there until you unpin or remove it." />
-          <button type="submit" className="btn btn-forest w-full sm:w-fit">
-            Post announcement
-          </button>
-        </Form>
+        <AnnouncementComposer email={channels.email} whatsapp={channels.whatsapp} />
       ) : null}
 
       <UpdatesBoard
@@ -211,4 +195,16 @@ export default async function FeedPage() {
       />
     </section>
   );
+}
+
+function meetingDay(payload: unknown) {
+  if (!payload || typeof payload !== "object" || !("startsOn" in payload)) return null;
+  const value = (payload as { startsOn?: unknown }).startsOn;
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }

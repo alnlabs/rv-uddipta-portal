@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { isMessageKind } from "@/lib/inbox";
 import { publishActivity } from "@/lib/activity";
+import { NOTICE_KINDS, isManagedNotice } from "@/lib/postKinds";
 import { reachCommunity } from "@/lib/reach";
 import { canEditBuilder, canManageAdmin, ensureProfile } from "@/lib/roles";
 import { createAdminClient } from "@/utils/supabase/admin";
@@ -53,12 +54,21 @@ export async function postAnnouncement(formData: FormData) {
   const title = String(formData.get("title") || "").trim();
   const body = String(formData.get("body") || "").trim();
   if (title.length < 3) throw new Error("Write a title first.");
+  const notice = NOTICE_KINDS.find((item) => item.value === String(formData.get("kind") || "announcement"));
+  if (!notice) throw new Error("Choose a type.");
+
+  let startsOn: string | null = null;
+  if (notice.value === "meeting") {
+    startsOn = String(formData.get("startsOn") || "").trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(startsOn)) throw new Error("Choose the meeting date.");
+  }
 
   const eventId = await publishActivity({
     actorUserId: user.id,
-    kind: "announcement",
+    kind: notice.value,
     title,
     body: body || null,
+    payload: startsOn ? { startsOn } : {},
     visibility: "community",
     href: "/feed",
     notify: "community",
@@ -70,7 +80,7 @@ export async function postAnnouncement(formData: FormData) {
   }
 
   await reachCommunity({
-    title: `Announcement · ${title}`,
+    title: `${notice.label} · ${title}`,
     body: body || title,
     exceptUserId: user.id,
   }).catch((error: unknown) => {
@@ -102,7 +112,7 @@ export async function pinAnnouncement(formData: FormData) {
     .select("kind")
     .eq("id", id)
     .maybeSingle();
-  if (!data || (data.kind !== "announcement" && data.kind !== "builder_update")) return;
+  if (!data || !isManagedNotice(data.kind)) return;
 
   await admin.from("activity_events").update({ pinned }).eq("id", id);
   revalidatePath("/feed");
@@ -128,7 +138,7 @@ export async function deleteAnnouncement(formData: FormData) {
     .select("kind")
     .eq("id", id)
     .maybeSingle();
-  if (!data || (data.kind !== "announcement" && data.kind !== "builder_update")) return;
+  if (!data || !isManagedNotice(data.kind)) return;
 
   await admin.from("activity_events").delete().eq("id", id);
   revalidatePath("/feed");
