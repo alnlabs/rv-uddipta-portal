@@ -52,7 +52,7 @@ export async function publishActivity(input: ActivityInput) {
     const { data } = await admin
       .from("profiles")
       .select("user_id")
-      .in("role", ["admin", "builder", "owner", "co_owner", "tenant"]);
+      .in("role", ["admin", "builder", "owner", "co_owner", "tenant", "committee", "facility", "staff", "security"]);
     recipients = data ?? [];
   } else if (mode === "flat_and_admins") {
     const { data: flatPeople } = input.flatId

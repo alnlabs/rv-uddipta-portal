@@ -15,14 +15,14 @@ const A1_FLAT = {
 export default function A1PlanPage() {
   return (
     <div className="page-gutter max-w-[1400px] py-6 md:py-10">
-      <header className="mb-6 border-b border-[rgba(27,58,47,0.1)] pb-5">
-        <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">
+      <header className="mb-6 border-b border-[rgba(15,23,42,0.1)] pb-5">
+        <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-[#b45309] uppercase">
           Brochure unit plan
         </p>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[#14241c]">
+        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[#0f172a]">
           {A1_META.unit} · {A1_META.type}
         </h1>
-        <p className="mt-2 max-w-2xl text-sm text-[#3d5247]">
+        <p className="mt-2 max-w-2xl text-sm text-[#475569]">
           {A1_META.floors}. South-west A-block corner. North is up, east is to the
           right, and the entrance is on the west side. Super built-up{" "}
           {A1_META.superBuiltUpSft.toLocaleString()} sft, carpet{" "}
@@ -31,7 +31,7 @@ export default function A1PlanPage() {
       </header>
       <A1PlanView />
       <section className="mt-8">
-        <h2 className="mb-3 text-lg font-semibold text-[#14241c]">3D interior</h2>
+        <h2 className="mb-3 text-lg font-semibold text-[#0f172a]">3D interior</h2>
         <FlatUnit3D flat={A1_FLAT} />
       </section>
     </div>

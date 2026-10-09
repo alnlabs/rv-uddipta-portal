@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import type { ModelFlat } from "@/components/Building3DView";
+import { FeatureOff } from "@/components/FeatureOff";
 import { HomeBoard } from "@/components/HomeBoard";
+import { resolveDeskAccess } from "@/lib/deskAccess";
 import { loadBoardPayload, loadBrochureBoard } from "@/lib/boardData";
 import { INVENTORY } from "@/lib/inventory";
 import { isCommunityRole } from "@/lib/roles";
@@ -38,6 +40,9 @@ function toModelFlat(flat: PublicFlat, memberNames: string[]): ModelFlat {
 
 export default async function CommunityPage() {
   const { user, profile, supabase } = await getAuthState();
+  if (user && (await resolveDeskAccess(profile.role, user, "building")) === "none") {
+    return <FeatureOff label="Building" />;
+  }
   const project = await getProjectInfo();
   const community = Boolean(user && profile && isCommunityRole(profile.role));
   const board = user
@@ -77,7 +82,7 @@ export default async function CommunityPage() {
   return (
     <Suspense
       fallback={
-        <div className="page-gutter max-w-6xl py-10 text-sm text-[#3d5247]">
+        <div className="page-gutter max-w-6xl py-10 text-sm text-[#475569]">
           Opening the building…
         </div>
       }

@@ -22,8 +22,8 @@ export function AnnouncementComposer({
       className="field-panel mt-5 grid gap-3"
     >
       <div>
-        <h2 className="text-lg font-semibold text-[#14241c]">Post an announcement</h2>
-        <p className="mt-1 text-sm text-[#3d5247]">
+        <h2 className="text-lg font-semibold text-[#0f172a]">Post an announcement</h2>
+        <p className="mt-1 text-sm text-[#475569]">
           Everyone in the community gets this in Notifications.
           {email ? " It is also emailed." : ""}
           {whatsapp ? " It is also sent on WhatsApp." : ""}

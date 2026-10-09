@@ -23,6 +23,9 @@ export type BuildingEditorProject = {
   nearby: Place[]
   amenities: string[]
   launchDate: string
+  emergencyContacts?: string
+  gateRules?: string
+  hostApproval?: boolean
 };
 
 const STATS = [
@@ -73,10 +76,36 @@ export function BuildingEditor({ project }: { readonly project: BuildingEditorPr
       <input type="hidden" name="nearby" value={nearbyValue} />
       <input type="hidden" name="amenities" value={amenities.join("\n")} />
 
-      <section className="overflow-hidden rounded-[1.75rem] bg-[#14241c] text-[#f7f2e6] shadow-[0_18px_50px_rgba(20,36,28,0.18)]">
+      <section className="slab grid gap-3 p-4">
+        <h2 className="text-lg font-semibold text-[#0f172a]">Contacts and the gate</h2>
+        <label className="grid gap-1 text-sm font-semibold text-[#0f172a]">
+          Emergency contacts
+          <textarea
+            name="emergencyContacts"
+            defaultValue={project.emergencyContacts || ""}
+            className="field-control"
+            placeholder="Security, plumber, lift"
+          />
+        </label>
+        <label className="grid gap-1 text-sm font-semibold text-[#0f172a]">
+          Gate rules
+          <textarea
+            name="gateRules"
+            defaultValue={project.gateRules || ""}
+            className="field-control"
+            placeholder="When visitors may enter, and what the gate should check"
+          />
+        </label>
+        <label className="flex items-center gap-2 text-sm font-semibold text-[#0f172a]">
+          <input type="checkbox" name="hostApproval" defaultChecked={project.hostApproval !== false} />
+          Ask the host to approve a visitor before entry
+        </label>
+      </section>
+
+      <section className="overflow-hidden rounded-[1.75rem] bg-[#0f172a] text-[#f8fafc] shadow-[0_18px_50px_rgba(20,36,28,0.18)]">
         <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(16rem,22rem)] lg:p-8">
           <div className="min-w-0">
-            <p className="text-[0.68rem] font-semibold tracking-[0.18em] text-[#c9a45c] uppercase">
+            <p className="text-[0.68rem] font-semibold tracking-[0.18em] text-[#059669] uppercase">
               What members see
             </p>
             <input
@@ -95,7 +124,7 @@ export function BuildingEditor({ project }: { readonly project: BuildingEditorPr
               value={tagline}
               onChange={(event) => setTagline(event.target.value)}
               aria-label="Tagline"
-              className="mt-3 w-full bg-transparent text-base text-[#e8d5a3] outline-none placeholder:text-[#8a7a58] sm:text-lg"
+              className="mt-3 w-full bg-transparent text-base text-[#f8fafc] outline-none placeholder:text-[#8a7a58] sm:text-lg"
               placeholder="One line about the building"
             />
             <textarea
@@ -104,13 +133,13 @@ export function BuildingEditor({ project }: { readonly project: BuildingEditorPr
               onChange={(event) => setAddress(event.target.value)}
               aria-label="Address"
               rows={2}
-              className="mt-4 w-full resize-none bg-transparent text-sm leading-relaxed text-[#d8c898] outline-none placeholder:text-[#8a7a58]"
+              className="mt-4 w-full resize-none bg-transparent text-sm leading-relaxed text-[#cbd5e1] outline-none placeholder:text-[#8a7a58]"
               placeholder="Street address"
             />
           </div>
           <div className="grid content-start gap-3">
             <label className="rounded-2xl bg-white/10 px-3 py-2 ring-1 ring-white/15">
-              <span className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#c9a45c] uppercase">
+              <span className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#059669] uppercase">
                 Place
               </span>
               <input
@@ -121,7 +150,7 @@ export function BuildingEditor({ project }: { readonly project: BuildingEditorPr
               />
             </label>
             <label className="rounded-2xl bg-white/10 px-3 py-2 ring-1 ring-white/15">
-              <span className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#c9a45c] uppercase">
+              <span className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#059669] uppercase">
                 Builder
               </span>
               <input
@@ -133,7 +162,7 @@ export function BuildingEditor({ project }: { readonly project: BuildingEditorPr
             </label>
             <div className="grid grid-cols-2 gap-3">
               <label className="rounded-2xl bg-white/10 px-3 py-2 ring-1 ring-white/15">
-                <span className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#c9a45c] uppercase">
+                <span className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#059669] uppercase">
                   Launch
                 </span>
                 <input
@@ -145,7 +174,7 @@ export function BuildingEditor({ project }: { readonly project: BuildingEditorPr
                 />
               </label>
               <label className="rounded-2xl bg-white/10 px-3 py-2 ring-1 ring-white/15">
-                <span className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#c9a45c] uppercase">
+                <span className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#059669] uppercase">
                   RERA
                 </span>
                 <input
@@ -164,7 +193,7 @@ export function BuildingEditor({ project }: { readonly project: BuildingEditorPr
         {STATS.map(([key, label, suffix]) => (
           <label
             key={key}
-            className="rounded-[1.35rem] bg-[#fffcf5] px-4 py-3 shadow-[inset_0_0_0_1px_rgba(27,58,47,0.1)]"
+            className="rounded-[1.35rem] bg-[#ffffff] px-4 py-3 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.1)]"
           >
             <span className="flex items-baseline gap-1">
               <input
@@ -174,10 +203,10 @@ export function BuildingEditor({ project }: { readonly project: BuildingEditorPr
                 onChange={(event) =>
                   setStats((current) => ({ ...current, [key]: event.target.value }))
                 }
-                className="w-full min-w-0 bg-transparent text-[clamp(1.8rem,4vw,2.6rem)] font-semibold leading-none tracking-tight text-[#14241c] outline-none"
+                className="w-full min-w-0 bg-transparent text-[clamp(1.8rem,4vw,2.6rem)] font-semibold leading-none tracking-tight text-[#0f172a] outline-none"
               />
               {suffix ? (
-                <span className="shrink-0 text-sm font-semibold text-[#7a5c22]">{suffix}</span>
+                <span className="shrink-0 text-sm font-semibold text-[#b45309]">{suffix}</span>
               ) : null}
             </span>
             <span className="mt-2 block text-[0.68rem] font-semibold tracking-[0.14em] text-[#5a6e62] uppercase">
@@ -188,13 +217,13 @@ export function BuildingEditor({ project }: { readonly project: BuildingEditorPr
       </div>
 
       <div className="grid items-start gap-4 xl:grid-cols-2">
-        <section className="rounded-[1.35rem] bg-[#fffcf5] p-4 shadow-[inset_0_0_0_1px_rgba(27,58,47,0.1)] sm:p-5">
+        <section className="rounded-[1.35rem] bg-[#ffffff] p-4 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.1)] sm:p-5">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold text-[#14241c]">Nearby</h2>
+            <h2 className="text-lg font-semibold text-[#0f172a]">Nearby</h2>
             <button
               type="button"
               onClick={() => setPlaces((current) => [...current, { label: "", distance: "" }])}
-              className="min-h-10 rounded-full bg-[#1b3a2f] px-3 text-sm font-semibold text-[#e8d5a3]"
+              className="min-h-10 rounded-full bg-[#1e293b] px-3 text-sm font-semibold text-[#f8fafc]"
             >
               Add place
             </button>
@@ -213,7 +242,7 @@ export function BuildingEditor({ project }: { readonly project: BuildingEditorPr
                       ),
                     )
                   }
-                  className="min-h-12 rounded-2xl bg-[#f4efe4] px-3 text-base outline-none focus:ring-4 focus:ring-[rgba(27,58,47,0.12)]"
+                  className="min-h-12 rounded-2xl bg-[#f4efe4] px-3 text-base outline-none focus:ring-4 focus:ring-[rgba(15,23,42,0.12)]"
                 />
                 <input
                   value={place.distance}
@@ -226,7 +255,7 @@ export function BuildingEditor({ project }: { readonly project: BuildingEditorPr
                       ),
                     )
                   }
-                  className="min-h-12 rounded-2xl bg-[#f4efe4] px-3 text-base outline-none focus:ring-4 focus:ring-[rgba(27,58,47,0.12)]"
+                  className="min-h-12 rounded-2xl bg-[#f4efe4] px-3 text-base outline-none focus:ring-4 focus:ring-[rgba(15,23,42,0.12)]"
                 />
                 <button
                   type="button"
@@ -247,8 +276,8 @@ export function BuildingEditor({ project }: { readonly project: BuildingEditorPr
           </ul>
         </section>
 
-        <section className="rounded-[1.35rem] bg-[#fffcf5] p-4 shadow-[inset_0_0_0_1px_rgba(27,58,47,0.1)] sm:p-5">
-          <h2 className="text-lg font-semibold text-[#14241c]">Amenities</h2>
+        <section className="rounded-[1.35rem] bg-[#ffffff] p-4 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.1)] sm:p-5">
+          <h2 className="text-lg font-semibold text-[#0f172a]">Amenities</h2>
           <div className="mt-3 flex gap-2">
             <input
               value={amenityDraft}
@@ -261,23 +290,23 @@ export function BuildingEditor({ project }: { readonly project: BuildingEditorPr
               }}
               placeholder="Add an amenity"
               aria-label="Add an amenity"
-              className="min-h-12 min-w-0 flex-1 rounded-2xl bg-[#f4efe4] px-3 text-base outline-none focus:ring-4 focus:ring-[rgba(27,58,47,0.12)]"
+              className="min-h-12 min-w-0 flex-1 rounded-2xl bg-[#f4efe4] px-3 text-base outline-none focus:ring-4 focus:ring-[rgba(15,23,42,0.12)]"
             />
             <button
               type="button"
               onClick={addAmenity}
-              className="min-h-12 rounded-full bg-[#c9a45c] px-4 text-sm font-semibold text-[#14241c]"
+              className="min-h-12 rounded-full bg-[#059669] px-4 text-sm font-semibold text-[#0f172a]"
             >
               Add
             </button>
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {groups.length === 0 ? (
-              <p className="text-sm text-[#3d5247]">Nothing listed yet.</p>
+              <p className="text-sm text-[#475569]">Nothing listed yet.</p>
             ) : (
               groups.map((group) => (
                 <div key={group.title}>
-                  <p className="text-[0.68rem] font-semibold tracking-[0.14em] text-[#7a5c22] uppercase">
+                  <p className="text-[0.68rem] font-semibold tracking-[0.14em] text-[#b45309] uppercase">
                     {group.title}
                   </p>
                   <ul className="mt-2 flex flex-wrap gap-1.5">
@@ -288,7 +317,7 @@ export function BuildingEditor({ project }: { readonly project: BuildingEditorPr
                           onClick={() =>
                             setAmenities((current) => current.filter((entry) => entry !== item))
                           }
-                          className="inline-flex min-h-10 items-center gap-1 rounded-full bg-[#1b3a2f] px-3 text-sm font-semibold text-[#e8d5a3]"
+                          className="inline-flex min-h-10 items-center gap-1 rounded-full bg-[#1e293b] px-3 text-sm font-semibold text-[#f8fafc]"
                         >
                           {item}
                           <span aria-hidden>×</span>
@@ -304,10 +333,10 @@ export function BuildingEditor({ project }: { readonly project: BuildingEditorPr
         </section>
       </div>
 
-      <div className="sticky bottom-3 z-10 flex items-center justify-between gap-3 rounded-full bg-[#14241c]/95 px-2 py-2 pl-4 text-[#f7f2e6] shadow-[0_12px_40px_rgba(20,36,28,0.28)] backdrop-blur">
+      <div className="sticky bottom-3 z-10 flex items-center justify-between gap-3 rounded-full bg-[#0f172a]/95 px-2 py-2 pl-4 text-[#f8fafc] shadow-[0_12px_40px_rgba(20,36,28,0.28)] backdrop-blur">
         <p className="min-w-0 truncate text-sm">
           <span className="font-semibold">{name || "Untitled"}</span>
-          <span className="text-[#c9a45c]"> · {stats.units || "0"} homes</span>
+          <span className="text-[#059669]"> · {stats.units || "0"} homes</span>
         </p>
         <button type="submit" className="btn btn-gold shrink-0">
           Save building

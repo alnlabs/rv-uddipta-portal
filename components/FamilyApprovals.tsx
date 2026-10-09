@@ -17,10 +17,10 @@ export function FamilyApprovals({
 
   return (
     <section className="page-gutter max-w-3xl pt-4">
-      <h2 className="text-xl font-semibold tracking-tight text-[#14241c]">
+      <h2 className="text-xl font-semibold tracking-tight text-[#0f172a]">
         Family waiting for you
       </h2>
-      <p className="mt-1 text-sm text-[#3d5247]">Approve a family member for your flat.</p>
+      <p className="mt-1 text-sm text-[#475569]">Approve a family member for your flat.</p>
       {error ? (
         <div className="mt-3">
           <FormAlert tone="error">{error}</FormAlert>
@@ -32,9 +32,9 @@ export function FamilyApprovals({
             key={row.id}
             className="field-panel flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
           >
-            <p className="text-base text-[#14241c]">
+            <p className="text-base text-[#0f172a]">
               <strong>{row.owner_name}</strong>
-              <span className="mt-0.5 block text-sm text-[#3d5247]">{row.phone}</span>
+              <span className="mt-0.5 block text-sm text-[#475569]">{row.phone}</span>
             </p>
             <button
               type="button"

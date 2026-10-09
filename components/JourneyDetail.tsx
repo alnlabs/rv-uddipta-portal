@@ -10,20 +10,20 @@ import {
 function Mark({ mark }: { readonly mark: JourneyStepView["mark"] }) {
   if (mark === "done") {
     return (
-      <span className="grid size-6 place-items-center rounded-full bg-[#1b3a2f] text-[11px] font-bold text-[#e8d5a3]">
+      <span className="grid size-6 place-items-center rounded-full bg-[#1e293b] text-[11px] font-bold text-[#f8fafc]">
         ✓
       </span>
     );
   }
   if (mark === "active") {
     return (
-      <span className="grid size-6 place-items-center rounded-full ring-2 ring-[#c9a45c]">
-        <span className="size-2 rounded-full bg-[#c9a45c]" />
+      <span className="grid size-6 place-items-center rounded-full ring-2 ring-[#059669]">
+        <span className="size-2 rounded-full bg-[#059669]" />
       </span>
     );
   }
   return (
-    <span className="grid size-6 place-items-center rounded-full ring-1 ring-[rgba(27,58,47,0.22)]" />
+    <span className="grid size-6 place-items-center rounded-full ring-1 ring-[rgba(15,23,42,0.22)]" />
   );
 }
 
@@ -62,7 +62,7 @@ export function JourneyDetail({
         role="dialog"
         aria-modal="true"
         aria-labelledby="journey-title"
-        className="max-h-[min(88dvh,36rem)] w-full max-w-lg overflow-y-auto rounded-[1.5rem] bg-[#fffcf5] p-5 text-[#14241c] shadow-[0_24px_80px_rgba(0,0,0,0.28)] ring-1 ring-[rgba(27,58,47,0.12)] md:p-7"
+        className="max-h-[min(88dvh,36rem)] w-full max-w-lg overflow-y-auto rounded-[1.5rem] bg-[#ffffff] p-5 text-[#0f172a] shadow-[0_24px_80px_rgba(0,0,0,0.28)] ring-1 ring-[rgba(15,23,42,0.12)] md:p-7"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
@@ -73,7 +73,7 @@ export function JourneyDetail({
             >
               Home journey
             </h2>
-            <p className="mt-1 text-sm text-[#3d5247]">
+            <p className="mt-1 text-sm text-[#475569]">
               {complete
                 ? "Journey completed"
                 : `${steps.filter((step) => step.mark === "done").length} of ${steps.length} milestones completed`}
@@ -83,7 +83,7 @@ export function JourneyDetail({
             type="button"
             onClick={onClose}
             aria-label="Close journey"
-            className="grid size-11 shrink-0 place-items-center rounded-full text-2xl leading-none text-[#14241c] ring-1 ring-[rgba(27,58,47,0.16)]"
+            className="grid size-11 shrink-0 place-items-center rounded-full text-2xl leading-none text-[#0f172a] ring-1 ring-[rgba(15,23,42,0.16)]"
           >
             ×
           </button>
@@ -103,26 +103,26 @@ export function JourneyDetail({
                     <span
                       className={`mt-1 min-h-6 w-px flex-1 ${
                         step.mark === "done"
-                          ? "bg-[#1b3a2f]"
-                          : "bg-[rgba(27,58,47,0.14)]"
+                          ? "bg-[#1e293b]"
+                          : "bg-[rgba(15,23,42,0.14)]"
                       }`}
                     />
                   )}
                 </div>
                 <div className={`min-w-0 ${last ? "pb-0" : "pb-5"}`}>
                   <p className="font-semibold">{step.label}</p>
-                  <p className="text-sm text-[#3d5247]">
+                  <p className="text-sm text-[#475569]">
                     {step.status}
                     {step.date ? ` · ${formatShortDate(step.date)}` : ""}
                   </p>
-                  <p className="mt-1 text-sm text-[#3d5247]">
+                  <p className="mt-1 text-sm text-[#475569]">
                     {journeyExplain(step.key, step.value)}
                   </p>
                   {current?.key === step.key && step.key === "interior" && onViewCurrent ? (
                     <button
                       type="button"
                       onClick={onViewCurrent}
-                      className="mt-3 text-sm font-semibold text-[#1b3a2f] underline-offset-4 hover:underline"
+                      className="mt-3 text-sm font-semibold text-[#1e293b] underline-offset-4 hover:underline"
                     >
                       View interior →
                     </button>

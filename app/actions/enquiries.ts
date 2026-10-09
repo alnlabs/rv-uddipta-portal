@@ -11,6 +11,7 @@ import {
   type ResultsView,
 } from "@/lib/enquiries";
 import { normalizePhone } from "@/lib/phone";
+import { resolveDeskAccess } from "@/lib/deskAccess";
 import { isCommunityRole, canManageAdmin } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
@@ -348,6 +349,12 @@ export async function submitEnquiry(
   if (enquiry.closed_at) return { ok: false, message: "This form is closed." };
 
   const auth = await getAuthState();
+  if (auth.user) {
+    const access = await resolveDeskAccess(auth.profile.role, auth.user, "forms");
+    if (access !== "manage") {
+      return { ok: false, message: "You can look at this. You cannot change it." };
+    }
+  }
   if (enquiry.visibility === "private") {
     if (!auth.user || !isCommunityRole(auth.profile.role)) {
       return { ok: false, message: "Sign in as a community member to send this." };

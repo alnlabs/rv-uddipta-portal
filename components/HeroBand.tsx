@@ -1,6 +1,6 @@
 export function HeroBand({ children }: { children: React.ReactNode }) {
   return (
-    <section className="hero-band flex items-center justify-center text-[#f7f2e6] md:justify-start">
+    <section className="hero-band flex items-center justify-center text-[#f8fafc] md:justify-start">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/hero-uddiipta.jpg"

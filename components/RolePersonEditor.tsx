@@ -9,10 +9,10 @@ import {
   Disclosure,
   FieldGrid,
   FormAlert,
-  SelectField,
   TextField,
 } from "@/components/form-ui";
-import { accessSummary, ROLE_GUIDE } from "@/lib/roleLabels";
+import { RoleChoice } from "@/components/RoleChoice";
+import { accessSummary, roleNeedsHome } from "@/lib/roleLabels";
 
 export type RolePerson = {
   userId: string
@@ -23,24 +23,40 @@ export type RolePerson = {
   flatNumber: string | null
 };
 
-export function RolePersonEditor({ person }: { readonly person: RolePerson }) {
+export function RolePersonEditor({
+  person,
+  kind,
+}: {
+  readonly person: RolePerson
+  readonly kind: "office" | "home"
+}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [role, setRole] = useState(
+    kind === "home"
+      ? roleNeedsHome(person.role)
+        ? person.role
+        : "owner"
+      : roleNeedsHome(person.role)
+        ? "visitor"
+        : person.role,
+  );
   const [pending, startTransition] = useTransition();
+  const needsHome = kind === "home" && roleNeedsHome(role);
 
   return (
     <div className="field-panel">
-      <p className="text-base font-semibold text-[#14241c]">
+      <p className="text-base font-semibold text-[#0f172a]">
         {person.displayName || person.email || "Unnamed account"}
         {person.locked ? (
-          <span className="ml-2 rounded-full bg-[#1b3a2f] px-2 py-0.5 align-middle text-[10px] font-semibold tracking-wide text-[#e8d5a3] uppercase">
+          <span className="ml-2 rounded-full bg-[#1e293b] px-2 py-0.5 align-middle text-[10px] font-semibold tracking-wide text-[#f8fafc] uppercase">
             Super admin
           </span>
         ) : null}
       </p>
       {person.email ? (
-        <p className="mt-0.5 text-sm text-[#3d5247]">{person.email}</p>
+        <p className="mt-0.5 text-sm text-[#475569]">{person.email}</p>
       ) : null}
       <p className="mt-1 text-sm font-medium text-[#2f5a48]">
         {accessSummary(person)}
@@ -53,6 +69,9 @@ export function RolePersonEditor({ person }: { readonly person: RolePerson }) {
           setError(null);
           setNotice(null);
           const formData = new FormData(event.currentTarget);
+          if (kind === "office" || !roleNeedsHome(String(formData.get("role") || ""))) {
+            formData.set("flatNumber", "");
+          }
           startTransition(async () => {
             const result = await adminSaveProfile(formData);
             if (!result.ok) {
@@ -65,24 +84,31 @@ export function RolePersonEditor({ person }: { readonly person: RolePerson }) {
         }}
       >
         <input type="hidden" name="userId" value={person.userId} />
-        <FieldGrid>
-          <SelectField
-            label="Access"
-            name="role"
-            defaultValue={person.role}
-            options={ROLE_GUIDE.map((item) => ({ value: item.value, label: item.label }))}
-          />
+        <RoleChoice kind={kind} value={role} onChange={setRole} />
+        <FieldGrid className="mt-4">
+          {needsHome ? (
+            <TextField
+              label="Home"
+              name="flatNumber"
+              defaultValue={person.flatNumber || ""}
+              placeholder="B804"
+              required
+              hint={
+                role === "co_owner"
+                  ? "The owner’s home."
+                  : role === "tenant"
+                    ? "The home they live in."
+                    : "The home they own."
+              }
+            />
+          ) : (
+            <p className="text-sm text-[#475569] sm:col-span-2">This role is not tied to a home.</p>
+          )}
           <TextField
-            label="Flat"
-            name="flatNumber"
-            defaultValue={person.flatNumber || ""}
-            placeholder="A101"
-            hint="Needed for owner or family."
-          />
-          <TextField
-            label="Name shown in the portal"
+            label="Name"
             name="displayName"
             defaultValue={person.displayName}
+            hint="How neighbours see them."
             className="sm:col-span-2"
           />
         </FieldGrid>

@@ -16,10 +16,10 @@ export function PublicFloorGuide() {
       className="page-gutter max-w-[1100px] scroll-mt-24 pb-8 md:scroll-mt-28 md:pb-14"
     >
       <div className="mb-4">
-        <h2 className="text-3xl font-semibold tracking-tight text-[#14241c]">
+        <h2 className="text-3xl font-semibold tracking-tight text-[#0f172a]">
           Floor-wise flats
         </h2>
-        <p className="text-[#3d5247]">
+        <p className="text-[#475569]">
           Pick a floor, then a wing. Sign in to see owners and possession.
         </p>
       </div>

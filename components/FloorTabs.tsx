@@ -23,8 +23,8 @@ export function FloorTabs({
             aria-label={`Floor ${floor}`}
             className={`flex min-h-14 items-center justify-center rounded-xl border text-xl font-semibold ${
               active
-                ? "border-[#1b3a2f] bg-[#1b3a2f] text-[#e8d5a3]"
-                : "border-[rgba(27,58,47,0.14)] bg-[#fffcf5] text-[#14241c]"
+                ? "border-[#1e293b] bg-[#1e293b] text-[#f8fafc]"
+                : "border-[rgba(15,23,42,0.14)] bg-[#ffffff] text-[#0f172a]"
             }`}
           >
             {floor}

@@ -55,12 +55,12 @@ export default function RegisterForm({
 
   return (
     <section className="page-gutter grid max-w-[1100px] place-items-start py-6 md:min-h-[70vh] md:place-items-center md:py-12">
-      <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-[rgba(27,58,47,0.12)] bg-[#fffcf5]/95 shadow-xl">
-        <div className="bg-[#14241c] px-5 py-5 text-[#f7f2e6] md:px-6">
+      <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-[rgba(15,23,42,0.12)] bg-[#ffffff]/95 shadow-xl">
+        <div className="bg-[#0f172a] px-5 py-5 text-[#f8fafc] md:px-6">
           <h1 className="text-3xl font-semibold tracking-tight">
             Request your flat
           </h1>
-          <p className="mt-2 text-sm text-[#d8c898]">
+          <p className="mt-2 text-sm text-[#cbd5e1]">
             Signed in as {email}. After approval you land on Updates, and My
             flat shows this apartment.
           </p>
@@ -120,12 +120,12 @@ export default function RegisterForm({
                   <button
                     type="button"
                     onClick={() => setFlatNumber(flat.flatNumber)}
-                    className="flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl bg-white px-3 text-left ring-1 ring-[rgba(27,58,47,0.12)]"
+                    className="flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl bg-white px-3 text-left ring-1 ring-[rgba(15,23,42,0.12)]"
                   >
-                    <span className="text-base font-semibold text-[#14241c]">
+                    <span className="text-base font-semibold text-[#0f172a]">
                       {flat.flatNumber}
                     </span>
-                    <span className="text-sm text-[#3d5247]">
+                    <span className="text-sm text-[#475569]">
                       {typeLabel(flat.type)} · {facingLabel(flat.facing)} ·{" "}
                       {flat.areaSqft.toLocaleString()} sft
                     </span>
@@ -136,8 +136,8 @@ export default function RegisterForm({
           ) : null}
 
           {selected ? (
-            <div className="rounded-2xl bg-[rgba(27,58,47,0.05)] px-4 py-3 text-sm text-[#3d5247]">
-              <p className="font-semibold text-[#14241c]">{selected.flatNumber}</p>
+            <div className="rounded-2xl bg-[rgba(15,23,42,0.05)] px-4 py-3 text-sm text-[#475569]">
+              <p className="font-semibold text-[#0f172a]">{selected.flatNumber}</p>
               <p className="mt-0.5">
                 Floor {selected.floor} · Wing {selected.wing} ·{" "}
                 {typeLabel(selected.type)} · {facingLabel(selected.facing)} ·{" "}

@@ -13,10 +13,10 @@ export function AddQuestionForm({ enquiryId }: { readonly enquiryId: number }) {
     <Form action={addEnquiryField} resetOnSuccess className="form-sheet grid gap-5 md:grid-cols-2">
       <div className="md:col-span-2">
         <p className="eyebrow">New question</p>
-        <h2 className="mt-1 text-2xl font-semibold tracking-tight text-[#14241c]">
+        <h2 className="mt-1 text-2xl font-semibold tracking-tight text-[#0f172a]">
           Add a question
         </h2>
-        <p className="mt-2 text-sm leading-relaxed text-[#3d5247]">
+        <p className="mt-2 text-sm leading-relaxed text-[#475569]">
           Write it the way you would ask a neighbour. You can reorder questions after they are added.
         </p>
       </div>

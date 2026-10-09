@@ -1,4 +1,5 @@
 import { openNotification, markNotificationRead } from "@/app/actions/activity";
+import { visibleText } from "@/lib/richText";
 
 type InboxRow = {
   id: number
@@ -29,7 +30,7 @@ export function InboxList({
 }) {
   if (rows.length === 0) {
     return (
-      <p className="mt-6 rounded-2xl bg-[#fffcf5] px-4 py-8 text-center text-sm text-[#3d5247] ring-1 ring-[rgba(27,58,47,0.1)]">
+      <p className="mt-6 rounded-2xl bg-[#ffffff] px-4 py-8 text-center text-sm text-[#475569] ring-1 ring-[rgba(15,23,42,0.1)]">
         {empty}
       </p>
     );
@@ -42,29 +43,29 @@ export function InboxList({
           key={row.id}
           className={`rounded-2xl px-4 py-3 ring-1 ${
             row.read_at
-              ? "bg-[#fffcf5] ring-[rgba(27,58,47,0.08)]"
-              : "bg-[#fffcf5] ring-[rgba(201,164,92,0.35)]"
+              ? "bg-[#ffffff] ring-[rgba(15,23,42,0.08)]"
+              : "bg-[#ffffff] ring-[rgba(5,150,105,0.35)]"
           }`}
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-[#14241c]">{row.title}</p>
-              {row.body ? <p className="mt-0.5 text-sm text-[#3d5247]">{row.body}</p> : null}
-              <p className="mt-1 text-xs text-[#3d5247]">{relativeTime(row.created_at)}</p>
+              <p className="text-sm font-semibold text-[#0f172a]">{row.title}</p>
+              {row.body ? <p className="mt-0.5 text-sm text-[#475569]">{visibleText(row.body)}</p> : null}
+              <p className="mt-1 text-xs text-[#475569]">{relativeTime(row.created_at)}</p>
             </div>
             <div className="flex shrink-0 flex-col items-end gap-2">
               {row.href ? (
                 <form action={openNotification}>
                   <input type="hidden" name="id" value={row.id} />
                   <input type="hidden" name="href" value={row.href} />
-                  <button type="submit" className="text-xs font-semibold text-[#1b3a2f] underline">
+                  <button type="submit" className="text-xs font-semibold text-[#1e293b] underline">
                     Open
                   </button>
                 </form>
               ) : null}
               {!row.read_at ? (
                 <form action={markNotificationRead.bind(null, row.id)}>
-                  <button type="submit" className="text-xs font-semibold text-[#7a5c22]">
+                  <button type="submit" className="text-xs font-semibold text-[#b45309]">
                     Mark read
                   </button>
                 </form>

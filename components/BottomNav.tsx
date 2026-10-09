@@ -16,7 +16,7 @@ export function BottomNav({
     <Link
       href={href}
       className={`flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center rounded-xl px-2 text-xs font-semibold ${
-        active ? "bg-[#1b3a2f] text-[#e8d5a3]" : "text-[#3d5247]"
+        active ? "bg-[#1e293b] text-[#f8fafc]" : "text-[#475569]"
       }`}
     >
       {label}
@@ -25,7 +25,7 @@ export function BottomNav({
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-[rgba(27,58,47,0.1)] bg-[#efe8d8]/92 px-2 pt-2 backdrop-blur-md md:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-[rgba(15,23,42,0.1)] bg-[#f8fafc]/92 px-2 pt-2 backdrop-blur-md md:hidden"
       style={{ paddingBottom: "max(0.65rem, env(safe-area-inset-bottom))" }}
       aria-label="Primary"
     >

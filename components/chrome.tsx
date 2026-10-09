@@ -32,16 +32,16 @@ export function PageTitle({
   readonly action?: ReactNode
 }) {
   return (
-    <header className="flex flex-col gap-4 border-b border-[rgba(27,58,47,0.1)] pb-8 md:flex-row md:items-end md:justify-between">
+    <header className="flex flex-col gap-4 border-b border-[rgba(15,23,42,0.1)] pb-8 md:flex-row md:items-end md:justify-between">
       <div className="min-w-0">
         {kicker ? (
-          <p className="text-sm text-[#7a5c22]">{kicker}</p>
+          <p className="text-sm text-[#b45309]">{kicker}</p>
         ) : null}
-        <h1 className="mt-1 font-semibold tracking-tight text-[#14241c] text-[clamp(2rem,5vw,3.25rem)] leading-[1.05]">
+        <h1 className="mt-1 font-semibold tracking-tight text-[#0f172a] text-[clamp(2rem,5vw,3.25rem)] leading-[1.05]">
           {title}
         </h1>
         {lede ? (
-          <p className="mt-3 max-w-xl text-base text-[#3d5247]">{lede}</p>
+          <p className="mt-3 max-w-xl text-base text-[#475569]">{lede}</p>
         ) : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
@@ -57,17 +57,17 @@ export function SectionHead({
   readonly aside?: ReactNode
 }) {
   return (
-    <div className="flex items-end justify-between gap-4 border-b border-[rgba(27,58,47,0.1)] pb-2">
-      <h2 className="text-lg font-semibold tracking-tight text-[#14241c] md:text-xl">
+    <div className="flex items-end justify-between gap-4 border-b border-[rgba(15,23,42,0.1)] pb-2">
+      <h2 className="text-lg font-semibold tracking-tight text-[#0f172a] md:text-xl">
         {title}
       </h2>
-      {aside ? <div className="text-sm text-[#3d5247]">{aside}</div> : null}
+      {aside ? <div className="text-sm text-[#475569]">{aside}</div> : null}
     </div>
   );
 }
 
 export function MetaLine({ children }: { readonly children: ReactNode }) {
-  return <p className="text-sm leading-relaxed text-[#3d5247]">{children}</p>;
+  return <p className="text-sm leading-relaxed text-[#475569]">{children}</p>;
 }
 
 export function TextLink({
@@ -80,7 +80,7 @@ export function TextLink({
   return (
     <Link
       href={href}
-      className="text-sm font-semibold text-[#1b3a2f] underline-offset-4 hover:underline"
+      className="text-sm font-semibold text-[#1e293b] underline-offset-4 hover:underline"
     >
       {children}
     </Link>
@@ -100,7 +100,7 @@ export function Segmented<T extends string>({
 }) {
   return (
     <div
-      className="inline-flex gap-px border-b border-[rgba(27,58,47,0.14)]"
+      className="inline-flex gap-px border-b border-[rgba(15,23,42,0.14)]"
       role="tablist"
       aria-label={label}
     >
@@ -115,8 +115,8 @@ export function Segmented<T extends string>({
             onClick={() => onChange(item.id)}
             className={`min-h-11 px-4 text-sm font-semibold ${
               active
-                ? "border-b-2 border-[#14241c] text-[#14241c]"
-                : "text-[#3d5247] hover:text-[#14241c]"
+                ? "border-b-2 border-[#0f172a] text-[#0f172a]"
+                : "text-[#475569] hover:text-[#0f172a]"
             }`}
           >
             {item.label}
@@ -131,7 +131,7 @@ function Mark({ mark }: { readonly mark: JourneyMark }) {
   if (mark === "done") {
     return (
       <span
-        className="grid size-6 place-items-center rounded-full bg-[#1b3a2f] text-[11px] font-bold text-[#e8d5a3]"
+        className="grid size-6 place-items-center rounded-full bg-[#1e293b] text-[11px] font-bold text-[#f8fafc]"
         aria-hidden
       >
         ✓
@@ -141,16 +141,16 @@ function Mark({ mark }: { readonly mark: JourneyMark }) {
   if (mark === "active") {
     return (
       <span
-        className="grid size-6 place-items-center rounded-full ring-2 ring-[#c9a45c]"
+        className="grid size-6 place-items-center rounded-full ring-2 ring-[#059669]"
         aria-hidden
       >
-        <span className="size-2 rounded-full bg-[#c9a45c]" />
+        <span className="size-2 rounded-full bg-[#059669]" />
       </span>
     );
   }
   return (
     <span
-      className="grid size-6 place-items-center rounded-full ring-1 ring-[rgba(27,58,47,0.22)]"
+      className="grid size-6 place-items-center rounded-full ring-1 ring-[rgba(15,23,42,0.22)]"
       aria-hidden
     />
   );
@@ -164,13 +164,13 @@ export function JourneyRail({
   readonly href?: string
 }) {
   const body = (
-    <ol className="divide-y divide-[rgba(27,58,47,0.08)]">
+    <ol className="divide-y divide-[rgba(15,23,42,0.08)]">
       {steps.map((step) => (
         <li key={step.key} className="flex items-center gap-4 py-3.5">
           <Mark mark={step.mark} />
           <div className="min-w-0 flex-1">
-            <p className="font-semibold text-[#14241c]">{step.label}</p>
-            <p className="text-sm text-[#3d5247]">
+            <p className="font-semibold text-[#0f172a]">{step.label}</p>
+            <p className="text-sm text-[#475569]">
               {step.status}
               {step.date ? ` · ${formatShortDate(step.date)}` : ""}
             </p>

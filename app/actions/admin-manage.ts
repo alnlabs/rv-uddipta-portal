@@ -411,6 +411,9 @@ export async function adminSaveBuilder(formData: FormData) {
     greenery_facing_percent: Number(formData.get("greeneryFacingPercent") || 0),
     amenities,
     nearby: nearbyRaw,
+    emergency_contacts: String(formData.get("emergencyContacts") || "").trim(),
+    gate_rules: String(formData.get("gateRules") || "").trim(),
+    host_approval: formData.get("hostApproval") === "on",
     updated_at: new Date().toISOString(),
   });
   if (error) throw new Error(error.message);

@@ -83,9 +83,9 @@ export function ApprovalsList({
       {error ? <FormAlert tone="error">{error}</FormAlert> : null}
 
       {waiting.length === 0 ? (
-        <div className="mt-3 rounded-2xl bg-[#fffcf5] p-4 ring-1 ring-[rgba(27,58,47,0.12)]">
-          <p className="text-lg font-semibold text-[#14241c]">No one is waiting</p>
-          <p className="mt-1 text-base text-[#3d5247]">
+        <div className="mt-3 rounded-2xl bg-[#ffffff] p-4 ring-1 ring-[rgba(15,23,42,0.12)]">
+          <p className="text-lg font-semibold text-[#0f172a]">No one is waiting</p>
+          <p className="mt-1 text-base text-[#475569]">
             When someone asks to join a flat, they show up here.
           </p>
         </div>
@@ -94,32 +94,32 @@ export function ApprovalsList({
           {waiting.map((row) => (
             <li
               key={row.id}
-              className="flex flex-col overflow-hidden rounded-[1.35rem] bg-[#fffcf5] shadow-[inset_0_0_0_1px_rgba(27,58,47,0.1)]"
+              className="flex flex-col overflow-hidden rounded-[1.35rem] bg-[#ffffff] shadow-[inset_0_0_0_1px_rgba(15,23,42,0.1)]"
             >
-              <div className="bg-[#14241c] px-4 py-4 text-[#f7f2e6]">
+              <div className="bg-[#0f172a] px-4 py-4 text-[#f8fafc]">
                 <div className="flex items-start justify-between gap-3">
                   <strong className="text-3xl font-semibold tracking-tight">
                     {row.flat_number}
                   </strong>
-                  <span className="rounded-full bg-[#c9a45c] px-2.5 py-1 text-[0.68rem] font-bold tracking-wide text-[#14241c] uppercase">
+                  <span className="rounded-full bg-[#059669] px-2.5 py-1 text-[0.68rem] font-bold tracking-wide text-[#0f172a] uppercase">
                     {row.request_kind === "family" ? "Family" : "Owner"}
                   </span>
                 </div>
-                <p className="mt-1 text-sm text-[#c9a45c]">
+                <p className="mt-1 text-sm text-[#059669]">
                   Floor {row.floor} · {row.type}
                 </p>
               </div>
               <div className="flex flex-1 flex-col p-4">
-              <p className="text-lg font-semibold text-[#14241c]">{row.owner_name}</p>
+              <p className="text-lg font-semibold text-[#0f172a]">{row.owner_name}</p>
               {row.request_kind === "family" ? (
-                <p className="text-sm text-[#3d5247]">
+                <p className="text-sm text-[#475569]">
                   The flat’s owner can also approve this.
                 </p>
               ) : (
-                <p className="text-sm text-[#3d5247]">Only an admin can approve this.</p>
+                <p className="text-sm text-[#475569]">Only an admin can approve this.</p>
               )}
-              <p className="text-base text-[#3d5247]">{row.email}</p>
-              <p className="text-base text-[#3d5247]">{maskPhone(row.phone)}</p>
+              <p className="text-base text-[#475569]">{row.email}</p>
+              <p className="text-base text-[#475569]">{maskPhone(row.phone)}</p>
               <div className="mt-auto grid gap-2 pt-4">
                 <button
                   type="button"
@@ -163,10 +163,10 @@ export function ApprovalsList({
 
       {reviewed.length > 0 ? (
         <Disclosure title={`Already decided (${reviewed.length})`} className="mt-8">
-          <ul className="divide-y divide-[rgba(27,58,47,0.1)]">
+          <ul className="divide-y divide-[rgba(15,23,42,0.1)]">
             {reviewed.map((row) => (
-              <li key={row.id} className="py-3 text-base text-[#3d5247]">
-                <strong className="text-[#14241c]">{row.flat_number}</strong> · {row.owner_name} ·{" "}
+              <li key={row.id} className="py-3 text-base text-[#475569]">
+                <strong className="text-[#0f172a]">{row.flat_number}</strong> · {row.owner_name} ·{" "}
                 {row.status === "approved" ? "Approved" : "Rejected"}
                 {row.reject_reason ? ` — ${row.reject_reason}` : ""}
               </li>

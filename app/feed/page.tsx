@@ -1,30 +1,53 @@
 import { redirect } from "next/navigation";
-import { deleteAnnouncement, pinAnnouncement } from "@/app/actions/activity";
-import { AnnouncementComposer } from "@/components/AnnouncementComposer";
-import { outboundChannels } from "@/lib/reach";
-import { UpdatesBoard, type FeedPost } from "@/components/UpdatesBoard";
+import { FeatureOff } from "@/components/FeatureOff";
+import { UpdatesBoard, type FeedNotice, type FeedPost, type FeedSlice } from "@/components/UpdatesBoard";
 import { isSuperAdmin } from "@/lib/admin";
-import { noticeLabel } from "@/lib/postKinds";
+import { resolveDeskAccess } from "@/lib/deskAccess";
+import { disabledCommunityKinds, loadCategoryLabels } from "@/lib/features";
 import { canManageAdmin, isCommunityRole } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 const NOTICE_QUERY = ["announcement", "builder_update", "maintenance", "meeting"];
 
-export default async function FeedPage() {
+export default async function FeedPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>
+}) {
   const { user, profile } = await getAuthState();
   if (!user) redirect("/login");
   const community = isCommunityRole(profile.role) || isSuperAdmin(user);
   if (!community) redirect("/register");
+  const params = await searchParams;
+  const requested =
+    params.view === "notices" || params.view === "events" || params.view === "polls" ? params.view : "all";
+  const [feedAccess, noticeAccess, eventAccess, pollAccess] = await Promise.all([
+    resolveDeskAccess(profile.role, user, "feed"),
+    resolveDeskAccess(profile.role, user, "announcements"),
+    resolveDeskAccess(profile.role, user, "events"),
+    resolveDeskAccess(profile.role, user, "polls"),
+  ]);
+  if (feedAccess === "none" && noticeAccess === "none" && eventAccess === "none" && pollAccess === "none") {
+    return <FeatureOff label="Updates" />;
+  }
+  const initialSlice: FeedSlice =
+    requested === "notices" && noticeAccess !== "none"
+      ? "notices"
+      : requested === "events" && eventAccess !== "none"
+        ? "events"
+        : requested === "polls" && pollAccess !== "none"
+          ? "polls"
+          : "all";
 
   const admin = createAdminClient();
   const [{ data: posts }, { data: replies }, { data: pinnedNotices }, { data: recentNotices }] =
     await Promise.all([
     admin
       .from("member_posts")
-      .select("id, author_user_id, author_name, flat_number, kind, topic, body, created_at, image_url, starts_on, closed_at, sold_at")
+      .select("id, author_user_id, author_name, flat_number, kind, topic, body, created_at, image_url, starts_on, closed_at, sold_at, poll_multiple")
       .order("created_at", { ascending: false })
-      .limit(40),
+      .limit(200),
     admin
       .from("member_replies")
       .select("id, post_id, author_user_id, author_name, flat_number, body")
@@ -41,9 +64,10 @@ export default async function FeedPage() {
       .eq("pinned", false)
       .in("kind", NOTICE_QUERY)
       .order("created_at", { ascending: false })
-      .limit(10),
+      .limit(40),
   ]);
-  const notices = [...(pinnedNotices ?? []), ...(recentNotices ?? [])];
+  const notices: FeedNotice[] =
+    noticeAccess === "none" ? [] : [...(pinnedNotices ?? []), ...(recentNotices ?? [])];
 
   const repliesByPost = new Map<number, FeedPost["replies"]>();
   for (const reply of replies ?? []) {
@@ -97,21 +121,29 @@ export default async function FeedPage() {
     : [{ data: [] }, { data: [] }];
 
   const votesByOption = new Map<number, number>();
-  const myVoteByPost = new Map<number, number>();
+  const myVotesByPost = new Map<number, number[]>();
+  const votersByPost = new Map<number, Set<string>>();
   for (const vote of pollVotes ?? []) {
     votesByOption.set(vote.option_id, (votesByOption.get(vote.option_id) ?? 0) + 1);
-    if (vote.user_id === user.id) myVoteByPost.set(vote.post_id, vote.option_id);
+    if (vote.user_id === user.id) {
+      const mine = myVotesByPost.get(vote.post_id) ?? [];
+      mine.push(vote.option_id);
+      myVotesByPost.set(vote.post_id, mine);
+    }
+    const voters = votersByPost.get(vote.post_id) ?? new Set<string>();
+    voters.add(vote.user_id);
+    votersByPost.set(vote.post_id, voters);
   }
   const optionsByPost = new Map<number, NonNullable<FeedPost["poll"]>>();
   for (const option of pollOptions ?? []) {
     const current = optionsByPost.get(option.post_id) ?? {
       options: [],
-      myVote: myVoteByPost.get(option.post_id) ?? null,
-      total: 0,
+      myVotes: myVotesByPost.get(option.post_id) ?? [],
+      multiple: false,
+      total: votersByPost.get(option.post_id)?.size ?? 0,
     };
     const votes = votesByOption.get(option.id) ?? 0;
     current.options.push({ id: option.id, label: option.label, votes });
-    current.total += votes;
     optionsByPost.set(option.post_id, current);
   }
 
@@ -124,87 +156,43 @@ export default async function FeedPage() {
     replies: repliesByPost.get(post.id) ?? [],
     reactions: reactionsByPost.get(post.id) ?? { helpful: 0, thanks: 0, mine: null },
     rsvp: post.kind === "event" ? rsvpByPost.get(post.id) ?? { count: 0, going: false } : null,
-    poll: post.kind === "poll" ? optionsByPost.get(post.id) ?? { options: [], myVote: null, total: 0 } : null,
-  }));
-  const channels = outboundChannels();
+    poll:
+      post.kind === "poll"
+        ? {
+            ...(optionsByPost.get(post.id) ?? { options: [], myVotes: [], total: 0 }),
+            multiple: Boolean(post.poll_multiple),
+            myVotes: myVotesByPost.get(post.id) ?? [],
+            total: votersByPost.get(post.id)?.size ?? 0,
+          }
+        : null,
+  })).filter((post) => {
+    if (post.kind === "event") return eventAccess !== "none";
+    if (post.kind === "poll") return pollAccess !== "none";
+    return feedAccess !== "none";
+  });
+  const [hiddenKinds, labels] = await Promise.all([disabledCommunityKinds(), loadCategoryLabels()]);
 
   return (
-    <section className="page-gutter max-w-6xl py-5 md:py-8">
-      <p className="eyebrow">Updates</p>
-      <h1 className="mt-1 text-[clamp(1.6rem,6vw,2.2rem)] font-semibold leading-none tracking-tight text-[#14241c]">
-        Updates
-      </h1>
-      <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#3d5247] sm:text-base">
-        Share news, a question, something neighbours need, or an emergency. A request or feedback goes only to the admin.
-      </p>
-
-      {notices.length ? (
-        <section className="mt-6">
-          <h2 className="text-lg font-semibold text-[#14241c]">Announcements</h2>
-          <ul className="mt-3 grid gap-3">
-            {notices.map((notice) => (
-              <li
-                key={notice.id}
-                className="rounded-[1.35rem] border-l-4 border-[#c9a45c] bg-[#fffcf5] p-4 shadow-[inset_0_0_0_1px_rgba(27,58,47,0.08)]"
-              >
-                <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#7a5c22] uppercase">
-                  {notice.pinned ? "Pinned · " : ""}
-                  {noticeLabel(notice.kind)}
-                  {" · "}
-                  {new Date(notice.created_at).toLocaleDateString("en-IN", {
-                    day: "numeric",
-                    month: "short",
-                  })}
-                </p>
-                <p className="mt-1 text-lg font-semibold text-[#14241c]">{notice.title}</p>
-                {meetingDay(notice.payload) ? (
-                  <p className="mt-1 text-sm font-semibold text-[#1b3a2f]">{meetingDay(notice.payload)}</p>
-                ) : null}
-                {notice.body ? <p className="mt-1 text-[#3d5247]">{notice.body}</p> : null}
-                {canManageAdmin(profile.role, user) ? (
-                  <div className="mt-2 flex gap-4">
-                    <form action={pinAnnouncement}>
-                      <input type="hidden" name="id" value={notice.id} />
-                      <input type="hidden" name="pinned" value={notice.pinned ? "false" : "true"} />
-                      <button type="submit" className="text-sm font-semibold text-[#1b3a2f]">
-                        {notice.pinned ? "Unpin" : "Pin"}
-                      </button>
-                    </form>
-                    <form action={deleteAnnouncement}>
-                      <input type="hidden" name="id" value={notice.id} />
-                      <button type="submit" className="text-sm font-semibold text-[#8a2f2f]">
-                        Remove
-                      </button>
-                    </form>
-                  </div>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {canManageAdmin(profile.role, user) ? (
-        <AnnouncementComposer email={channels.email} whatsapp={channels.whatsapp} />
-      ) : null}
-
+    <section className="page-gutter max-w-2xl py-5 md:py-6">
+      <h1 className="text-2xl font-semibold tracking-tight text-[#0f172a]">Updates</h1>
       <UpdatesBoard
         posts={feedPosts}
+        notices={notices}
         userId={user.id}
         canModerate={canManageAdmin(profile.role, user)}
+        canWrite={feedAccess === "manage"}
+        canPostFeed={feedAccess === "manage"}
+        canPostEvents={eventAccess === "manage"}
+        canPostPolls={pollAccess === "manage"}
+        canPostNotices={canManageAdmin(profile.role, user) && noticeAccess === "manage"}
+        showNotices={noticeAccess !== "none"}
+        showEvents={eventAccess !== "none"}
+        showPolls={pollAccess !== "none"}
+        showFeed={feedAccess !== "none"}
+        initialSlice={initialSlice}
+        hiddenKinds={hiddenKinds}
+        labels={labels}
       />
     </section>
   );
-}
-
-function meetingDay(payload: unknown) {
-  if (!payload || typeof payload !== "object" || !("startsOn" in payload)) return null;
-  const value = (payload as { startsOn?: unknown }).startsOn;
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
-  const [year, month, day] = value.split("-").map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
 }

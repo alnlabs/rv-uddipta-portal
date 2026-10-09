@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import type {
   ButtonHTMLAttributes,
   FormEvent,
@@ -56,6 +57,16 @@ function useFieldError(name?: string) {
   return name ? errors[name] : undefined;
 }
 
+export function FieldMessage({ name }: { readonly name: string }) {
+  const message = useFieldError(name);
+  if (!message) return null;
+  return (
+    <p className="field-error" role="alert">
+      {message}
+    </p>
+  );
+}
+
 export function WorkspaceHeader({
   kicker,
   title,
@@ -71,11 +82,11 @@ export function WorkspaceHeader({
     <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
         {kicker ? <p className="eyebrow">{kicker}</p> : null}
-        <h1 className="mt-1 text-[clamp(1.6rem,6vw,2.2rem)] font-semibold leading-none tracking-tight text-[#14241c]">
+        <h1 className="mt-1 text-[clamp(1.6rem,6vw,2.2rem)] font-semibold leading-none tracking-tight text-[#0f172a]">
           {title}
         </h1>
         {lede ? (
-          <p className="mt-2 max-w-prose text-sm leading-relaxed text-[#3d5247] sm:text-base">
+          <p className="mt-2 max-w-prose text-sm leading-relaxed text-[#475569] sm:text-base">
             {lede}
           </p>
         ) : null}
@@ -103,14 +114,14 @@ export function FormPanel({
   return (
     <section className={`field-panel ${className}`}>
       {title ? (
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-[rgba(27,58,47,0.08)] pb-3">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-[rgba(15,23,42,0.08)] pb-3">
           <div className="min-w-0">
             {kicker ? <p className="eyebrow">{kicker}</p> : null}
-            <h2 className="text-xl font-semibold tracking-tight text-[#14241c]">
+            <h2 className="text-xl font-semibold tracking-tight text-[#0f172a]">
               {title}
             </h2>
             {lede ? (
-              <p className="mt-1 text-sm leading-relaxed text-[#3d5247]">{lede}</p>
+              <p className="mt-1 text-sm leading-relaxed text-[#475569]">{lede}</p>
             ) : null}
           </div>
           {action ? <div className="shrink-0">{action}</div> : null}
@@ -254,7 +265,7 @@ export function SelectField({
           id={listId}
           role="listbox"
           aria-label={label}
-          className="absolute top-full z-30 mt-1 max-h-72 w-full overflow-auto rounded-2xl bg-white p-1.5 shadow-[0_16px_40px_rgba(20,36,28,0.16)] ring-1 ring-[rgba(27,58,47,0.12)]"
+          className="absolute top-full z-30 mt-1 max-h-72 w-full overflow-auto rounded-2xl bg-white p-1.5 shadow-[0_16px_40px_rgba(20,36,28,0.16)] ring-1 ring-[rgba(15,23,42,0.12)]"
         >
           {options.map((option) => {
             const active = option.value === current;
@@ -267,8 +278,8 @@ export function SelectField({
                   onClick={() => choose(option.value)}
                   className={`flex min-h-12 w-full items-center rounded-xl px-3 text-left text-base font-semibold ${
                     active
-                      ? "bg-[#1b3a2f] text-[#e8d5a3]"
-                      : "text-[#14241c] hover:bg-[rgba(27,58,47,0.05)]"
+                      ? "bg-[#1e293b] text-[#f8fafc]"
+                      : "text-[#0f172a] hover:bg-[rgba(15,23,42,0.05)]"
                   }`}
                 >
                   {option.label}
@@ -297,6 +308,7 @@ export function DateField({
   disabled,
   required,
   after,
+  notBeforeToday = false,
   tone = "meta",
 }: FieldFrame & {
   readonly name?: string
@@ -307,6 +319,7 @@ export function DateField({
   readonly disabled?: boolean
   readonly required?: boolean
   readonly after?: string
+  readonly notBeforeToday?: boolean
 }) {
   const { clear } = useContext(FieldErrorContext);
   const formError = useFieldError(name);
@@ -316,16 +329,53 @@ export function DateField({
   const [internal, setInternal] = useState(defaultValue);
   const current = controlled ? value : internal;
   const [open, setOpen] = useState(false);
+  const [panel, setPanel] = useState<"days" | "months" | "years">("days");
   const rootRef = useRef<HTMLDivElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const labelId = useId();
   const parsed = parseIso(current);
-  const close = useCallback(() => setOpen(false), []);
   const [cursor, setCursor] = useState(() => {
     const start = parsed ?? todayParts();
     return { y: start.y, m: start.m };
   });
+  const [box, setBox] = useState({ top: 0, left: 0 });
+  const today = todayParts();
+  const close = useCallback(() => setOpen(false), []);
 
-  useDismiss(open, rootRef, close);
+  const place = useCallback(() => {
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const width = 320;
+    const height = 380;
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+    const below = rect.bottom + 8;
+    const top = below + height > window.innerHeight ? Math.max(8, rect.top - height - 8) : below;
+    setBox({ top, left });
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    place();
+    function onPointer(event: PointerEvent) {
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target) || popRef.current?.contains(target)) return;
+      close();
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") close();
+    }
+    window.addEventListener("pointerdown", onPointer);
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("pointerdown", onPointer);
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open, close, place]);
 
   function commit(next: string) {
     if (!controlled) setInternal(next);
@@ -337,19 +387,150 @@ export function DateField({
   function show() {
     const start = parseIso(current) ?? todayParts();
     setCursor({ y: start.y, m: start.m });
+    setPanel("days");
     setOpen(true);
   }
 
-  const daysInMonth = new Date(cursor.y, cursor.m, 0).getDate();
-  const lead = new Date(cursor.y, cursor.m - 1, 1).getDay();
-  const cells: Array<number | null> = [
-    ...Array.from({ length: lead }, () => null),
-    ...Array.from({ length: daysInMonth }, (_, index) => index + 1),
-  ];
-  const today = todayParts();
+  function shiftMonth(by: number) {
+    setCursor((prev) => {
+      const date = new Date(prev.y, prev.m - 1 + by, 1);
+      return { y: date.getFullYear(), m: date.getMonth() + 1 };
+    });
+  }
+
+  const days = calendarDays(cursor.y, cursor.m);
+  const yearStart = cursor.y - ((cursor.y % 12) + 12) % 12;
+
+  const popover = open ? (
+    <div
+      ref={popRef}
+      role="dialog"
+      aria-label={label}
+      style={{ top: box.top, left: box.left }}
+      className="fixed z-50 w-80 rounded-2xl bg-white p-3 shadow-[0_16px_40px_rgba(20,36,28,0.16)] ring-1 ring-[rgba(15,23,42,0.12)]"
+    >
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <button
+          type="button"
+          aria-label={panel === "days" ? "Previous month" : "Previous years"}
+          onClick={() => (panel === "days" ? shiftMonth(-1) : setCursor((prev) => ({ ...prev, y: prev.y - (panel === "years" ? 12 : 1) })))}
+          className="flex size-10 items-center justify-center rounded-xl text-xl font-semibold text-[#1e293b] hover:bg-[rgba(15,23,42,0.06)]"
+        >
+          ‹
+        </button>
+        <button
+          type="button"
+          onClick={() => setPanel((currentPanel) => (currentPanel === "days" ? "months" : currentPanel === "months" ? "years" : "months"))}
+          className="min-h-10 rounded-xl px-3 text-base font-semibold text-[#0f172a] hover:bg-[rgba(15,23,42,0.06)]"
+        >
+          {panel === "years" ? `${yearStart} – ${yearStart + 11}` : panel === "months" ? cursor.y : `${MONTHS[cursor.m - 1]} ${cursor.y}`}
+        </button>
+        <button
+          type="button"
+          aria-label={panel === "days" ? "Next month" : "Next years"}
+          onClick={() => (panel === "days" ? shiftMonth(1) : setCursor((prev) => ({ ...prev, y: prev.y + (panel === "years" ? 12 : 1) })))}
+          className="flex size-10 items-center justify-center rounded-xl text-xl font-semibold text-[#1e293b] hover:bg-[rgba(15,23,42,0.06)]"
+        >
+          ›
+        </button>
+      </div>
+      {panel === "days" ? (
+        <>
+          <div className="grid grid-cols-7 text-center text-xs font-semibold text-[#64748b]">
+            {WEEKDAYS.map((day) => (
+              <span key={day} className="py-1">{day}</span>
+            ))}
+          </div>
+          <div className="mt-1 grid grid-cols-7">
+            {days.map((day) => {
+              const iso = toIso(day.y, day.m, day.d);
+              const blocked = notBeforeToday && iso < toIso(today.y, today.m, today.d);
+              const active = parsed?.y === day.y && parsed.m === day.m && parsed.d === day.d;
+              const isToday = today.y === day.y && today.m === day.m && today.d === day.d;
+              return (
+                <button
+                  key={iso}
+                  type="button"
+                  disabled={blocked}
+                  onClick={() => commit(iso)}
+                  className={`mx-auto flex size-10 items-center justify-center rounded-full text-sm font-semibold ${
+                    active
+                      ? "bg-[#1e293b] text-[#f8fafc]"
+                      : blocked
+                        ? "text-[#cbd5e1]"
+                        : isToday
+                          ? "text-[#0f172a] ring-2 ring-[#1e293b]"
+                          : day.outside
+                            ? "text-[#94a3b8] hover:bg-[rgba(15,23,42,0.06)]"
+                            : "text-[#0f172a] hover:bg-[rgba(15,23,42,0.06)]"
+                  }`}
+                >
+                  {day.d}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      ) : null}
+      {panel === "months" ? (
+        <div className="grid grid-cols-3 gap-2">
+          {MONTHS.map((month, index) => (
+            <button
+              key={month}
+              type="button"
+              onClick={() => {
+                setCursor((prev) => ({ ...prev, m: index + 1 }));
+                setPanel("days");
+              }}
+              className={`min-h-11 rounded-xl text-sm font-semibold ${
+                cursor.m === index + 1 ? "bg-[#1e293b] text-[#f8fafc]" : "text-[#0f172a] hover:bg-[rgba(15,23,42,0.06)]"
+              }`}
+            >
+              {month.slice(0, 3)}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {panel === "years" ? (
+        <div className="grid grid-cols-3 gap-2">
+          {Array.from({ length: 12 }, (_, index) => yearStart + index).map((year) => (
+            <button
+              key={year}
+              type="button"
+              onClick={() => {
+                setCursor((prev) => ({ ...prev, y: year }));
+                setPanel("months");
+              }}
+              className={`min-h-11 rounded-xl text-sm font-semibold ${
+                cursor.y === year ? "bg-[#1e293b] text-[#f8fafc]" : "text-[#0f172a] hover:bg-[rgba(15,23,42,0.06)]"
+              }`}
+            >
+              {year}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {panel === "days" ? (
+        <div className="mt-3 flex gap-2">
+          <button
+            type="button"
+            onClick={() => commit(toIso(today.y, today.m, today.d))}
+            className="btn-line flex-1"
+          >
+            Today
+          </button>
+          {required || !current ? null : (
+            <button type="button" onClick={() => commit("")} className="btn-line flex-1">
+              Clear
+            </button>
+          )}
+        </div>
+      ) : null}
+    </div>
+  ) : null;
 
   return (
-    <div ref={rootRef} className={`flex min-w-0 flex-col gap-2 ${open ? "relative z-30" : ""} ${className}`}>
+    <div ref={rootRef} className={`flex min-w-0 flex-col gap-2 ${className}`}>
       <FieldLabel id={labelId} label={label} tone={tone} required={required} />
       {name ? (
         <input
@@ -358,11 +539,16 @@ export function DateField({
           value={current}
           required={required}
           data-label={label}
+          data-empty={
+            /date/i.test(label)
+              ? `Choose the ${label.charAt(0).toLowerCase()}${label.slice(1)}.`
+              : `Choose ${label}.`
+          }
           data-after={after}
         />
       ) : null}
-      <div className="relative">
       <button
+        ref={buttonRef}
         type="button"
         disabled={disabled}
         data-field={name}
@@ -376,93 +562,9 @@ export function DateField({
         <span className={parsed ? "" : "font-medium text-[#8a9a90]"}>
           {parsed ? formatPlain(parsed) : placeholder}
         </span>
-        <Chevron open={open} />
+        <CalendarMark />
       </button>
-      {open ? (
-        <div
-          role="dialog"
-          aria-label={label}
-          className="absolute top-full left-0 z-30 mt-1 w-[min(20rem,calc(100vw-2rem))] rounded-2xl bg-white p-3 shadow-[0_16px_40px_rgba(20,36,28,0.16)] ring-1 ring-[rgba(27,58,47,0.12)]"
-        >
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <button
-              type="button"
-              aria-label="Previous month"
-              onClick={() =>
-                setCursor((prev) =>
-                  prev.m === 1 ? { y: prev.y - 1, m: 12 } : { y: prev.y, m: prev.m - 1 },
-                )
-              }
-              className="flex size-11 items-center justify-center rounded-xl text-xl font-semibold text-[#1b3a2f] hover:bg-[rgba(27,58,47,0.06)]"
-            >
-              ‹
-            </button>
-            <p className="text-base font-semibold text-[#14241c]">
-              {MONTHS[cursor.m - 1]} {cursor.y}
-            </p>
-            <button
-              type="button"
-              aria-label="Next month"
-              onClick={() =>
-                setCursor((prev) =>
-                  prev.m === 12 ? { y: prev.y + 1, m: 1 } : { y: prev.y, m: prev.m + 1 },
-                )
-              }
-              className="flex size-11 items-center justify-center rounded-xl text-xl font-semibold text-[#1b3a2f] hover:bg-[rgba(27,58,47,0.06)]"
-            >
-              ›
-            </button>
-          </div>
-          <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold tracking-wide text-[#5a6e62] uppercase">
-            {WEEKDAYS.map((day) => (
-              <span key={day} className="py-1">
-                {day}
-              </span>
-            ))}
-          </div>
-          <div className="mt-1 grid grid-cols-7 gap-1">
-            {cells.map((day, index) => {
-              if (!day) return <span key={`empty-${index}`} />;
-              const active = parsed?.y === cursor.y && parsed.m === cursor.m && parsed.d === day;
-              const isToday = today.y === cursor.y && today.m === cursor.m && today.d === day;
-              return (
-                <button
-                  key={day}
-                  type="button"
-                  onClick={() => commit(toIso(cursor.y, cursor.m, day))}
-                  className={`flex min-h-11 items-center justify-center rounded-xl text-base font-semibold ${
-                    active
-                      ? "bg-[#1b3a2f] text-[#e8d5a3]"
-                      : isToday
-                        ? "bg-[rgba(201,164,92,0.28)] text-[#14241c]"
-                        : "text-[#14241c] hover:bg-[rgba(27,58,47,0.06)]"
-                  }`}
-                >
-                  {day}
-                </button>
-              );
-            })}
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => commit(toIso(today.y, today.m, today.d))}
-              className="btn btn-ghost min-h-11 ring-1 ring-[rgba(27,58,47,0.12)]"
-            >
-              Today
-            </button>
-            <button
-              type="button"
-              onClick={() => commit("")}
-              disabled={!current}
-              className="btn btn-danger min-h-11"
-            >
-              Clear
-            </button>
-          </div>
-        </div>
-      ) : null}
-      </div>
+      {popover && typeof document !== "undefined" ? createPortal(popover, document.body) : null}
       <FieldNote id={errorId} message={message} hint={hint} />
     </div>
   );
@@ -510,7 +612,7 @@ function Chevron({ open }: { readonly open: boolean }) {
     <svg
       aria-hidden
       viewBox="0 0 20 20"
-      className={`size-4 shrink-0 text-[#1b3a2f] transition-transform ${open ? "rotate-180" : ""}`}
+      className={`size-4 shrink-0 text-[#1e293b] transition-transform ${open ? "rotate-180" : ""}`}
       fill="none"
       stroke="currentColor"
       strokeWidth="1.8"
@@ -558,7 +660,32 @@ const MONTHS = [
   "December",
 ];
 
-const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+
+function CalendarMark() {
+  return (
+    <svg aria-hidden viewBox="0 0 20 20" className="size-4 shrink-0 text-[#1e293b]" fill="none" stroke="currentColor" strokeWidth="1.6">
+      <rect x="3" y="4" width="14" height="13" rx="2" />
+      <path d="M3 8h14M7 3v3M13 3v3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function calendarDays(year: number, month: number) {
+  const first = new Date(year, month - 1, 1);
+  const offset = (first.getDay() + 6) % 7;
+  const start = new Date(year, month - 1, 1 - offset);
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + index);
+    return {
+      y: date.getFullYear(),
+      m: date.getMonth() + 1,
+      d: date.getDate(),
+      outside: date.getMonth() !== month - 1,
+    };
+  });
+}
 
 function todayParts() {
   const now = new Date();
@@ -718,10 +845,10 @@ export function SwitchField({
   readonly disabled?: boolean
 }) {
   return (
-    <label className="flex min-h-14 cursor-pointer items-center justify-between gap-3 rounded-2xl border border-[rgba(27,58,47,0.12)] bg-white px-3.5 py-2">
+    <label className="flex min-h-14 cursor-pointer items-center justify-between gap-3 rounded-2xl border border-[rgba(15,23,42,0.12)] bg-white px-3.5 py-2">
       <span className="min-w-0">
-        <span className="block text-sm font-semibold text-[#14241c]">{label}</span>
-        {hint ? <span className="mt-0.5 block text-xs leading-snug text-[#3d5247]">{hint}</span> : null}
+        <span className="block text-sm font-semibold text-[#0f172a]">{label}</span>
+        {hint ? <span className="mt-0.5 block text-xs leading-snug text-[#475569]">{hint}</span> : null}
       </span>
       <span className="relative shrink-0">
         <input
@@ -734,7 +861,7 @@ export function SwitchField({
             ? { defaultChecked }
             : { checked })}
         />
-        <span className="block h-7 w-12 rounded-full bg-[#d5cec0] transition-colors peer-checked:bg-[#1b3a2f] peer-focus-visible:ring-4 peer-focus-visible:ring-[rgba(27,58,47,0.16)]" />
+        <span className="block h-7 w-12 rounded-full bg-[#d5cec0] transition-colors peer-checked:bg-[#1e293b] peer-focus-visible:ring-4 peer-focus-visible:ring-[rgba(15,23,42,0.16)]" />
         <span className="pointer-events-none absolute top-0.5 left-0.5 size-6 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
       </span>
     </label>
@@ -902,33 +1029,51 @@ function FieldNote({
   return null;
 }
 
+function spokenLabel(field: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement) {
+  const raw = (field.dataset.label || "this").replace(/[?:]+$/g, "").trim();
+  return raw.charAt(0).toLowerCase() + raw.slice(1);
+}
+
+function missingMessage(field: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement) {
+  if (field.dataset.empty) return field.dataset.empty;
+  const label = spokenLabel(field);
+  if (field instanceof HTMLSelectElement || /date/i.test(field.dataset.label || "")) {
+    return `Choose the ${label}.`;
+  }
+  return `Fill in the ${label}.`;
+}
+
 function collectFieldErrors(form: HTMLFormElement) {
   const errors: Record<string, string> = {};
-  const fields = form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input[name], textarea[name]");
+  const fields = form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+    "input[name], textarea[name], select[name]",
+  );
   fields.forEach((field) => {
     if (field.disabled) return;
-    if (field.type === "checkbox" || field.type === "radio" || field.type === "file" || field.type === "submit") {
+    if (
+      field instanceof HTMLInputElement &&
+      (field.type === "checkbox" || field.type === "radio" || field.type === "file" || field.type === "submit")
+    ) {
       return;
     }
-    if (field.type === "hidden" && !field.required) return;
+    if (field instanceof HTMLInputElement && field.type === "hidden" && !field.required) return;
     const name = field.name;
     if (!name || errors[name]) return;
-    const label = field.dataset.label || "This field";
     const value = field.value.trim();
-    const min = field.minLength > 0 ? field.minLength : 0;
+    const min = field instanceof HTMLSelectElement ? 0 : field.minLength > 0 ? field.minLength : 0;
     if (field.required && !value) {
-      errors[name] = field.type === "hidden" ? `Choose ${label}.` : `Enter ${label}.`;
+      errors[name] = missingMessage(field);
       return;
     }
     if (value && min > 0 && value.length < min) {
-      errors[name] = `${label} needs at least ${min} characters.`;
+      errors[name] = `The ${spokenLabel(field)} needs at least ${min} characters.`;
       return;
     }
-    if (value && field.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+    if (value && field instanceof HTMLInputElement && field.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
       errors[name] = "Enter a valid email address.";
       return;
     }
-    if (value && field.type === "tel" && !isPhone(value)) {
+    if (value && field instanceof HTMLInputElement && field.type === "tel" && !isPhone(value)) {
       errors[name] = "Enter a 10-digit mobile number.";
       return;
     }
@@ -944,7 +1089,7 @@ function collectFieldErrors(form: HTMLFormElement) {
       const otherLabel =
         other instanceof HTMLInputElement ? other.dataset.label || "the earlier date" : "the earlier date";
       if (otherValue && value < otherValue) {
-        errors[name] = `${label} is before ${otherLabel}.`;
+        errors[name] = `The ${spokenLabel(field)} is before ${otherLabel}.`;
       }
     }
   });

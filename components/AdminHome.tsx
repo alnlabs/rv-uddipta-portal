@@ -20,13 +20,13 @@ export function AdminHome({
       />
       <div className="mt-4 grid grid-cols-3 gap-2">
         {[
-          [waiting, "Waiting", "bg-[#14241c] text-[#e8d5a3]"],
-          [approved, "Approved", "bg-[#fffcf5] text-[#14241c]"],
-          [rejected, "Declined", "bg-[#fffcf5] text-[#14241c]"],
+          [waiting, "Waiting", "bg-[#0f172a] text-[#f8fafc]"],
+          [approved, "Approved", "bg-[#ffffff] text-[#0f172a]"],
+          [rejected, "Declined", "bg-[#ffffff] text-[#0f172a]"],
         ].map(([count, label, tone]) => (
           <div
             key={String(label)}
-            className={`rounded-2xl px-3 py-3 shadow-[inset_0_0_0_1px_rgba(27,58,47,0.08)] ${tone}`}
+            className={`rounded-2xl px-3 py-3 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.08)] ${tone}`}
           >
             <p className="text-3xl font-semibold leading-none">{count}</p>
             <p className="mt-1 text-xs font-semibold tracking-wide uppercase opacity-80">{label}</p>

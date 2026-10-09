@@ -42,8 +42,8 @@ function CommunityChoices({ view }: { readonly view: CommunityView }) {
             aria-current={active ? "page" : undefined}
             className={`flex min-h-14 items-center justify-center rounded-2xl px-2 text-center text-base font-semibold sm:text-lg ${
               active
-                ? "bg-[#1b3a2f] text-[#e8d5a3]"
-                : "bg-[#fffcf5] text-[#14241c] shadow-[inset_0_0_0_1px_rgba(27,58,47,0.14)]"
+                ? "bg-[#1e293b] text-[#f8fafc]"
+                : "bg-[#ffffff] text-[#0f172a] shadow-[inset_0_0_0_1px_rgba(15,23,42,0.14)]"
             }`}
           >
             {item.label}
@@ -129,8 +129,8 @@ export function HomeBoard({
         </div>
       ) : (
         <section className="page-gutter max-w-6xl py-4 md:py-6">
-          <h1 className="text-3xl font-semibold text-[#14241c]">Floors</h1>
-          <p className="mt-2 text-lg text-[#3d5247]">Choose a floor, then tap a home.</p>
+          <h1 className="text-3xl font-semibold text-[#0f172a]">Floors</h1>
+          <p className="mt-2 text-lg text-[#475569]">Choose a floor, then tap a home.</p>
           {data ? (
             <>
               <div className="mb-4 mt-4">
@@ -142,7 +142,7 @@ export function HomeBoard({
               </div>
               {selected ? (
                 <figure>
-                  <figcaption className="mb-3 text-sm text-[#3d5247]">
+                  <figcaption className="mb-3 text-sm text-[#475569]">
                     Floor {selected.floor}
                   </figcaption>
                   <FloorPlate2D
@@ -165,7 +165,7 @@ export function HomeBoard({
               ) : null}
             </>
           ) : (
-            <p className="mt-4 rounded-2xl bg-[#fffcf5] px-4 py-3 text-[#3d5247] ring-1 ring-[rgba(27,58,47,0.1)]">
+            <p className="mt-4 rounded-2xl bg-[#ffffff] px-4 py-3 text-[#475569] ring-1 ring-[rgba(15,23,42,0.1)]">
               {error || "Gathering floor data…"}
             </p>
           )}

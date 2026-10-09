@@ -1,12 +1,14 @@
 import { redirect } from "next/navigation";
 import { DashboardHome } from "@/components/DashboardHome";
+import { HouseholdHome } from "@/components/HouseholdHome";
 import { FamilyApprovals } from "@/components/FamilyApprovals";
 import { PublicGate } from "@/components/PublicGate";
 import { loadBoardPayload } from "@/lib/boardData";
 import { mapFlatMember, mapFlatRenter, mapOwnedFlat } from "@/lib/flats";
 import { maskPhone } from "@/lib/phone";
+import { visibleText } from "@/lib/richText";
 import { isSuperAdmin } from "@/lib/admin";
-import { isCommunityRole } from "@/lib/roles";
+import { canEditFlat, isCommunityRole } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
 
@@ -14,7 +16,7 @@ export default async function Page() {
   const { user, profile, supabase } = await getAuthState();
 
   if (!user) return <PublicGate />;
-  if (isSuperAdmin(user)) redirect("/feed");
+  if (isSuperAdmin(user)) redirect("/account");
   const board = await loadBoardPayload(user, supabase, profile.role);
   const community = isCommunityRole(profile.role);
 
@@ -70,10 +72,12 @@ export default async function Page() {
     flatNumber: ownedFlat?.flatNumber ?? null,
   }));
 
+  const admin = createAdminClient();
+  const today = new Date().toISOString().slice(0, 10);
   const familyWaiting =
     profile.role === "owner" && ownedFlat
       ? (
-          await createAdminClient()
+          await admin
             .from("registration_requests")
             .select("id, owner_name, phone")
             .eq("flat_number", ownedFlat.flatNumber)
@@ -81,6 +85,57 @@ export default async function Page() {
             .eq("request_kind", "family")
         ).data ?? []
       : [];
+
+  const [{ data: openNotes }, { data: todayEvents }] = await Promise.all([
+    ownedFlat
+      ? admin
+          .from("member_notes")
+          .select("id, kind, body, status")
+          .eq("flat_id", ownedFlat.id)
+          .neq("status", "done")
+          .order("created_at", { ascending: false })
+          .limit(4)
+      : Promise.resolve({ data: [] as { id: number; kind: string; body: string; status: string }[] }),
+    admin
+      .from("member_posts")
+      .select("id, body, starts_on, author_name")
+      .eq("kind", "event")
+      .eq("starts_on", today)
+      .order("created_at", { ascending: false })
+      .limit(4),
+  ]);
+
+  const needsAction = [
+    ...familyWaiting.map((row) => ({
+      title: "Family waiting for approval",
+      detail: String(row.owner_name || "A family member"),
+      href: "/",
+    })),
+    ...(openNotes ?? []).map((note) => ({
+      title: note.kind === "feedback" ? "Feedback with the office" : "Request with the office",
+      detail: String(note.body || ""),
+      href: "/requests",
+    })),
+  ];
+  const todayItems = (todayEvents ?? []).map((event) => ({
+    title: visibleText(String(event.body || "")) || "Event",
+    when: event.author_name ? `Posted by ${event.author_name}` : "Today",
+    href: "/feed?view=events",
+  }));
+
+  if ((profile.role === "tenant" || profile.role === "co_owner") && ownedFlat) {
+    return (
+      <HouseholdHome
+        kind={profile.role === "tenant" ? "tenant" : "family"}
+        name={profile.displayName || null}
+        flat={ownedFlat}
+        members={members}
+        renters={renters}
+        needsAction={needsAction}
+        todayItems={todayItems}
+      />
+    );
+  }
 
   return (
     <>
@@ -99,6 +154,9 @@ export default async function Page() {
       renters={renters}
       ownedFlat={ownedFlat}
       ownerPhoneMasked={ownedFlat ? maskPhone(ownedFlat.phone) : ""}
+      canEditHome={canEditFlat(profile.role)}
+      needsAction={needsAction}
+      todayItems={todayItems}
     />
     </>
   );

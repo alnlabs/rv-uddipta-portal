@@ -278,28 +278,24 @@ export default function RentersEditor({
   }
 
   return (
-    <section className="field-panel text-[#14241c]">
-      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[rgba(27,58,47,0.08)] pb-3">
+    <section className="field-panel text-[#0f172a]">
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[rgba(15,23,42,0.08)] pb-3">
         <div>
-          <p className="eyebrow">Profile</p>
-          <h2 className="mt-0.5 text-xl font-semibold tracking-tight">
-            Renters
-          </h2>
-          <p className="mt-2 max-w-md text-sm text-[#3d5247]">
-            Keep a history of tenants with start and end dates. The current
-            renter (no end date) shows on the community board.
+          <h2 className="text-xl font-semibold tracking-tight">Tenant</h2>
+          <p className="mt-2 max-w-md text-sm text-[#475569]">
+            Who is renting this home, and from when. Leave the end date empty for the person living here now.
           </p>
         </div>
-        <span className="inline-flex min-h-10 items-center rounded-full bg-[#1b3a2f] px-4 text-sm font-bold text-[#e8d5a3]">
+        <span className="inline-flex min-h-10 items-center rounded-full bg-[#1e293b] px-4 text-sm font-bold text-[#f8fafc]">
           {renters.length} {renters.length === 1 ? "renter" : "renters"}
         </span>
       </div>
 
       {renters.length === 0 ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-[rgba(27,58,47,0.18)] px-4 py-10 text-center">
-          <p className="text-base font-semibold text-[#14241c]">No renters yet</p>
-          <p className="mt-1 text-sm text-[#3d5247]">
-            Add the current tenant with a start date.
+        <div className="mt-6 rounded-2xl border border-dashed border-[rgba(15,23,42,0.18)] px-4 py-10 text-center">
+          <p className="text-base font-semibold text-[#0f172a]">No tenant yet</p>
+          <p className="mt-1 text-sm text-[#475569]">
+            Add the person living here, and the day they moved in.
           </p>
         </div>
       ) : (
@@ -308,7 +304,7 @@ export default function RentersEditor({
             editingId === renter.id ? (
               <li
                 key={renter.id}
-                className="rounded-2xl bg-[rgba(27,58,47,0.04)] p-4 ring-1 ring-[rgba(27,58,47,0.1)] sm:col-span-2"
+                className="rounded-2xl bg-[rgba(15,23,42,0.04)] p-4 ring-1 ring-[rgba(15,23,42,0.1)] sm:col-span-2"
               >
                 <Form onSubmit={saveEdit} className="space-y-3">
                   {draftFields(editDraft, setEditDraft)}
@@ -330,10 +326,10 @@ export default function RentersEditor({
             ) : (
               <li
                 key={renter.id}
-                className="flex items-center gap-3 rounded-2xl bg-[rgba(27,58,47,0.04)] px-3.5 py-3"
+                className="flex items-center gap-3 rounded-2xl bg-[rgba(15,23,42,0.04)] px-3.5 py-3"
               >
                 <span
-                  className="grid size-12 shrink-0 place-items-center rounded-full bg-[#9a5b3c] text-sm font-bold tracking-wide text-[#fffcf5]"
+                  className="grid size-12 shrink-0 place-items-center rounded-full bg-[#9a5b3c] text-sm font-bold tracking-wide text-[#ffffff]"
                   aria-hidden
                 >
                   {initials(renter.name)}
@@ -343,11 +339,11 @@ export default function RentersEditor({
                     {renter.name}
                     {!renter.endDate ? (
                       <span className="ml-2 rounded-full bg-[rgba(154,91,60,0.16)] px-2 py-0.5 text-[10px] font-bold tracking-wide text-[#6d3a22] uppercase">
-                        Current
+                        Living here
                       </span>
                     ) : null}
                   </p>
-                  <p className="truncate text-sm text-[#3d5247]">
+                  <p className="truncate text-sm text-[#475569]">
                     {periodLabel(renter)}
                     {renter.phone ? ` · ${renter.phone}` : ""}
                   </p>
@@ -379,17 +375,17 @@ export default function RentersEditor({
       {openAdd ? (
         <Form
           onSubmit={addRenter}
-          className="mt-6 space-y-3 rounded-2xl bg-[rgba(27,58,47,0.04)] p-4 ring-1 ring-[rgba(27,58,47,0.08)]"
+          className="mt-6 space-y-3 rounded-2xl bg-[rgba(15,23,42,0.04)] p-4 ring-1 ring-[rgba(15,23,42,0.08)]"
         >
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-semibold tracking-[0.12em] text-[#3d5247] uppercase">
-              Add renter
+            <p className="text-xs font-semibold tracking-[0.12em] text-[#475569] uppercase">
+              Add tenant
             </p>
             {renters.length > 0 ? (
               <button
                 type="button"
                 onClick={() => setOpenAdd(false)}
-                className="text-xs font-semibold text-[#3d5247] hover:underline"
+                className="text-xs font-semibold text-[#475569] hover:underline"
               >
                 Close
               </button>
@@ -397,7 +393,7 @@ export default function RentersEditor({
           </div>
           {draftFields(draft, setDraft)}
           <button type="submit" disabled={busy} className="btn btn-forest w-full">
-            {busy ? "Saving…" : "Add renter"}
+            {busy ? "Saving…" : "Add tenant"}
           </button>
         </Form>
       ) : (
@@ -407,9 +403,9 @@ export default function RentersEditor({
             setOpenAdd(true);
             setEditingId(null);
           }}
-          className="mt-6 min-h-12 w-full rounded-full border border-dashed border-[rgba(27,58,47,0.28)] text-sm font-semibold text-[#1b3a2f] hover:bg-[rgba(27,58,47,0.04)]"
+          className="mt-6 min-h-12 w-full rounded-full border border-dashed border-[rgba(15,23,42,0.28)] text-sm font-semibold text-[#1e293b] hover:bg-[rgba(15,23,42,0.04)]"
         >
-          + Add renter
+          Add tenant
         </button>
       )}
 

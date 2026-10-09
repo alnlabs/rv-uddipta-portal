@@ -42,10 +42,10 @@ export function ProfileDangerZone({
       <p className="text-xs font-semibold tracking-[0.12em] text-[#8a2f2f] uppercase">
         Remove access
       </p>
-      <p className="text-sm text-[#3d5247]">
+      <p className="text-sm text-[#475569]">
         Turns them into a visitor and unlinks any flat. Their Google login
         still works. Type{" "}
-        <code className="rounded bg-[#efe8d8] px-1">{email}</code> to confirm.
+        <code className="rounded bg-[#f8fafc] px-1">{email}</code> to confirm.
       </p>
       {error ? <FormAlert tone="error">{error}</FormAlert> : null}
       {notice ? <FormAlert tone="ok">{notice}</FormAlert> : null}

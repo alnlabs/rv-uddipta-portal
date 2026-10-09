@@ -447,34 +447,46 @@ export default function UpdateForm({
     }
   }
 
+  const stayPage = panel === "stay";
+
   return (
-    <div className="relative min-h-full bg-[#14241c] text-[#f7f2e6]">
+    <div className={stayPage ? "min-h-full bg-[#f8fafc] text-[#0f172a]" : "relative min-h-full bg-[#0f172a] text-[#f8fafc]"}>
+      {stayPage ? null : (
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-[28rem]"
         aria-hidden
         style={{
           backgroundImage:
-            "radial-gradient(ellipse 90% 70% at 15% 0%, rgba(201,164,92,0.22), transparent 55%), radial-gradient(ellipse 70% 60% at 90% 10%, rgba(47,90,72,0.55), transparent 50%)",
+            "radial-gradient(ellipse 90% 70% at 15% 0%, rgba(5,150,105,0.22), transparent 55%), radial-gradient(ellipse 70% 60% at 90% 10%, rgba(47,90,72,0.55), transparent 50%)",
         }}
       />
+      )}
 
-      <section className="page-gutter relative max-w-5xl pb-24 pt-6 md:pb-16 md:pt-10">
+      <section className={`page-gutter relative max-w-5xl ${stayPage ? "py-8 md:py-12" : "pb-24 pt-6 md:pb-16 md:pt-10"}`}>
         <div className="mb-8 flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-[clamp(1.7rem,6vw,2.4rem)] font-semibold leading-none tracking-tight text-[#f7f2e6]">
-              {panel === "journey" ? "Home journey" : "Ownership & stay"}
+            <h1 className={`font-semibold leading-none tracking-tight ${stayPage ? "text-3xl text-[#0f172a]" : "text-[clamp(1.7rem,6vw,2.4rem)] text-[#f8fafc]"}`}>
+              {panel === "journey" ? "Home journey" : "Household"}
             </h1>
             {panel === "journey" ? (
               <p className="mt-2 text-[#d0c090]">
                 Your journey to move into {flat.flatNumber}
               </p>
-            ) : null}
+            ) : (
+              <p className="mt-2 max-w-2xl text-[#475569]">
+                Who lives in {flat.flatNumber}. Say if you live here or a tenant does, then list the family.
+              </p>
+            )}
           </div>
           <button
             type="button"
             onClick={goHome}
             aria-label={`Close and return to ${flat.flatNumber}`}
-            className="grid size-11 shrink-0 place-items-center rounded-full text-2xl leading-none text-[#e8d5a3] ring-1 ring-[rgba(232,213,163,0.28)] hover:bg-[rgba(232,213,163,0.08)]"
+            className={`grid size-11 shrink-0 place-items-center rounded-full text-2xl leading-none ring-1 ${
+              stayPage
+                ? "text-[#0f172a] ring-[rgba(15,23,42,0.16)] hover:bg-[rgba(15,23,42,0.05)]"
+                : "text-[#f8fafc] ring-[rgba(226,232,240,0.28)] hover:bg-[rgba(226,232,240,0.08)]"
+            }`}
           >
             ×
           </button>
@@ -482,10 +494,10 @@ export default function UpdateForm({
 
         {panel === "journey" ? (
           <div className="min-h-[calc(100dvh-12rem)]">
-            <p className="text-lg font-semibold text-[#f7f2e6]">
+            <p className="text-lg font-semibold text-[#f8fafc]">
               {progress.doneCount} of {progress.total} milestones completed
             </p>
-            <p className="mt-1 text-[#c9a45c]">{journeyHeadline(
+            <p className="mt-1 text-[#059669]">{journeyHeadline(
               progress.steps.map((step) => ({
                 key: step.key,
                 label: step.label,
@@ -529,10 +541,10 @@ export default function UpdateForm({
                       <span
                         className={`grid size-6 shrink-0 place-items-center rounded-full text-[11px] font-bold ${
                           mark === "done"
-                            ? "bg-[#c9a45c] text-[#14241c]"
+                            ? "bg-[#059669] text-[#0f172a]"
                             : current
-                              ? "ring-2 ring-[#c9a45c]"
-                              : "ring-1 ring-[rgba(232,213,163,0.28)]"
+                              ? "ring-2 ring-[#059669]"
+                              : "ring-1 ring-[rgba(226,232,240,0.28)]"
                         }`}
                         aria-hidden
                       >
@@ -542,8 +554,8 @@ export default function UpdateForm({
                         <span
                           className={`mt-1 min-h-[2.5rem] w-px flex-1 ${
                             mark === "done"
-                              ? "bg-[#c9a45c]"
-                              : "bg-[rgba(232,213,163,0.22)]"
+                              ? "bg-[#059669]"
+                              : "bg-[rgba(226,232,240,0.22)]"
                           }`}
                           aria-hidden
                         />
@@ -554,31 +566,31 @@ export default function UpdateForm({
                       <div
                         className={
                           current
-                            ? "rounded-[1.25rem] bg-[rgba(232,213,163,0.08)] p-5 ring-1 ring-[rgba(201,164,92,0.28)]"
+                            ? "rounded-[1.25rem] bg-[rgba(226,232,240,0.08)] p-5 ring-1 ring-[rgba(5,150,105,0.28)]"
                             : ""
                         }
                       >
                         <h2
                           className={`font-semibold tracking-tight ${
                             current
-                              ? "text-2xl text-[#f7f2e6] md:text-3xl"
-                              : "text-lg text-[#f7f2e6]"
+                              ? "text-2xl text-[#f8fafc] md:text-3xl"
+                              : "text-lg text-[#f8fafc]"
                           }`}
                         >
                           {step.label}
                         </h2>
-                        <p className={`mt-1 ${current ? "text-[#c9a45c]" : "text-sm text-[#b0a070]"}`}>
+                        <p className={`mt-1 ${current ? "text-[#059669]" : "text-sm text-[#94a3b8]"}`}>
                           {journeyStatusCopy(step.key, step.value)}
                           {step.key === "registration" && date
                             ? ` · ${formatShortDate(date)}`
                             : ""}
                         </p>
-                        <p className={`mt-2 max-w-xl ${current ? "text-[#e8d5a3]" : "text-sm text-[#d0c090]"}`}>
+                        <p className={`mt-2 max-w-xl ${current ? "text-[#f8fafc]" : "text-sm text-[#d0c090]"}`}>
                           {journeyExplain(step.key, step.value)}
                         </p>
 
                         {step.key === "ceremony" || step.key === "moving" ? (
-                          <p className="mt-3 text-sm text-[#b0a070]">
+                          <p className="mt-3 text-sm text-[#94a3b8]">
                             {step.key === "ceremony" ? "Date" : "Move-in date"}
                             {" · "}
                             {date ? formatShortDate(date) : "No date set"}
@@ -604,21 +616,21 @@ export default function UpdateForm({
                                         : null;
                                 const row = (
                                   <>
-                                    <span className="block font-semibold text-[#f7f2e6]">
+                                    <span className="block font-semibold text-[#f8fafc]">
                                       {item.label}
                                     </span>
-                                    <span className="block text-sm text-[#b0a070]">
+                                    <span className="block text-sm text-[#94a3b8]">
                                       {status}
                                     </span>
                                     {hint ? (
-                                      <span className="mt-1 block text-sm font-semibold text-[#c9a45c]">
+                                      <span className="mt-1 block text-sm font-semibold text-[#059669]">
                                         {hint}
                                       </span>
                                     ) : null}
                                   </>
                                 );
                                 const className =
-                                  "rounded-2xl bg-[rgba(20,36,28,0.35)] px-4 py-3 text-left ring-1 ring-[rgba(232,213,163,0.12)]";
+                                  "rounded-2xl bg-[rgba(20,36,28,0.35)] px-4 py-3 text-left ring-1 ring-[rgba(226,232,240,0.12)]";
                                 if (item.href && item.ready) {
                                   return (
                                     <li key={item.id}>
@@ -646,7 +658,7 @@ export default function UpdateForm({
                             </ul>
                             <Link
                               href="/#interior"
-                              className="mt-5 inline-flex min-h-11 items-center rounded-full bg-[#c9a45c] px-5 text-sm font-semibold text-[#14241c]"
+                              className="mt-5 inline-flex min-h-11 items-center rounded-full bg-[#059669] px-5 text-sm font-semibold text-[#0f172a]"
                             >
                               Continue interior →
                             </Link>
@@ -656,7 +668,7 @@ export default function UpdateForm({
                         <button
                           type="button"
                           onClick={() => setOpenStep(open ? null : step.key)}
-                          className="mt-4 text-sm font-semibold text-[#c9a45c]"
+                          className="mt-4 text-sm font-semibold text-[#059669]"
                         >
                           {open ? "Hide dates" : "Update dates"}
                         </button>
@@ -667,7 +679,7 @@ export default function UpdateForm({
                               e.preventDefault();
                               void onSaveMilestone(step.key);
                             }}
-                            className="field-panel mt-4 text-[#14241c]"
+                            className="field-panel mt-4 text-[#0f172a]"
                           >
                             <div
                               className="grid gap-2 sm:grid-cols-2"
@@ -777,35 +789,124 @@ export default function UpdateForm({
             </ol>
           </div>
         ) : panel === "stay" ? (
-          <div className="space-y-5">
+          <div className="grid items-start gap-4 lg:grid-cols-2">
             <Form
-              onSubmit={onSaveOwner}
-              className="field-panel text-[#14241c]"
+              onSubmit={onSaveOccupancy}
+              className="field-panel text-[#0f172a]"
             >
-              <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[rgba(27,58,47,0.08)] pb-3">
-                <div>
-                  <p className="eyebrow">Profile</p>
-                  <h2 className="mt-0.5 text-xl font-semibold tracking-tight">
-                    Owner
-                  </h2>
-                  <p className="mt-2 text-sm text-[#3d5247]">
-                    Update your display name here. Phone stays linked to this
-                    account ({ownerPhoneMasked}).
-                  </p>
-                </div>
-                <button
-                  type="submit"
-                  disabled={ownerBusy || !ownerDirty}
-                  className="btn btn-gold"
-                >
-                  {ownerBusy ? "Saving…" : "Save"}
-                </button>
+              <div className="border-b border-[rgba(15,23,42,0.08)] pb-3">
+                <h2 className="text-xl font-semibold tracking-tight">Who lives here</h2>
+                <p className="mt-2 text-sm text-[#475569]">
+                  Neighbours see whether you live in {flat.flatNumber} or a tenant does.
+                </p>
               </div>
 
-              <div className="mt-5">
-                <p className="mb-2 text-sm font-semibold text-[#14241c]">
-                  Profile photo
+              <div className="mt-4">
+                <ChoiceField
+                  legend="This home"
+                  name="saleStatus"
+                  value={occupancyForm.saleStatus}
+                  onChange={(value) => {
+                    setOccupancyForm((prev) => ({
+                      ...prev,
+                      saleStatus: value === "sold" ? "sold" : "unsold",
+                      occupancy:
+                        value === "sold" ? prev.occupancy ?? "owner_stay" : null,
+                      tenantName: value === "sold" ? prev.tenantName : "",
+                      tenantPhone: value === "sold" ? prev.tenantPhone : "",
+                    }));
+                    setOccupancyMessage("");
+                    setOccupancyError("");
+                  }}
+                  options={[
+                    { value: "sold", label: "Sold", hint: "An owner has this home." },
+                    { value: "unsold", label: "Not sold", hint: "Still with the builder." },
+                  ]}
+                />
+              </div>
+
+              {occupancyForm.saleStatus === "sold" ? (
+                <div className="mt-4">
+                  <ChoiceField
+                    legend="Who lives here"
+                    name="occupancy"
+                    layout="stack"
+                    value={occupancyForm.occupancy ?? "owner_stay"}
+                    onChange={(value) => {
+                      setOccupancyForm((prev) => ({
+                        ...prev,
+                        occupancy: value === "rented" ? "rented" : "owner_stay",
+                        tenantName: value === "rented" ? prev.tenantName : "",
+                        tenantPhone: value === "rented" ? prev.tenantPhone : "",
+                      }));
+                      setOccupancyMessage("");
+                      setOccupancyError("");
+                    }}
+                    options={[
+                      { value: "owner_stay", label: "I live here", hint: "The owner stays in this home." },
+                      { value: "rented", label: "A tenant lives here", hint: "Add the tenant below." },
+                    ]}
+                  />
+                </div>
+              ) : null}
+
+              {occupancyForm.saleStatus === "sold" ? (
+                <div className="mt-4 grid gap-2 border-t border-[rgba(15,23,42,0.08)] pt-4">
+                  <p className="text-sm font-semibold text-[#0f172a]">Offered to neighbours</p>
+                  <SwitchField
+                    label="Open for rent"
+                    hint="Neighbours can see that this home can be rented."
+                    checked={occupancyForm.openForRent}
+                    onChange={(next) => {
+                      setOccupancyForm((prev) => ({ ...prev, openForRent: next }));
+                      setOccupancyMessage("");
+                      setOccupancyError("");
+                    }}
+                  />
+                  <SwitchField
+                    label="Open for resale"
+                    hint="Neighbours can see that this home can be bought."
+                    checked={occupancyForm.openForResale}
+                    onChange={(next) => {
+                      setOccupancyForm((prev) => ({ ...prev, openForResale: next }));
+                      setOccupancyMessage("");
+                      setOccupancyError("");
+                    }}
+                  />
+                </div>
+              ) : null}
+
+              {occupancyError ? (
+                <div className="mt-4">
+                  <FormAlert tone="error">{occupancyError}</FormAlert>
+                </div>
+              ) : null}
+              {occupancyMessage ? (
+                <div className="mt-4">
+                  <FormAlert tone="ok">{occupancyMessage}</FormAlert>
+                </div>
+              ) : null}
+              <button
+                type="submit"
+                disabled={occupancyBusy || !occupancyDirty}
+                className="btn-slate mt-4"
+              >
+                {occupancyBusy ? "Saving…" : "Save"}
+              </button>
+            </Form>
+
+            <Form
+              onSubmit={onSaveOwner}
+              className="field-panel text-[#0f172a]"
+            >
+              <div className="border-b border-[rgba(15,23,42,0.08)] pb-3">
+                <h2 className="text-xl font-semibold tracking-tight">You</h2>
+                <p className="mt-2 text-sm text-[#475569]">
+                  The name neighbours see. Phone stays {ownerPhoneMasked}.
                 </p>
+              </div>
+              <div className="mt-5">
+                <p className="mb-2 text-sm font-semibold text-[#0f172a]">Photo</p>
                 <ProfilePhotoPicker
                   name={ownerName || flat.ownerName || flat.flatNumber}
                   photoUrl={ownerPhotoUrl}
@@ -848,7 +949,7 @@ export default function UpdateForm({
               </div>
 
               <TextField
-                label="Owner name"
+                label="Your name"
                 name="ownerName"
                 type="text"
                 value={ownerName}
@@ -864,11 +965,11 @@ export default function UpdateForm({
               />
 
               {flat.ownerEmail ? (
-                <p className="mt-4 max-w-md text-sm text-[#3d5247]">
+                <p className="mt-4 max-w-md text-sm text-[#475569]">
                   Email{" "}
                   <a
                     href={`mailto:${flat.ownerEmail}`}
-                    className="break-all font-medium text-[#14241c] underline-offset-2 hover:underline"
+                    className="break-all font-medium text-[#0f172a] underline-offset-2 hover:underline"
                   >
                     {flat.ownerEmail}
                   </a>
@@ -885,124 +986,16 @@ export default function UpdateForm({
                   <FormAlert tone="ok">{ownerMessage}</FormAlert>
                 </div>
               ) : null}
+              <button
+                type="submit"
+                disabled={ownerBusy || !ownerDirty}
+                className="btn-slate mt-4"
+              >
+                {ownerBusy ? "Saving…" : "Save name"}
+              </button>
             </Form>
 
-            <Form
-              onSubmit={onSaveOccupancy}
-              className="field-panel text-[#14241c]"
-            >
-              <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[rgba(27,58,47,0.08)] pb-3">
-                <div>
-                  <p className="eyebrow">Occupancy</p>
-                  <h2 className="mt-0.5 text-xl font-semibold tracking-tight">
-                    Sale & stay
-                  </h2>
-                  <p className="mt-2 text-sm text-[#3d5247]">
-                    Community sees sold vs unsold, owner stay vs rented, and tenant
-                    name with masked phone only.
-                  </p>
-                </div>
-                <button
-                  type="submit"
-                  disabled={occupancyBusy || !occupancyDirty}
-                  className="btn btn-gold"
-                >
-                  {occupancyBusy ? "Saving…" : "Save"}
-                </button>
-              </div>
-
-              <div className="mt-4">
-                <ChoiceField
-                  legend="Sale status"
-                  name="saleStatus"
-                  value={occupancyForm.saleStatus}
-                  onChange={(value) => {
-                    setOccupancyForm((prev) => ({
-                      ...prev,
-                      saleStatus: value === "sold" ? "sold" : "unsold",
-                      occupancy:
-                        value === "sold" ? prev.occupancy ?? "owner_stay" : null,
-                      tenantName: value === "sold" ? prev.tenantName : "",
-                      tenantPhone: value === "sold" ? prev.tenantPhone : "",
-                    }));
-                    setOccupancyMessage("");
-                    setOccupancyError("");
-                  }}
-                  options={[
-                    { value: "sold", label: "Sold" },
-                    { value: "unsold", label: "Unsold" },
-                  ]}
-                />
-              </div>
-
-              {occupancyForm.saleStatus === "sold" ? (
-                <div className="mt-4">
-                  <ChoiceField
-                    legend="Who lives here"
-                    name="occupancy"
-                    value={occupancyForm.occupancy ?? "owner_stay"}
-                    onChange={(value) => {
-                      setOccupancyForm((prev) => ({
-                        ...prev,
-                        occupancy: value === "rented" ? "rented" : "owner_stay",
-                        tenantName: value === "rented" ? prev.tenantName : "",
-                        tenantPhone: value === "rented" ? prev.tenantPhone : "",
-                      }));
-                      setOccupancyMessage("");
-                      setOccupancyError("");
-                    }}
-                    options={[
-                      { value: "owner_stay", label: "Owner stay" },
-                      { value: "rented", label: "Rented" },
-                    ]}
-                  />
-                </div>
-              ) : null}
-
-              {occupancyForm.saleStatus === "sold" &&
-              occupancyForm.occupancy === "rented" ? (
-                <p className="mt-4 rounded-2xl bg-[rgba(154,91,60,0.1)] px-3.5 py-3 text-sm text-[#6d3a22]">
-                  Add renters with dates below. The current renter (no end
-                  date) appears on the community board.
-                </p>
-              ) : null}
-
-              {occupancyForm.saleStatus === "sold" ? (
-                <div className="mt-4 grid gap-2 border-t border-[rgba(27,58,47,0.08)] pt-4">
-                  <p className="field-label">Listings</p>
-                  <SwitchField
-                    label="Open for rent"
-                    checked={occupancyForm.openForRent}
-                    onChange={(next) => {
-                      setOccupancyForm((prev) => ({ ...prev, openForRent: next }));
-                      setOccupancyMessage("");
-                      setOccupancyError("");
-                    }}
-                  />
-                  <SwitchField
-                    label="Open for resale"
-                    checked={occupancyForm.openForResale}
-                    onChange={(next) => {
-                      setOccupancyForm((prev) => ({ ...prev, openForResale: next }));
-                      setOccupancyMessage("");
-                      setOccupancyError("");
-                    }}
-                  />
-                </div>
-              ) : null}
-
-              {occupancyError ? (
-                <div className="mt-4">
-                  <FormAlert tone="error">{occupancyError}</FormAlert>
-                </div>
-              ) : null}
-              {occupancyMessage ? (
-                <div className="mt-4">
-                  <FormAlert tone="ok">{occupancyMessage}</FormAlert>
-                </div>
-              ) : null}
-            </Form>
-
+            <div className="grid gap-4 lg:col-span-2">
             <MembersEditor
               flatId={flat.id}
               initialMembers={initialMembers}
@@ -1017,6 +1010,7 @@ export default function UpdateForm({
                 presentation="stage"
               />
             ) : null}
+            </div>
           </div>
         ) : null}
 

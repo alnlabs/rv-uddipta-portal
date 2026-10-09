@@ -171,6 +171,14 @@ export async function approveRegistration(requestId: number): Promise<ActionResu
     revalidatePath("/members");
     revalidatePath("/community");
     revalidatePath("/notifications");
+    const { writeAudit } = await import("@/lib/audit");
+    await writeAudit({
+      actorUserId: adminUser.id,
+      actorName: adminUser.email,
+      action: "Approved a member",
+      subject: request.flat_number,
+      detail: request.owner_name,
+    });
     return { ok: true };
   } catch (error) {
     return fail(error);

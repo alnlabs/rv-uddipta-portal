@@ -29,10 +29,10 @@ export default async function EnquiryPage({
       <div className="page-gutter w-full py-8 md:py-14">
         <header className="form-sheet">
           <p className="eyebrow">Form</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#14241c] md:text-4xl">
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#0f172a] md:text-4xl">
             {enquiry.title}
           </h1>
-          <p className="mt-3 text-base leading-relaxed text-[#3d5247]">
+          <p className="mt-3 text-base leading-relaxed text-[#475569]">
             This form is for residents. Sign in with a community account to open it.
           </p>
         </header>
@@ -72,19 +72,19 @@ export default async function EnquiryPage({
     <div className="page-gutter w-full py-8 md:py-14">
       <header className="form-sheet">
         <p className="eyebrow">Form</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#14241c] md:text-4xl">
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#0f172a] md:text-4xl">
           {enquiry.title}
         </h1>
         {enquiry.note ? (
-          <p className="mt-3 max-w-2xl text-base leading-relaxed text-[#3d5247]">{enquiry.note}</p>
+          <p className="mt-3 max-w-2xl text-base leading-relaxed text-[#475569]">{enquiry.note}</p>
         ) : (
-          <p className="mt-3 max-w-2xl text-base leading-relaxed text-[#3d5247]">
+          <p className="mt-3 max-w-2xl text-base leading-relaxed text-[#475569]">
             Answer each question below. Required questions are marked.
           </p>
         )}
         {enquiry.askSignin && !user ? (
-          <p className="mt-4 rounded-2xl bg-[rgba(201,164,92,0.18)] px-4 py-3 text-sm leading-relaxed text-[#14241c]">
-            <Link href={`/login?next=${encodeURIComponent(next)}`} className="font-semibold text-[#1b3a2f]">
+          <p className="mt-4 rounded-2xl bg-[rgba(201,164,92,0.18)] px-4 py-3 text-sm leading-relaxed text-[#0f172a]">
+            <Link href={`/login?next=${encodeURIComponent(next)}`} className="font-semibold text-[#1e293b]">
               Sign in
             </Link>{" "}
             so your name and flat are filled in. You can also type them below.
@@ -99,7 +99,9 @@ export default async function EnquiryPage({
         updating={Boolean(mine)}
         identity={{ name: knownName, phone: knownPhone, flatNumber: knownFlat }}
       />
-      {visible ? <EnquiryResults fields={fields} answers={visible} /> : null}
+      {visible ? (
+        <EnquiryResults fields={fields} answers={visible} highlightFlat={knownFlat || undefined} />
+      ) : null}
     </div>
   );
 }

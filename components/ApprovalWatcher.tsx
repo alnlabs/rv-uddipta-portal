@@ -37,7 +37,7 @@ export function ApprovalWatcher() {
   if (!notice) return null;
 
   return (
-    <output className="sticky top-0 z-30 block border-b border-[rgba(201,164,92,0.45)] bg-[#1b3a2f] px-4 py-3 text-sm font-semibold text-[#e8d5a3]">
+    <output className="sticky top-0 z-30 block border-b border-[rgba(5,150,105,0.45)] bg-[#1e293b] px-4 py-3 text-sm font-semibold text-[#f8fafc]">
       {notice}
     </output>
   );

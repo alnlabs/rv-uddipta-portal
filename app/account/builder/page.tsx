@@ -16,10 +16,10 @@ export default async function AdminBuilderPage() {
     <section>
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-[clamp(1.7rem,4vw,2.4rem)] font-semibold leading-none tracking-tight text-[#14241c]">
+          <h1 className="text-[clamp(1.7rem,4vw,2.4rem)] font-semibold leading-none tracking-tight text-[#0f172a]">
             Building details
           </h1>
-          <p className="mt-2 max-w-2xl text-sm text-[#3d5247] sm:text-base">
+          <p className="mt-2 max-w-2xl text-sm text-[#475569] sm:text-base">
             {showAdminHome
               ? "This is the board members read. Edit the name, the numbers, nearby places, and amenities in place."
               : "This is the board members read. You can edit it. You cannot approve members."}

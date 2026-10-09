@@ -20,7 +20,7 @@ export function UpdateRedirect() {
   }, [router]);
 
   return (
-    <div className="page-gutter py-16 text-sm text-[#3d5247]">
+    <div className="page-gutter py-16 text-sm text-[#475569]">
       Opening your home…
     </div>
   );

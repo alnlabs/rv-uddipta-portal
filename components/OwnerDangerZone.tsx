@@ -52,10 +52,10 @@ export function OwnerDangerZone({
         <p className="text-xs font-semibold tracking-[0.14em] text-[#8a2f2f] uppercase">
           Safe delete
         </p>
-        <h3 className="mt-1 text-lg font-semibold text-[#14241c]">
+        <h3 className="mt-1 text-lg font-semibold text-[#0f172a]">
           Precautions for {flatNumber}
         </h3>
-        <p className="mt-1 text-sm text-[#3d5247]">
+        <p className="mt-1 text-sm text-[#475569]">
           Brochure inventory is never removed. Unlink keeps owner and household
           rows. Release clears owner contact and marks the unit unsold. Wipe
           only removes household/renter records.
@@ -67,7 +67,7 @@ export function OwnerDangerZone({
 
       {hasLinkedUser ? (
         <Form
-          className="space-y-2 rounded-xl bg-white/70 p-3 ring-1 ring-[rgba(27,58,47,0.08)]"
+          className="space-y-2 rounded-xl bg-white/70 p-3 ring-1 ring-[rgba(15,23,42,0.08)]"
           onSubmit={(event) => {
             event.preventDefault();
             run(
@@ -78,10 +78,10 @@ export function OwnerDangerZone({
           }}
         >
           <input type="hidden" name="flatNumber" value={flatNumber} />
-          <p className="text-sm font-semibold text-[#14241c]">Unlink Google login</p>
-          <p className="text-xs text-[#3d5247]">
+          <p className="text-sm font-semibold text-[#0f172a]">Unlink Google login</p>
+          <p className="text-xs text-[#475569]">
             The resident can sign in with another account later. Type{" "}
-            <code className="rounded bg-[#efe8d8] px-1">UNLINK</code>.
+            <code className="rounded bg-[#f8fafc] px-1">UNLINK</code>.
           </p>
           <input
             name="confirm"
@@ -106,7 +106,7 @@ export function OwnerDangerZone({
 
       {isSold ? (
         <Form
-          className="space-y-2 rounded-xl bg-white/70 p-3 ring-1 ring-[rgba(27,58,47,0.08)]"
+          className="space-y-2 rounded-xl bg-white/70 p-3 ring-1 ring-[rgba(15,23,42,0.08)]"
           onSubmit={(event) => {
             event.preventDefault();
             run(
@@ -117,10 +117,10 @@ export function OwnerDangerZone({
           }}
         >
           <input type="hidden" name="flatNumber" value={flatNumber} />
-          <p className="text-sm font-semibold text-[#14241c]">Release to unsold</p>
-          <p className="text-xs text-[#3d5247]">
+          <p className="text-sm font-semibold text-[#0f172a]">Release to unsold</p>
+          <p className="text-xs text-[#475569]">
             Clears name, email, phone, and listings. Type{" "}
-            <code className="rounded bg-[#efe8d8] px-1">{flatNumber}</code>.
+            <code className="rounded bg-[#f8fafc] px-1">{flatNumber}</code>.
           </p>
           <input
             name="confirm"
@@ -145,7 +145,7 @@ export function OwnerDangerZone({
 
       {household > 0 ? (
         <Form
-          className="space-y-2 rounded-xl bg-white/70 p-3 ring-1 ring-[rgba(27,58,47,0.08)]"
+          className="space-y-2 rounded-xl bg-white/70 p-3 ring-1 ring-[rgba(15,23,42,0.08)]"
           onSubmit={(event) => {
             event.preventDefault();
             run(
@@ -156,13 +156,13 @@ export function OwnerDangerZone({
           }}
         >
           <input type="hidden" name="flatNumber" value={flatNumber} />
-          <p className="text-sm font-semibold text-[#14241c]">
+          <p className="text-sm font-semibold text-[#0f172a]">
             Remove household records
           </p>
-          <p className="text-xs text-[#3d5247]">
+          <p className="text-xs text-[#475569]">
             {memberCount} member{memberCount === 1 ? "" : "s"}, {renterCount}{" "}
             renter{renterCount === 1 ? "" : "s"}. Type{" "}
-            <code className="rounded bg-[#efe8d8] px-1">WIPE {flatNumber}</code>.
+            <code className="rounded bg-[#f8fafc] px-1">WIPE {flatNumber}</code>.
           </p>
           <input
             name="confirm"
@@ -184,7 +184,7 @@ export function OwnerDangerZone({
           </button>
         </Form>
       ) : (
-        <p className="text-xs text-[#3d5247]">No household or renter rows on this unit.</p>
+        <p className="text-xs text-[#475569]">No household or renter rows on this unit.</p>
       )}
     </div>
   );

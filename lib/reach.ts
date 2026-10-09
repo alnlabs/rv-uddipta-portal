@@ -1,9 +1,10 @@
 import "server-only";
 
 import { normalizePhone } from "@/lib/phone";
+import { pushUsers } from "@/lib/push";
 import { createAdminClient } from "@/utils/supabase/admin";
 
-const COMMUNITY = ["admin", "builder", "owner", "co_owner", "tenant"];
+const COMMUNITY = ["admin", "builder", "owner", "co_owner", "tenant", "committee", "facility", "staff", "security"];
 
 export function outboundChannels() {
   return {
@@ -34,12 +35,15 @@ export async function reachCommunity(input: {
   exceptUserId?: string | null
 }) {
   const contacts = await communityContacts(input.exceptUserId);
-  await reachOut({
-    title: input.title,
-    body: input.body,
-    emails: contacts.emails,
-    phones: contacts.phones,
-  });
+  await Promise.all([
+    reachOut({
+      title: input.title,
+      body: input.body,
+      emails: contacts.emails,
+      phones: contacts.phones,
+    }),
+    pushUsers(contacts.userIds, input.title, input.body),
+  ]);
 }
 
 async function communityContacts(exceptUserId?: string | null) {
@@ -76,7 +80,7 @@ async function communityContacts(exceptUserId?: string | null) {
     if (phone) phones.add(phone);
   }
 
-  return { emails: [...emails], phones: [...phones] };
+  return { emails: [...emails], phones: [...phones], userIds: [...ids] as string[] };
 }
 
 function whatsappNumber(raw: string | null | undefined) {

@@ -11,7 +11,11 @@ export type AppRole =
   | "owner"
   | "co_owner"
   | "visitor"
-  | "tenant";
+  | "tenant"
+  | "committee"
+  | "facility"
+  | "staff"
+  | "security";
 
 export type Profile = {
   userId: string
@@ -28,6 +32,10 @@ const COMMUNITY_ROLES: AppRole[] = [
   "owner",
   "co_owner",
   "tenant",
+  "committee",
+  "facility",
+  "staff",
+  "security",
 ];
 
 export function isCommunityRole(role: AppRole | null | undefined) {
@@ -44,6 +52,28 @@ export function canEditBuilder(role: AppRole | null | undefined, user: User | nu
 
 export function canManageAdmin(role: AppRole | null | undefined, user: User | null) {
   return role === "admin" || isSuperAdmin(user);
+}
+
+const OFFICE_ROLES: AppRole[] = ["admin", "builder", "committee", "facility", "staff", "security", "visitor"];
+
+export function isOfficeRole(role: AppRole | null | undefined) {
+  return Boolean(role && OFFICE_ROLES.includes(role) && role !== "visitor");
+}
+
+export function canRunGate(role: AppRole | null | undefined, user: User | null) {
+  return role === "security" || canManageAdmin(role, user);
+}
+
+export function canRunFacility(role: AppRole | null | undefined, user: User | null) {
+  return role === "facility" || canManageAdmin(role, user);
+}
+
+export function canDoStaffWork(role: AppRole | null | undefined, user: User | null) {
+  return role === "staff" || canRunFacility(role, user);
+}
+
+export function canSitCommittee(role: AppRole | null | undefined, user: User | null) {
+  return role === "committee" || canManageAdmin(role, user);
 }
 
 async function detachFlatFromUser(userId: string) {

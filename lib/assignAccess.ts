@@ -3,6 +3,7 @@ import "server-only";
 import type { User } from "@supabase/supabase-js";
 import { isSuperAdmin, SUPER_ADMIN_NO_FLAT } from "@/lib/admin";
 import { normalizeEmail } from "@/lib/email";
+import { writeAudit } from "@/lib/audit";
 import type { AppRole } from "@/lib/roles";
 import {
   isSocietyPerson,
@@ -62,7 +63,8 @@ export async function applyPersonAccess(
   }
 
   let role = input.role;
-  if (!["admin", "builder", "owner", "co_owner", "visitor", "tenant"].includes(role)) {
+  const officeRoles = ["admin", "builder", "visitor", "committee", "facility", "staff", "security"];
+  if (![...officeRoles, "owner", "co_owner", "tenant"].includes(role)) {
     throw new Error("Unknown access type");
   }
 
@@ -71,23 +73,6 @@ export async function applyPersonAccess(
     .select("role, flat_id")
     .eq("user_id", input.user.id)
     .maybeSingle();
-  if (
-    currentProfile?.role === "owner" &&
-    currentProfile.flat_id &&
-    (role !== "owner" || !input.flatNumber)
-  ) {
-    const { count } = await admin
-      .from("profiles")
-      .select("user_id", { count: "exact", head: true })
-      .eq("flat_id", currentProfile.flat_id)
-      .eq("role", "owner");
-    if ((count ?? 0) <= 1) {
-      throw new Error(
-        "This flat needs at least one owner. Add another owner before changing this person.",
-      );
-    }
-  }
-
   if (role === "owner") {
     if (!input.user.email) throw new Error("This person needs a verified email.");
   }
@@ -103,6 +88,7 @@ export async function applyPersonAccess(
     if (!flat) throw new Error(`Flat ${input.flatNumber} is not in the brochure.`);
     flatId = flat.id;
     if (
+      role === "owner" &&
       currentProfile?.role === "owner" &&
       currentProfile.flat_id &&
       currentProfile.flat_id !== flatId
@@ -130,7 +116,7 @@ export async function applyPersonAccess(
     }
     if (role === "co_owner") {
       const { count } = await admin
-        .from("profiles")
+        .from("person_roles")
         .select("user_id", { count: "exact", head: true })
         .eq("flat_id", flat.id)
         .eq("role", "owner");
@@ -152,20 +138,43 @@ export async function applyPersonAccess(
   if (FLAT_ROLES.includes(role) && !flatId) {
     throw new Error("Enter a flat for owner, co-owner, or tenant.");
   }
-  if (role === "visitor") flatId = null;
-  if ((role === "admin" || role === "builder") && !FLAT_ROLES.includes(role)) {
-    flatId = null;
+  if (
+    officeRoles.includes(role) &&
+    currentProfile?.flat_id &&
+    (currentProfile.role === "owner" || currentProfile.role === "co_owner" || currentProfile.role === "tenant")
+  ) {
+    const { error: keepHome } = await admin.from("person_roles").upsert(
+      {
+        user_id: input.user.id,
+        role: currentProfile.role,
+        flat_id: currentProfile.flat_id,
+      },
+      { onConflict: "user_id,role" },
+    );
+    if (keepHome) throw new Error(keepHome.message);
   }
+  if (officeRoles.includes(role)) flatId = null;
+
+  const displayName =
+    input.displayName ||
+    (input.user.user_metadata?.full_name as string | undefined) ||
+    input.user.email ||
+    null;
+  const { error: roleError } = await admin.from("person_roles").upsert(
+    {
+      user_id: input.user.id,
+      role,
+      flat_id: flatId,
+    },
+    { onConflict: "user_id,role" },
+  );
+  if (roleError) throw new Error(roleError.message);
 
   const { error } = await admin.from("profiles").upsert({
     user_id: input.user.id,
     role,
     flat_id: flatId,
-    display_name:
-      input.displayName ||
-      (input.user.user_metadata?.full_name as string | undefined) ||
-      input.user.email ||
-      null,
+    display_name: displayName,
   });
   if (error) throw new Error(error.message);
 
@@ -177,4 +186,11 @@ export async function applyPersonAccess(
       .eq("id", flatId);
     if (linkError) throw new Error(linkError.message);
   }
+  await writeAudit({
+    actorUserId: input.user.id,
+    actorName: input.displayName || input.user.email,
+    action: "Changed a role",
+    subject: role,
+    detail: input.flatNumber || "",
+  });
 }

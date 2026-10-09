@@ -3,16 +3,16 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { adminAssignRole } from "@/app/actions/admin-manage";
+import { RoleChoice } from "@/components/RoleChoice";
 import {
   Button,
   FieldGrid,
   Form,
   FormAlert,
-  FormPanel,
   SelectField,
   TextField,
 } from "@/components/form-ui";
-import { ROLE_GUIDE } from "@/lib/roleLabels";
+import { roleNeedsHome } from "@/lib/roleLabels";
 
 export type AssignCandidate = {
   userId: string
@@ -22,28 +22,23 @@ export type AssignCandidate = {
 
 export function RoleAssignForm({
   candidates,
-  defaultRole = "owner",
-  defaultFlat = "",
+  defaultRole = "admin",
 }: {
   readonly candidates: AssignCandidate[]
   readonly defaultRole?: string
-  readonly defaultFlat?: string
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [formEpoch, setFormEpoch] = useState(0);
+  const [role, setRole] = useState(roleNeedsHome(defaultRole) ? "admin" : defaultRole);
   const [pending, startTransition] = useTransition();
 
   if (!candidates.length) {
     return (
-      <FormPanel
-        className="mt-5"
-        title="Add owner or family"
-        lede="They need to sign in first. Then you can add them here."
-      >
-        {null}
-      </FormPanel>
+      <p className="mt-5 text-sm text-[#475569]">
+        No one else has signed in yet. They need a Google sign-in before you can give them an office role.
+      </p>
     );
   }
 
@@ -56,22 +51,23 @@ export function RoleAssignForm({
         setNotice(null);
         const form = event.currentTarget;
         const formData = new FormData(form);
+        formData.set("flatNumber", "");
         startTransition(async () => {
           const result = await adminAssignRole(formData);
           if (!result.ok) {
             setError(result.error);
             return;
           }
-          setNotice("Access saved.");
+          setNotice("Saved.");
           setFormEpoch((epoch) => epoch + 1);
           router.refresh();
         });
       }}
     >
-      <div className="mb-4 border-b border-[rgba(27,58,47,0.08)] pb-3">
-        <h2 className="text-xl font-semibold tracking-tight">Add owner or family</h2>
-        <p className="mt-1 text-sm text-[#3d5247]">
-          Choose a person who has already signed in.
+      <div className="mb-4 border-b border-[rgba(15,23,42,0.08)] pb-3">
+        <h2 className="text-xl font-semibold tracking-tight">Give an office role</h2>
+        <p className="mt-1 text-sm text-[#475569]">
+          Choose someone who has signed in. Their home stays with them. This sets the office role they use.
         </p>
       </div>
 
@@ -79,35 +75,27 @@ export function RoleAssignForm({
         <SelectField
           label="Person"
           name="userId"
-          placeholder="Choose someone"
+          placeholder="Choose someone who has signed in"
           defaultValue=""
           required
           className="sm:col-span-2"
           options={candidates.map((person) => ({
             value: person.userId,
-            label: person.flatNumber ? `${person.label} · ${person.flatNumber}` : person.label,
+            label: person.label,
           }))}
         />
-        <SelectField
-          label="Access"
-          name="role"
-          defaultValue={defaultRole === "family" ? "co_owner" : defaultRole}
-          options={ROLE_GUIDE.filter(
-            (item) =>
-              item.value === "owner" || item.value === "co_owner" || item.value === "admin",
-          ).map((item) => ({ value: item.value, label: item.label }))}
-        />
+      </FieldGrid>
+
+      <div className="mt-4">
+        <RoleChoice kind="office" value={role} onChange={setRole} />
+      </div>
+
+      <FieldGrid className="mt-4">
         <TextField
-          label="Flat"
-          name="flatNumber"
-          defaultValue={defaultFlat}
-          placeholder="A101"
-          hint="Needed for owner or family."
-        />
-        <TextField
-          label="Name shown in the portal"
+          label="Name"
           name="displayName"
           placeholder="Optional"
+          hint="Leave blank to keep their sign-in name."
           className="sm:col-span-2"
         />
       </FieldGrid>
@@ -124,7 +112,7 @@ export function RoleAssignForm({
       ) : null}
 
       <Button disabled={pending} className="mt-4 w-full sm:w-auto">
-        {pending ? "Saving…" : "Save"}
+        {pending ? "Saving…" : "Save office role"}
       </Button>
     </Form>
   );

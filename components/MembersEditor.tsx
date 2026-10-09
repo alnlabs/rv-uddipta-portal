@@ -58,8 +58,8 @@ function RelationChips({
             <span
               className={`inline-flex min-h-11 items-center rounded-full px-3 text-sm font-semibold ${
                 selected
-                  ? "bg-[#1b3a2f] text-[#e8d5a3]"
-                  : "bg-[rgba(27,58,47,0.06)] text-[#3d5247] ring-1 ring-[rgba(27,58,47,0.1)]"
+                  ? "bg-[#1e293b] text-[#f8fafc]"
+                  : "bg-[rgba(15,23,42,0.06)] text-[#475569] ring-1 ring-[rgba(15,23,42,0.1)]"
               }`}
             >
               {option.label}
@@ -258,28 +258,24 @@ export default function MembersEditor({
   }
 
   return (
-    <section className="field-panel text-[#14241c]">
-      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[rgba(27,58,47,0.08)] pb-3">
+    <section className="field-panel text-[#0f172a]">
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[rgba(15,23,42,0.08)] pb-3">
         <div>
-          <p className="eyebrow">Profile</p>
-          <h2 className="mt-0.5 text-xl font-semibold tracking-tight">
-            Members
-          </h2>
-          <p className="mt-2 max-w-md text-sm text-[#3d5247]">
-            Add photos and details for family members. They show on the
-            community Members directory.
+          <h2 className="text-xl font-semibold tracking-tight">Family</h2>
+          <p className="mt-2 max-w-md text-sm text-[#475569]">
+            People who live here with you. Neighbours see their names.
           </p>
         </div>
-        <span className="inline-flex min-h-10 items-center rounded-full bg-[#1b3a2f] px-4 text-sm font-bold text-[#e8d5a3]">
+        <span className="inline-flex min-h-10 items-center rounded-full bg-[#1e293b] px-4 text-sm font-bold text-[#f8fafc]">
           {members.length} {members.length === 1 ? "person" : "people"}
         </span>
       </div>
 
       {members.length === 0 ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-[rgba(27,58,47,0.18)] px-4 py-10 text-center">
-          <p className="text-base font-semibold text-[#14241c]">No members yet</p>
-          <p className="mt-1 text-sm text-[#3d5247]">
-            Start with spouse, children, or parents.
+        <div className="mt-6 rounded-2xl border border-dashed border-[rgba(15,23,42,0.18)] px-4 py-10 text-center">
+          <p className="text-base font-semibold text-[#0f172a]">No family listed yet</p>
+          <p className="mt-1 text-sm text-[#475569]">
+            Add a spouse, a child, or a parent.
           </p>
         </div>
       ) : (
@@ -288,7 +284,7 @@ export default function MembersEditor({
             editingId === member.id ? (
               <li
                 key={member.id}
-                className="rounded-2xl bg-[rgba(27,58,47,0.04)] p-4 ring-1 ring-[rgba(27,58,47,0.1)] sm:col-span-2"
+                className="rounded-2xl bg-[rgba(15,23,42,0.04)] p-4 ring-1 ring-[rgba(15,23,42,0.1)] sm:col-span-2"
               >
                 <Form onSubmit={saveEdit} className="space-y-3">
                   <ProfilePhotoPicker
@@ -365,7 +361,7 @@ export default function MembersEditor({
             ) : (
               <li
                 key={member.id}
-                className="flex items-center gap-3 rounded-2xl bg-[rgba(27,58,47,0.04)] px-3.5 py-3"
+                className="flex items-center gap-3 rounded-2xl bg-[rgba(15,23,42,0.04)] px-3.5 py-3"
               >
                 <ProfileAvatar
                   name={member.name}
@@ -374,7 +370,7 @@ export default function MembersEditor({
                 />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-base font-semibold">{member.name}</p>
-                  <p className="truncate text-sm text-[#3d5247]">
+                  <p className="truncate text-sm text-[#475569]">
                     {relationLabel(member.relation)}
                     {member.phone ? ` · ${member.phone}` : ""}
                   </p>
@@ -406,11 +402,11 @@ export default function MembersEditor({
       {openAdd ? (
           <Form
           onSubmit={addMember}
-          className="mt-6 space-y-3 rounded-2xl bg-[rgba(27,58,47,0.04)] p-4 ring-1 ring-[rgba(27,58,47,0.08)]"
+          className="mt-6 space-y-3 rounded-2xl bg-[rgba(15,23,42,0.04)] p-4 ring-1 ring-[rgba(15,23,42,0.08)]"
         >
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-semibold tracking-[0.12em] text-[#3d5247] uppercase">
-              Add member
+            <p className="text-xs font-semibold tracking-[0.12em] text-[#475569] uppercase">
+              Add family
             </p>
             {members.length > 0 ? (
               <button
@@ -419,7 +415,7 @@ export default function MembersEditor({
                   setOpenAdd(false);
                   setDraftPhoto(null);
                 }}
-                className="text-xs font-semibold text-[#3d5247] hover:underline"
+                className="text-xs font-semibold text-[#475569] hover:underline"
               >
                 Close
               </button>
@@ -446,7 +442,7 @@ export default function MembersEditor({
                 {draftPhoto.name}
               </span>
             ) : (
-              <span className="text-xs font-normal text-[#3d5247]">
+              <span className="text-xs font-normal text-[#475569]">
                 Optional · JPEG, PNG, WebP or GIF · max 5 MB
               </span>
             )}
@@ -486,7 +482,7 @@ export default function MembersEditor({
             placeholder="Optional 10-digit mobile"
           />
           <button type="submit" disabled={busy} className="btn btn-forest w-full">
-            {busy ? "Saving…" : "Add member"}
+            {busy ? "Saving…" : "Add to family"}
           </button>
         </Form>
       ) : (
@@ -496,9 +492,9 @@ export default function MembersEditor({
             setOpenAdd(true);
             setEditingId(null);
           }}
-          className="mt-6 min-h-12 w-full rounded-full border border-dashed border-[rgba(27,58,47,0.28)] text-sm font-semibold text-[#1b3a2f] hover:bg-[rgba(27,58,47,0.04)]"
+          className="mt-6 min-h-12 w-full rounded-full border border-dashed border-[rgba(15,23,42,0.28)] text-sm font-semibold text-[#1e293b] hover:bg-[rgba(15,23,42,0.04)]"
         >
-          + Add member
+          Add family
         </button>
       )}
 

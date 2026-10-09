@@ -9,21 +9,21 @@ function pillClass(kind: string, value: string, invert: boolean) {
 
   if (invert) {
     if (kind === "registration" && done) {
-      return "bg-[#2a4a3c] text-[#e8d5a3] ring-1 ring-[rgba(232,213,163,0.28)]";
+      return "bg-[#2a4a3c] text-[#f8fafc] ring-1 ring-[rgba(226,232,240,0.28)]";
     }
     if (progress) {
-      return "bg-[#4a3428] text-[#f0c9a8] ring-1 ring-[rgba(201,164,92,0.35)]";
+      return "bg-[#4a3428] text-[#f0c9a8] ring-1 ring-[rgba(5,150,105,0.35)]";
     }
     if (kind === "interior" && done) {
-      return "bg-[#4a3428] text-[#f0c9a8] ring-1 ring-[rgba(201,164,92,0.35)]";
+      return "bg-[#4a3428] text-[#f0c9a8] ring-1 ring-[rgba(5,150,105,0.35)]";
     }
     if (kind === "ceremony" && done) {
-      return "bg-[#c9a45c] text-[#14241c] ring-1 ring-[rgba(232,213,163,0.4)]";
+      return "bg-[#059669] text-[#0f172a] ring-1 ring-[rgba(226,232,240,0.4)]";
     }
     if (kind === "moving" && done) {
-      return "bg-[#2f5a48] text-[#e8d5a3] ring-1 ring-[rgba(232,213,163,0.28)]";
+      return "bg-[#2f5a48] text-[#f8fafc] ring-1 ring-[rgba(226,232,240,0.28)]";
     }
-    return "bg-[#1b2e26] text-[#e8d5a3] ring-1 ring-[rgba(232,213,163,0.2)]";
+    return "bg-[#1b2e26] text-[#f8fafc] ring-1 ring-[rgba(226,232,240,0.2)]";
   }
 
   if (kind === "registration" && done) {
@@ -36,12 +36,12 @@ function pillClass(kind: string, value: string, invert: boolean) {
     return "bg-[#f0e0d4] text-[#6d3a22] ring-1 ring-[rgba(154,91,60,0.28)]";
   }
   if (kind === "ceremony" && done) {
-    return "bg-[#f0e6d0] text-[#103126] ring-1 ring-[rgba(201,164,92,0.35)]";
+    return "bg-[#f0e6d0] text-[#103126] ring-1 ring-[rgba(5,150,105,0.35)]";
   }
   if (kind === "moving" && done) {
     return "bg-[#d5e6dc] text-[#103126] ring-1 ring-[rgba(79,138,108,0.3)]";
   }
-  return "bg-[#ebe6dc] text-[#3d5247] ring-1 ring-[rgba(27,58,47,0.12)]";
+  return "bg-[#f1f5f9] text-[#475569] ring-1 ring-[rgba(15,23,42,0.12)]";
 }
 
 function labelFor(kind: keyof typeof STATUS_LABELS, value: string) {

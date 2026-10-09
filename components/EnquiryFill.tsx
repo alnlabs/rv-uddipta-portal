@@ -77,7 +77,7 @@ export function EnquiryFill({
 
   if (closed) {
     return (
-      <p className="form-sheet mt-5 text-base leading-relaxed text-[#3d5247]">
+      <p className="form-sheet mt-5 text-base leading-relaxed text-[#475569]">
         This form is closed. Answers already sent are kept, and new ones are not accepted.
       </p>
     );
@@ -85,7 +85,7 @@ export function EnquiryFill({
 
   if (fields.length === 0) {
     return (
-      <p className="form-sheet mt-5 text-base leading-relaxed text-[#3d5247]">
+      <p className="form-sheet mt-5 text-base leading-relaxed text-[#475569]">
         This form does not have any questions yet.
       </p>
     );
@@ -99,8 +99,8 @@ export function EnquiryFill({
       {askFlat ? null : <input type="hidden" name="flatNumber" value={identity.flatNumber} />}
 
       {who ? (
-        <div className="rounded-[1.5rem] bg-[#14241c] px-5 py-4 text-[#f7f2e6] md:px-6 lg:col-span-2">
-          <p className="text-xs font-semibold tracking-[0.14em] text-[#e8d5a3] uppercase">
+        <div className="rounded-[1.5rem] bg-[#0f172a] px-5 py-4 text-[#f8fafc] md:px-6 lg:col-span-2">
+          <p className="text-xs font-semibold tracking-[0.14em] text-[#f8fafc] uppercase">
             Answering as
           </p>
           <p className="mt-1 text-lg font-semibold">{who}</p>
@@ -109,8 +109,8 @@ export function EnquiryFill({
 
       {askName || askPhone || askFlat ? (
         <section className="form-sheet lg:col-span-2">
-          <h2 className="text-xl font-semibold tracking-tight text-[#14241c]">Your details</h2>
-          <p className="mt-1 text-sm leading-relaxed text-[#3d5247]">
+          <h2 className="text-xl font-semibold tracking-tight text-[#0f172a]">Your details</h2>
+          <p className="mt-1 text-sm leading-relaxed text-[#475569]">
             So the answer is tied to the right flat. One answer is kept per flat.
           </p>
           <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -156,7 +156,7 @@ export function EnquiryFill({
           key={field.id}
           className={`form-sheet${field.kind === "long" ? " lg:col-span-2" : ""}`}
         >
-          <p className="text-sm font-semibold text-[#7a5c22]">
+          <p className="text-sm font-semibold text-[#b45309]">
             Question {index + 1} of {fields.length}
           </p>
           <div className="mt-3">
@@ -172,7 +172,7 @@ export function EnquiryFill({
       ) : null}
 
       <div className="form-sheet flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between lg:col-span-2">
-        <p className="text-sm leading-relaxed text-[#3d5247]">
+        <p className="text-sm leading-relaxed text-[#475569]">
           {updating
             ? "This flat already has an answer. Sending again replaces it."
             : "Each flat keeps one answer. You can send it again later to update it."}

@@ -36,6 +36,14 @@ ADMIN_EMAILS=you@gmail.com
    - Site URL: `http://localhost:4800`
    - Redirect URLs: `http://localhost:4800/auth/callback`
 
+The phone uses its own Google clients, and the same Google account still opens this community.
+
+1. In the same Google project, create an **iOS** client with bundle ID `com.alnlabs.rvuddipta`.
+2. Create an **Android** client with package `com.alnlabs.rvuddipta` and the app signing SHA-1.
+3. Supabase → Authentication → Providers → Google → Client IDs: keep the website Web client id first, then add the iOS and Android client ids, separated by commas. Turn on **Skip nonce check**.
+4. In `rv-uddipta-mobile/.env`, set `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` to the website Web client id, and `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` to the iOS client id.
+5. Build the phone app (`npx expo run:ios` or `npx expo run:android`). Expo Go keeps the website sign-in screen.
+
 Then:
 
 ```bash

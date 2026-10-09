@@ -89,7 +89,7 @@ export function ProfilePhotoPicker({
             type="button"
             disabled={busy}
             onClick={() => inputRef.current?.click()}
-            className="min-h-12 rounded-full bg-[#1b3a2f] px-4 text-sm font-semibold text-[#e8d5a3] disabled:opacity-65"
+            className="min-h-12 rounded-full bg-[#1e293b] px-4 text-sm font-semibold text-[#f8fafc] disabled:opacity-65"
           >
             {busy ? "Uploading…" : "Choose photo"}
           </button>
@@ -104,7 +104,7 @@ export function ProfilePhotoPicker({
             </button>
           ) : null}
         </div>
-        <p className="text-[11px] text-[#3d5247]">JPEG, PNG, WebP or GIF · max 5 MB</p>
+        <p className="text-[11px] text-[#475569]">JPEG, PNG, WebP or GIF · max 5 MB</p>
         {error ? (
           <p role="alert" className="text-xs text-[#8a2f2f]">
             {error}

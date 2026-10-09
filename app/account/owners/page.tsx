@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { adminSaveFlat } from "@/app/actions/admin-manage";
+import { HomeAssignForm } from "@/components/HomeAssignForm";
 import { OwnerDangerZone } from "@/components/OwnerDangerZone";
 import {
   Disclosure,
@@ -11,8 +12,10 @@ import {
   TextField,
   WorkspaceHeader,
 } from "@/components/form-ui";
+import { roleNeedsHome } from "@/lib/roleLabels";
 import { canManageAdmin } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
+import { loadSignInPeople } from "@/lib/signInPeople";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 const LIST_COLUMNS = "id, flat_number, owner_name, email, phone, floor, unit, sale_status";
@@ -69,7 +72,7 @@ function ownerFilter(term: string, includeEmail: boolean) {
 export default async function AdminOwnersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; flat?: string }>
+  searchParams: Promise<{ q?: string; flat?: string; as?: string }>
 }) {
   const { user, profile } = await getAuthState();
   if (!user) redirect("/login");
@@ -157,12 +160,17 @@ export default async function AdminOwnersPage({
     memberCount = members.count ?? 0;
     renterCount = renters.count ?? 0;
   }
+  const homePeople = editing
+    ? (await loadSignInPeople()).filter(
+        (person) => !person.locked && (person.role === "visitor" || roleNeedsHome(person.role)),
+      )
+    : [];
 
   function renderFlatList() {
     return (
-    <ul className="max-h-[min(28rem,50dvh)] overflow-auto rounded-2xl border border-[rgba(27,58,47,0.12)] bg-[#fffcf5] lg:max-h-[min(36rem,calc(100dvh-12rem))]">
+    <ul className="max-h-[min(28rem,50dvh)] overflow-auto rounded-2xl border border-[rgba(15,23,42,0.12)] bg-[#ffffff] lg:max-h-[min(36rem,calc(100dvh-12rem))]">
           {rows.length === 0 ? (
-            <li className="px-3 py-4 text-base text-[#3d5247]">
+            <li className="px-3 py-4 text-base text-[#475569]">
               {term ? "No flats match." : "Nothing to fix."}
             </li>
           ) : null}
@@ -170,10 +178,10 @@ export default async function AdminOwnersPage({
             <li key={flat.id}>
               <Link
                 href={`/account/owners?flat=${flat.flat_number}${qParam}`}
-                className={`block min-h-14 border-b border-[rgba(27,58,47,0.06)] px-4 py-3 text-base ${
+                className={`block min-h-14 border-b border-[rgba(15,23,42,0.06)] px-4 py-3 text-base ${
                   editing?.flat_number === flat.flat_number
-                    ? "bg-[#1b3a2f] text-[#e8d5a3]"
-                    : "hover:bg-[rgba(27,58,47,0.04)]"
+                    ? "bg-[#1e293b] text-[#f8fafc]"
+                    : "hover:bg-[rgba(15,23,42,0.04)]"
                 }`}
               >
                 <strong className="text-lg">{flat.flat_number}</strong>
@@ -224,7 +232,7 @@ export default async function AdminOwnersPage({
         <Disclosure
           title={`Change flat · ${editing.flat_number}`}
           className="field-panel mt-3 lg:hidden"
-          titleClassName="text-[#14241c]"
+          titleClassName="text-[#0f172a]"
         >
           {renderFlatList()}
         </Disclosure>
@@ -252,28 +260,15 @@ export default async function AdminOwnersPage({
             className="grid gap-3"
           >
             <input type="hidden" name="flatNumber" value={editing.flat_number} />
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[rgba(27,58,47,0.08)] pb-3">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[rgba(15,23,42,0.08)] pb-3">
               <div>
                 <h2 className="text-xl font-semibold tracking-tight">{editing.flat_number}</h2>
-                <p className="mt-1 text-sm text-[#3d5247]">
+                <p className="mt-1 text-sm text-[#475569]">
                   Wing {editing.wing} · Floor {editing.floor} · {editing.type}
                   {editing.user_id ? " · Linked Google account" : ""}
                 </p>
               </div>
-              <div className="flex gap-2">
-                <Link
-                  href={`/members?flat=${editing.flat_number}&as=owner`}
-                  className="btn btn-forest"
-                >
-                  Add owner
-                </Link>
-                <Link
-                  href={`/members?flat=${editing.flat_number}&as=family`}
-                  className="btn btn-ghost ring-1 ring-[rgba(27,58,47,0.16)]"
-                >
-                  Add family
-                </Link>
-              </div>
+              <p className="text-sm text-[#475569]">The record for this home.</p>
             </div>
 
             <FieldGrid>
@@ -296,7 +291,7 @@ export default async function AdminOwnersPage({
             <Disclosure
               title="More about this flat"
               className="rounded-2xl bg-white/70 p-3"
-              titleClassName="text-[#14241c]"
+              titleClassName="text-[#0f172a]"
             >
               <div className="grid gap-3">
                 <FieldGrid>
@@ -345,6 +340,15 @@ export default async function AdminOwnersPage({
               Save
             </button>
           </Form>
+          <HomeAssignForm
+            flatNumber={editing.flat_number}
+            defaultRole={params.as === "family" ? "family" : params.as === "tenant" ? "tenant" : "owner"}
+            candidates={homePeople.map((person) => ({
+              userId: person.userId,
+              label: person.displayName || person.email || "Signed-in person",
+              flatNumber: person.flatNumber,
+            }))}
+          />
           <Disclosure title="Clear this flat" className="mt-4" titleClassName="text-[#8a2f2f]">
           <OwnerDangerZone
             flatNumber={editing.flat_number}
@@ -357,8 +361,8 @@ export default async function AdminOwnersPage({
           </div>
         ) : (
           <div className="field-panel hidden lg:block">
-            <p className="text-lg font-semibold text-[#14241c]">Choose a flat</p>
-            <p className="mt-1 text-base text-[#3d5247]">
+            <p className="text-lg font-semibold text-[#0f172a]">Choose a flat</p>
+            <p className="mt-1 text-base text-[#475569]">
               Pick one from the list. Search if you already know the number.
             </p>
           </div>

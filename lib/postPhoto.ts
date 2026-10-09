@@ -11,12 +11,20 @@ const TYPES = new Map([
 ]);
 
 export async function savePostPhoto(postId: number, file: File) {
+  return savePhoto(`posts/${postId}`, file);
+}
+
+export async function saveNotePhoto(noteId: number, file: File) {
+  return savePhoto(`notes/${noteId}`, file);
+}
+
+async function savePhoto(folder: string, file: File) {
   const ext = TYPES.get(file.type);
   if (!ext) throw new Error("Use a JPEG, PNG, or WebP photo.");
   if (file.size > MAX_BYTES) throw new Error("Photo must be 5 MB or smaller.");
 
   const bytes = Buffer.from(await file.arrayBuffer());
-  const path = `posts/${postId}/${Date.now()}.${ext}`;
+  const path = `${folder}/${Date.now()}.${ext}`;
   const admin = createAdminClient();
   const { error } = await admin.storage.from(BUCKET).upload(path, bytes, {
     contentType: file.type,

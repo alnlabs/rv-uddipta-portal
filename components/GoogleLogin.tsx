@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Mark } from "@/components/Mark";
 import { createClient } from "@/utils/supabase/client";
 
 export default function GoogleLogin({
@@ -35,11 +36,12 @@ export default function GoogleLogin({
 
   return (
     <section className="page-gutter grid max-w-[1100px] place-items-start py-6 md:min-h-[70vh] md:place-items-center md:py-12">
-      <div className="w-full max-w-lg rounded-2xl border border-[rgba(27,58,47,0.14)] bg-[#fffcf5] p-4 shadow-xl md:p-6">
-        <h1 className="text-[clamp(2rem,6vw,2.75rem)] font-semibold leading-tight tracking-tight text-[#14241c]">
+      <div className="w-full max-w-lg rounded-2xl border border-[rgba(15,23,42,0.14)] bg-[#ffffff] p-4 shadow-xl md:p-6">
+        <Mark size={72} alt="RV Uddiipta" />
+        <h1 className="mt-4 text-[clamp(2rem,6vw,2.75rem)] font-semibold leading-tight tracking-tight text-[#0f172a]">
           Sign in
         </h1>
-        <p className="mt-3 text-lg leading-relaxed text-[#3d5247]">
+        <p className="mt-3 text-lg leading-relaxed text-[#475569]">
           Use the Google account for your flat. After an admin approves you,
           you can see your home.
         </p>
@@ -53,7 +55,7 @@ export default function GoogleLogin({
           type="button"
           onClick={signIn}
           disabled={busy}
-          className="mt-6 inline-flex min-h-16 w-full items-center justify-center gap-3 rounded-full bg-[#1b3a2f] px-5 text-xl font-semibold text-[#e8d5a3] disabled:opacity-65"
+          className="mt-6 inline-flex min-h-16 w-full items-center justify-center gap-3 rounded-full bg-[#1e293b] px-5 text-xl font-semibold text-[#f8fafc] disabled:opacity-65"
         >
           <span aria-hidden className="text-lg">
             G

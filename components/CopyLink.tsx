@@ -13,12 +13,12 @@ export function CopyLink({
   const [copied, setCopied] = useState(false);
 
   return (
-    <div className="flex flex-col gap-4 rounded-[1.5rem] bg-[#14241c] px-5 py-5 text-[#f7f2e6] sm:flex-row sm:items-center md:px-6">
+    <div className="flex flex-col gap-4 rounded-[1.5rem] bg-[#0f172a] px-5 py-5 text-[#f8fafc] sm:flex-row sm:items-center md:px-6">
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold tracking-[0.14em] text-[#e8d5a3] uppercase">
+        <p className="text-xs font-semibold tracking-[0.14em] text-[#f8fafc] uppercase">
           Share this form
         </p>
-        <p className="mt-2 break-all text-sm leading-relaxed text-[#f7f2e6]">{href}</p>
+        <p className="mt-2 break-all text-sm leading-relaxed text-[#f8fafc]">{href}</p>
       </div>
       <div className="flex shrink-0 flex-wrap gap-2">
         <button
@@ -34,7 +34,7 @@ export function CopyLink({
           {copied ? "Copied" : "Copy link"}
         </button>
         {previewHref ? (
-          <Link href={previewHref} className="btn btn-ghost text-[#e8d5a3] ring-1 ring-[rgba(232,213,163,0.35)]">
+          <Link href={previewHref} className="btn btn-ghost text-[#f8fafc] ring-1 ring-[rgba(226,232,240,0.35)]">
             Preview
           </Link>
         ) : null}

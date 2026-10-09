@@ -1,15 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useId, useState } from "react";
+import { useMemo, useState } from "react";
 import ProfileAvatar from "@/components/ProfileAvatar";
-import {
-  facingLabel,
-  listingChipTone,
-  possessionTone,
-  saleOccupancyTone,
-  typeLabel,
-} from "@/lib/flatDisplay";
+import { facingLabel, typeLabel } from "@/lib/flatDisplay";
 
 export type MemberPerson = {
   name: string
@@ -48,9 +41,17 @@ export type MemberCard = {
   statusLabel: string | null
   openForRent: boolean
   openForResale: boolean
-  /** Owner has a signed-in account linked to this flat. */
   ownerRegistered: boolean
 };
+
+type Filter = "all" | "staying" | "family" | "tenants";
+
+const FILTERS: { id: Filter; label: string }[] = [
+  { id: "all", label: "Everyone" },
+  { id: "staying", label: "Owner living here" },
+  { id: "family", label: "With family" },
+  { id: "tenants", label: "With a tenant" },
+];
 
 function formatDate(value: string | null) {
   if (!value) return null;
@@ -59,459 +60,216 @@ function formatDate(value: string | null) {
   return `${day}/${month}/${year}`;
 }
 
-function periodLabel(renter: MemberRenter) {
+function stayLabel(renter: MemberRenter) {
   const start = formatDate(renter.startDate);
   const end = formatDate(renter.endDate);
-  if (start && end) return `${start} → ${end}`;
-  if (start && !end) return `${start} → present`;
-  if (!start && end) return `until ${end}`;
+  if (start && end) return `${start} to ${end}`;
+  if (start) return `From ${start}`;
+  if (end) return `Until ${end}`;
   return null;
 }
 
-type Filter = "all" | "owners" | "tenants" | "family";
-
-export type LinkedAccount = {
-  userId: string
-  role: string
-  displayName: string
-  email: string
-  locked: boolean
-  flatNumber: string | null
-};
-
-type HouseholdRow = {
-  key: string
-  name: string
-  photoUrl: string | null
-  role: "Owner" | "Family" | "Tenant"
-  registered: boolean
-  userId: string | null
-};
-
-function sameName(left: string, right: string) {
-  return left.trim().toLowerCase() === right.trim().toLowerCase();
+function matches(flat: MemberCard, query: string) {
+  if (!query) return true;
+  const hay = [
+    flat.flatNumber,
+    flat.ownerName,
+    flat.tenantName,
+    ...flat.members.map((member) => member.name),
+    ...flat.renters.map((renter) => renter.name),
+  ]
+    .join(" ")
+    .toLowerCase();
+  return hay.includes(query);
 }
 
-function householdRows(flat: MemberCard, accounts: LinkedAccount[], filter: Filter): HouseholdRow[] {
-  const here = accounts.filter((account) => account.flatNumber === flat.flatNumber && !account.locked);
-  const ownerAccount = here.find((account) => account.role === "owner");
-  const rows: HouseholdRow[] = [];
-  const showOwner = filter === "all" || filter === "owners" || (filter === "family" && (flat.ownerRegistered || Boolean(ownerAccount)));
-  if (showOwner) {
-    rows.push({
-      key: `owner-${flat.flatNumber}`,
-      name: ownerAccount?.displayName || flat.ownerName,
-      photoUrl: flat.ownerPhotoUrl,
-      role: "Owner",
-      registered: flat.ownerRegistered || Boolean(ownerAccount),
-      userId: ownerAccount?.userId ?? null,
-    });
+function matchesFilter(flat: MemberCard, filter: Filter) {
+  if (filter === "staying") return flat.occupancyLabel === "Owner stay";
+  if (filter === "family") return flat.members.length > 0;
+  if (filter === "tenants") return Boolean(flat.tenantName) || flat.renters.some((renter) => renter.current);
+  return true;
+}
+
+function peopleLine(flat: MemberCard) {
+  const bits: string[] = [];
+  if (flat.members.length) {
+    bits.push(flat.members.map((member) => member.name).slice(0, 2).join(", "));
+    if (flat.members.length > 2) bits[bits.length - 1] += ` +${flat.members.length - 2}`;
   }
-  if (filter === "all" || filter === "family") {
-    const listed = new Set<string>();
-    for (const member of flat.members) {
-      listed.add(member.name.trim().toLowerCase());
-      const account = here.find(
-        (item) => item.role === "co_owner" && sameName(item.displayName || item.email, member.name),
-      );
-      rows.push({
-        key: `family-${flat.flatNumber}-${member.name}`,
-        name: member.name,
-        photoUrl: member.photoUrl,
-        role: "Family",
-        registered: Boolean(account),
-        userId: account?.userId ?? null,
-      });
-    }
-    for (const account of here) {
-      if (account.role !== "co_owner") continue;
-      const name = account.displayName || account.email || "Family";
-      if (listed.has(name.trim().toLowerCase())) continue;
-      rows.push({
-        key: `account-${account.userId}`,
-        name,
-        photoUrl: null,
-        role: "Family",
-        registered: true,
-        userId: account.userId,
-      });
-    }
-  }
-  if ((filter === "all" || filter === "tenants") && flat.tenantName) {
-    const tenantAccount = here.find((account) => account.role === "tenant");
-    rows.push({
-      key: `tenant-${flat.flatNumber}`,
-      name: flat.tenantName,
-      photoUrl: null,
-      role: "Tenant",
-      registered: Boolean(tenantAccount),
-      userId: tenantAccount?.userId ?? null,
-    });
-  }
-  if (filter === "family" && !rows.some((row) => row.role === "Family")) return [];
-  if (filter === "tenants" && !rows.some((row) => row.role === "Tenant")) return [];
-  return rows;
+  if (flat.tenantName) bits.push(`Tenant ${flat.tenantName}`);
+  return bits.join(" · ");
 }
 
 export function MembersDirectory({
   flats,
   initialQuery = "",
-  accounts = [],
-  canManage = false,
-  openUserId = null,
 }: {
   readonly flats: MemberCard[]
   readonly initialQuery?: string
-  readonly accounts?: LinkedAccount[]
-  readonly canManage?: boolean
-  readonly openUserId?: string | null
 }) {
-  const [selected, setSelected] = useState<MemberCard | null>(null);
+  const [query, setQuery] = useState(initialQuery);
   const [filter, setFilter] = useState<Filter>("all");
-  const titleId = useId();
-  const homes = flats
-    .map((flat) => ({ flat, rows: householdRows(flat, accounts, filter) }))
-    .filter((home) => home.rows.length > 0)
-    .sort((a, b) => {
-      const aRegistered = a.rows.some((row) => row.role === "Owner" && row.registered);
-      const bRegistered = b.rows.some((row) => row.role === "Owner" && row.registered);
-      if (aRegistered !== bRegistered) return aRegistered ? -1 : 1;
-      return a.flat.flatNumber.localeCompare(b.flat.flatNumber, undefined, { numeric: true });
-    });
+  const [openNumber, setOpenNumber] = useState<string | null>(null);
+  const needle = query.trim().toLowerCase();
 
-  useEffect(() => {
-    if (!selected) return;
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") setSelected(null);
-    }
-    document.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
-  }, [selected]);
+  const homes = useMemo(
+    () =>
+      flats
+        .filter((flat) => matches(flat, needle) && matchesFilter(flat, filter))
+        .sort((a, b) => a.flatNumber.localeCompare(b.flatNumber, undefined, { numeric: true })),
+    [flats, needle, filter],
+  );
+  const wings = [...new Set(homes.map((flat) => flat.wing || "A"))];
+  const open = homes.find((flat) => flat.flatNumber === openNumber) ?? null;
 
   return (
-    <>
-      <form className="mt-6 flex gap-3 border-b border-[rgba(27,58,47,0.1)] pb-3">
+    <div className="mt-6">
+      <label className="block max-w-xl">
+        <span className="field-label">Find a neighbour</span>
         <input
-          name="q"
-          defaultValue={initialQuery}
-          placeholder="Search name or flat"
-          className="min-h-11 flex-1 border-0 bg-transparent px-0 text-base outline-none"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Name or home number"
+          className="field-control mt-2"
         />
-        <button type="submit" className="text-sm font-semibold text-[#1b3a2f]">
-          Search
-        </button>
-      </form>
+      </label>
 
-      <div className="mt-4 flex flex-wrap gap-4 text-sm">
-        {(
-          [
-            ["all", "All"],
-            ["owners", "Owners"],
-            ["tenants", "Tenants"],
-            ["family", "Family"],
-          ] as const
-        ).map(([id, label]) => (
+      <div className="mt-4 flex flex-wrap gap-2">
+        {FILTERS.map((item) => (
           <button
-            key={id}
+            key={item.id}
             type="button"
-            onClick={() => setFilter(id)}
+            onClick={() => setFilter(item.id)}
             className={
-              filter === id
-                ? "border-b-2 border-[#14241c] font-semibold text-[#14241c]"
-                : "text-[#3d5247]"
+              filter === item.id
+                ? "inline-flex min-h-11 items-center rounded-full bg-[#1e293b] px-4 text-sm font-semibold text-[#f8fafc]"
+                : "inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold text-[#0f172a] ring-1 ring-[rgba(15,23,42,0.16)]"
             }
           >
-            {label}
+            {item.label}
           </button>
         ))}
+        <p className="inline-flex min-h-11 items-center text-sm text-[#475569]">
+          {homes.length} {homes.length === 1 ? "home" : "homes"}
+        </p>
       </div>
 
-      {homes.length === 0 ? (
-        <p className="mt-8 text-sm text-[#3d5247]">No residents match that search.</p>
-      ) : (
-        <div className="mt-6">
-          {homes.map(({ flat, rows }) => (
-            <section key={flat.flatNumber} className="mb-6">
-              <h2 className="mb-1 text-sm font-semibold text-[#7a5c22]">
-                {flat.flatNumber}
-                {flat.wing ? ` · Wing ${flat.wing}` : ""}
-              </h2>
-              <ul className="divide-y divide-[rgba(27,58,47,0.08)]">
-                {rows.map((row) => (
-                  <li key={row.key} className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setSelected(flat)}
-                      className="flex min-w-0 flex-1 items-center gap-3 py-3 text-left"
-                    >
-                      <ProfileAvatar name={row.name} photoUrl={row.photoUrl} size="sm" />
-                      <span className="min-w-0 flex-1">
-                        <span className="flex flex-wrap items-center gap-2 font-medium text-[#14241c]">
-                          {row.name}
-                          {row.registered ? (
-                            <span className="rounded-full bg-[#c9a45c] px-2 py-0.5 text-[10px] font-bold tracking-wide text-[#14241c] uppercase">
-                              Signed up
-                            </span>
-                          ) : null}
-                        </span>
-                        <span className="block text-sm text-[#3d5247]">{row.role}</span>
-                      </span>
-                    </button>
-                    {canManage && row.userId ? (
-                      <Link
-                        href={openUserId === row.userId ? "/members" : `/members?person=${row.userId}`}
-                        className="shrink-0 text-sm font-semibold text-[#1b3a2f]"
-                      >
-                        {openUserId === row.userId ? "Close" : "Change"}
-                      </Link>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
-        </div>
-      )}
-
-      {selected ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-[#0d1a14]/55 p-3 backdrop-blur-[2px] sm:items-center"
-          role="presentation"
-          onClick={() => setSelected(null)}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={titleId}
-            className="max-h-[min(90dvh,40rem)] w-full max-w-md overflow-y-auto rounded-[1.5rem] bg-[#fffcf5] text-[#14241c] shadow-[0_24px_80px_rgba(0,0,0,0.35)] ring-1 ring-[rgba(27,58,47,0.12)]"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="sticky top-0 flex items-start justify-between gap-3 border-b border-[rgba(27,58,47,0.1)] bg-[#fffcf5]5 px-5 py-4 backdrop-blur-sm">
-              <div className="flex min-w-0 items-center gap-3">
-                <ProfileAvatar
-                  name={selected.ownerName}
-                  photoUrl={selected.ownerPhotoUrl}
-                  size="lg"
-                />
-                <div className="min-w-0">
-                  <p className="text-[0.65rem] font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">
-                    Flat details
-                  </p>
-                  <h2
-                    id={titleId}
-                    className="mt-0.5 text-2xl font-semibold tracking-tight"
-                  >
-                    {selected.flatNumber}
-                  </h2>
-                </div>
-              </div>
-              <button
-                type="button"
-                aria-label="Close details"
-                onClick={() => setSelected(null)}
-                className="grid size-10 shrink-0 place-items-center rounded-full text-xl text-[#3d5247] hover:bg-[rgba(27,58,47,0.06)]"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="space-y-5 px-5 py-5">
-              <div>
-                <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#3d5247] uppercase">
-                  Owner
+      {open ? (
+        <article className="slab mt-5 p-4 sm:p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <ProfileAvatar name={open.ownerName} photoUrl={open.ownerPhotoUrl} size="lg" />
+              <div className="min-w-0">
+                <p className="text-sm text-[#475569]">
+                  Wing {open.wing || "A"} · Floor {open.floor}
+                  {open.type ? ` · ${typeLabel(open.type)}` : ""}
+                  {open.facing ? ` · ${facingLabel(open.facing)}` : ""}
+                  {open.areaSqft ? ` · ${open.areaSqft.toLocaleString()} sft` : ""}
                 </p>
-                <p className="mt-1 text-lg font-semibold">{selected.ownerName}</p>
-                {selected.ownerEmail ? (
-                  <a
-                    href={`mailto:${selected.ownerEmail}`}
-                    className="mt-0.5 block break-all text-sm text-[#2f5a48] underline-offset-2 hover:underline"
-                  >
-                    {selected.ownerEmail}
-                  </a>
-                ) : null}
-                {selected.phoneMasked ? (
-                  <p className="mt-0.5 text-sm tabular-nums text-[#3d5247]">
-                    {selected.phoneMasked}
-                  </p>
-                ) : null}
+                <h2 className="text-2xl font-semibold text-[#0f172a]">{open.flatNumber}</h2>
+                <p className="text-sm text-[#475569]">{open.occupancyLabel}</p>
               </div>
-
-              {selected.members.length > 0 ? (
-                <div>
-                  <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#3d5247] uppercase">
-                    Household
-                  </p>
-                  <ul className="mt-2 space-y-1.5">
-                    {selected.members.map((member) => (
-                      <li
-                        key={member.name}
-                        className="flex items-center gap-3 rounded-xl bg-[rgba(27,58,47,0.05)] px-3 py-2"
-                      >
-                        <ProfileAvatar
-                          name={member.name}
-                          photoUrl={member.photoUrl}
-                          size="sm"
-                          tone="member"
-                        />
-                        <span className="text-sm font-medium">{member.name}</span>
+            </div>
+            <button type="button" onClick={() => setOpenNumber(null)} className="btn-line">
+              Close
+            </button>
+          </div>
+          <div className="mt-5 grid gap-4 sm:grid-cols-3">
+            <div>
+              <p className="text-sm font-semibold text-[#64748b]">Owner</p>
+              <p className="mt-1 font-semibold text-[#0f172a]">{open.ownerName}</p>
+              {open.phoneMasked ? <p className="text-sm text-[#475569]">{open.phoneMasked}</p> : null}
+              {open.ownerEmail ? (
+                <a href={`mailto:${open.ownerEmail}`} className="text-sm text-[#1e293b] underline decoration-[#cbd5e1] underline-offset-4">
+                  {open.ownerEmail}
+                </a>
+              ) : null}
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-[#64748b]">Family</p>
+              {open.members.length ? (
+                <ul className="mt-1 grid gap-2">
+                  {open.members.map((member) => (
+                    <li key={member.name} className="flex items-center gap-2">
+                      <ProfileAvatar name={member.name} photoUrl={member.photoUrl} size="sm" tone="member" />
+                      <span className="text-[#0f172a]">{member.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-1 text-sm text-[#475569]">No family listed.</p>
+              )}
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-[#64748b]">Tenant</p>
+              {open.tenantName || open.renters.length ? (
+                <ul className="mt-1 grid gap-2">
+                  {open.tenantName ? (
+                    <li>
+                      <p className="font-semibold text-[#0f172a]">{open.tenantName}</p>
+                      {open.tenantPhoneMasked ? <p className="text-sm text-[#475569]">{open.tenantPhoneMasked}</p> : null}
+                    </li>
+                  ) : null}
+                  {open.renters
+                    .filter((renter) => renter.name !== open.tenantName)
+                    .map((renter) => (
+                      <li key={`${renter.name}-${renter.startDate}`}>
+                        <p className="font-semibold text-[#0f172a]">
+                          {renter.name}
+                          {renter.current ? " · Living here" : ""}
+                        </p>
+                        {stayLabel(renter) ? <p className="text-sm text-[#475569]">{stayLabel(renter)}</p> : null}
+                        {renter.phoneMasked ? <p className="text-sm text-[#475569]">{renter.phoneMasked}</p> : null}
                       </li>
                     ))}
-                  </ul>
-                </div>
-              ) : null}
-
-              {selected.renters.length > 0 ? (
-                <div>
-                  <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#9a5b3c] uppercase">
-                    Renters
-                  </p>
-                  <ul className="mt-2 space-y-1.5">
-                    {selected.renters.map((renter) => {
-                      const period = periodLabel(renter);
-                      return (
-                        <li
-                          key={`${renter.name}-${renter.startDate}-${renter.endDate}`}
-                          className="rounded-xl bg-[rgba(154,91,60,0.1)] px-3 py-2"
-                        >
-                          <p className="text-sm font-semibold">
-                            {renter.name}
-                            {renter.current ? (
-                              <span className="ml-2 rounded-full bg-[rgba(154,91,60,0.2)] px-2 py-0.5 text-[10px] font-bold tracking-wide text-[#6d3a22] uppercase">
-                                Current
-                              </span>
-                            ) : null}
-                          </p>
-                          {period ? (
-                            <p className="mt-0.5 text-xs text-[#3d5247]">
-                              {period}
-                            </p>
-                          ) : null}
-                          {renter.phoneMasked ? (
-                            <p className="text-xs tabular-nums text-[#3d5247]">
-                              {renter.phoneMasked}
-                            </p>
-                          ) : null}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              ) : selected.tenantName ? (
-                <div className="rounded-2xl bg-[rgba(154,91,60,0.1)] px-3.5 py-3">
-                  <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#9a5b3c] uppercase">
-                    Tenant
-                  </p>
-                  <p className="mt-1 font-semibold">{selected.tenantName}</p>
-                  {selected.tenantPhoneMasked ? (
-                    <p className="text-sm tabular-nums text-[#3d5247]">
-                      {selected.tenantPhoneMasked}
-                    </p>
-                  ) : null}
-                </div>
-              ) : null}
-
-              <div>
-                <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#3d5247] uppercase">
-                  Journey dates
-                </p>
-                <dl className="mt-2 grid grid-cols-2 gap-3 text-sm">
-                  {(
-                    [
-                      ["Registration", selected.registrationDate],
-                      ["Interior start", selected.interiorStartDate],
-                      ["Interior done", selected.interiorDate],
-                      ["Home ceremony", selected.ceremonyDate],
-                      ["Move-in", selected.movingDate],
-                    ] as const
-                  ).map(([label, value]) => (
-                    <div key={label}>
-                      <dt className="text-xs text-[#3d5247]">{label}</dt>
-                      <dd className="mt-0.5 font-semibold">
-                        {formatDate(value) ?? "—"}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-
-              <div className="flex flex-wrap gap-1.5">
-                <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-semibold ${saleOccupancyTone(selected.occupancyLabel)}`}
-                >
-                  {selected.occupancyLabel}
-                </span>
-                {selected.openForRent ? (
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${listingChipTone("rent")}`}
-                  >
-                    Open for rent
-                  </span>
-                ) : null}
-                {selected.openForResale ? (
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${listingChipTone("resale")}`}
-                  >
-                    Open for resale
-                  </span>
-                ) : null}
-                {selected.statusLabel ? (
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${possessionTone(selected.statusLabel)}`}
-                  >
-                    {selected.statusLabel}
-                  </span>
-                ) : null}
-              </div>
-
-              <dl className="grid grid-cols-2 gap-3 border-t border-[rgba(27,58,47,0.1)] pt-4 text-sm">
-                <div>
-                  <dt className="text-xs text-[#3d5247]">Wing / floor</dt>
-                  <dd className="mt-0.5 font-semibold">
-                    {selected.wing || "—"} · {selected.floor}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-[#3d5247]">Type</dt>
-                  <dd className="mt-0.5 font-semibold">
-                    {typeLabel(selected.type)}
-                  </dd>
-                </div>
-                {selected.facing ? (
-                  <div>
-                    <dt className="text-xs text-[#3d5247]">Facing</dt>
-                    <dd className="mt-0.5 font-semibold">
-                      {facingLabel(selected.facing)}
-                    </dd>
-                  </div>
-                ) : null}
-                {selected.areaSqft ? (
-                  <div>
-                    <dt className="text-xs text-[#3d5247]">Area</dt>
-                    <dd className="mt-0.5 font-semibold">
-                      {selected.areaSqft.toLocaleString()} sft
-                    </dd>
-                  </div>
-                ) : null}
-              </dl>
-            </div>
-
-            <div className="border-t border-[rgba(27,58,47,0.1)] px-5 py-4">
-              <button
-                type="button"
-                onClick={() => setSelected(null)}
-                className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[#1b3a2f] px-4 text-sm font-semibold text-[#e8d5a3]"
-              >
-                Close
-              </button>
+                </ul>
+              ) : (
+                <p className="mt-1 text-sm text-[#475569]">No tenant.</p>
+              )}
             </div>
           </div>
-        </div>
+        </article>
       ) : null}
-    </>
+
+      {homes.length === 0 ? (
+        <p className="mt-8 text-[#475569]">No home matches.</p>
+      ) : (
+        wings.map((wing) => (
+          <section key={wing} className="mt-8">
+            <h2 className="text-lg font-semibold text-[#0f172a]">Wing {wing}</h2>
+            <ul className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {homes
+                .filter((flat) => (flat.wing || "A") === wing)
+                .map((flat) => {
+                  const active = open?.flatNumber === flat.flatNumber;
+                  const extra = peopleLine(flat);
+                  return (
+                    <li key={flat.flatNumber}>
+                      <button
+                        type="button"
+                        onClick={() => setOpenNumber(active ? null : flat.flatNumber)}
+                        className={`slab flex h-full w-full items-start gap-3 p-4 text-left ${
+                          active ? "ring-2 ring-[#1e293b]" : ""
+                        }`}
+                      >
+                        <ProfileAvatar name={flat.ownerName} photoUrl={flat.ownerPhotoUrl} size="sm" />
+                        <span className="min-w-0">
+                          <span className="block text-lg font-semibold text-[#0f172a]">{flat.flatNumber}</span>
+                          <span className="block truncate font-medium text-[#0f172a]">{flat.ownerName}</span>
+                          <span className="mt-1 block text-sm text-[#475569]">
+                            Owner{flat.occupancyLabel === "Rented" ? " · Rented" : ""}
+                            {flat.members.length ? ` · Family ${flat.members.length}` : ""}
+                          </span>
+                          {extra ? <span className="mt-1 block truncate text-sm text-[#475569]">{extra}</span> : null}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+            </ul>
+          </section>
+        ))
+      )}
+    </div>
   );
 }

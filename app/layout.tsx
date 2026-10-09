@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Hanken_Grotesk, Manrope } from "next/font/google";
+import { Mark } from "@/components/Mark";
 import { OwnersShell } from "@/components/OwnersShell";
 import { SiteHeader } from "@/components/SiteHeader";
 import { isSuperAdmin } from "@/lib/admin";
@@ -9,17 +10,19 @@ import {
   canManageAdmin,
   isCommunityRole,
 } from "@/lib/roles";
+import { visibleDeskKeys } from "@/lib/deskAccess";
+import { loadHeldRoles, type HeldRole } from "@/lib/heldRoles";
 import { getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
 import "./globals.css";
 
-const geistSans = Geist({
+const manrope = Manrope({
   variable: "--font-geist-sans",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const hanken = Hanken_Grotesk({
+  variable: "--font-hanken",
   subsets: ["latin"],
 });
 
@@ -28,8 +31,12 @@ export const metadata: Metadata = {
   description: "Private floor-wise owners portal for RV Uddiipta, Karmanghat — 238 homes.",
   appleWebApp: {
     capable: true,
-    title: "UDDIIPTA",
+    title: "RV Uddiipta",
     statusBarStyle: "black-translucent",
+  },
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
   },
 };
 
@@ -37,7 +44,7 @@ export const viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#1b3a2f",
+  themeColor: "#0f172a",
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
@@ -49,6 +56,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   let builderEdit = false;
   let unreadNotifications = 0;
   let pendingApprovals = 0;
+  let heldRoles: HeldRole[] = [];
+  const enabledFeatures = user && profile ? await visibleDeskKeys(profile.role, user) : null;
 
   if (user && profile) {
     const superAdmin = isSuperAdmin(user);
@@ -72,6 +81,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     ]);
     if (!superAdmin) {
       flatNumber = ownFlat?.flat_number ?? null;
+      heldRoles = await loadHeldRoles(user.id);
     }
     unreadNotifications = count ?? 0;
 
@@ -101,12 +111,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       data-scroll-behavior="smooth"
-      className={`${geistSans.variable} ${geistMono.variable} antialiased ${
+      className={`${manrope.variable} ${hanken.variable} antialiased ${
         user ? "app-shell" : "h-full"
       }`}
     >
       <body
-        className={`flex flex-col text-[#14241c] ${
+        className={`flex flex-col text-[#0f172a] ${
           user ? "h-full min-h-0" : "min-h-full"
         }`}
       >
@@ -120,8 +130,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             unreadNotifications={unreadNotifications}
             pendingApprovals={pendingApprovals}
             accountLabel={profile.displayName || user.email || null}
+            role={profile.role}
+            heldRoles={heldRoles}
+            enabledFeatures={enabledFeatures}
             showPrivateCommunity={
-              isCommunityRole(profile.role) || isSuperAdmin(user)
+              isCommunityRole(profile.role) && !isSuperAdmin(user)
             }
           >
             {children}
@@ -132,7 +145,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             <main className="relative min-w-0 flex-1 overflow-x-clip">
               {children}
             </main>
-            <footer className="relative hidden border-t border-[rgba(27,58,47,0.1)] px-4 py-8 text-sm text-[#3d5247] md:block md:px-8">
+            <footer className="relative hidden items-center gap-3 border-t border-[rgba(15,23,42,0.1)] px-4 py-8 text-sm text-[#475569] md:flex md:px-8">
+              <Mark size={28} />
               RV Uddiipta · Karmanghat · {new Date().getFullYear()}
             </footer>
           </>

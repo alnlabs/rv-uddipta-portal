@@ -20,6 +20,9 @@ export type ProjectInfo = {
   nearby: { label: string; distance: string }[]
   amenities: string[]
   launchDate: string
+  emergencyContacts: string
+  gateRules: string
+  hostApproval: boolean
 };
 
 const FALLBACK: ProjectInfo = {
@@ -38,6 +41,9 @@ const FALLBACK: ProjectInfo = {
   nearby: [...BUILDING.nearby],
   amenities: [...BUILDING.amenities],
   launchDate: "",
+  emergencyContacts: "",
+  gateRules: "",
+  hostApproval: true,
 };
 
 type AnyClient = ReturnType<typeof createClient> | ReturnType<typeof createAdminClient>;
@@ -64,5 +70,8 @@ export async function getProjectInfo(client?: AnyClient): Promise<ProjectInfo> {
     nearby: Array.isArray(data.nearby) ? data.nearby : FALLBACK.nearby,
     amenities: Array.isArray(data.amenities) ? data.amenities : FALLBACK.amenities,
     launchDate: data.launch_date || FALLBACK.launchDate,
+    emergencyContacts: data.emergency_contacts || FALLBACK.emergencyContacts,
+    gateRules: data.gate_rules || FALLBACK.gateRules,
+    hostApproval: data.host_approval ?? FALLBACK.hostApproval,
   };
 }

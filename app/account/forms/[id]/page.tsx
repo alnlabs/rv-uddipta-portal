@@ -56,7 +56,7 @@ export default async function EnquiryAdminPage({
             : "People with the link can fill this in. Edit the questions here, then share it."
         }
         action={
-          <Link href="/account/forms" className="text-sm font-semibold text-[#1b3a2f]">
+          <Link href="/account/forms" className="text-sm font-semibold text-[#1e293b]">
             All forms
           </Link>
         }
@@ -71,10 +71,10 @@ export default async function EnquiryAdminPage({
         heading={
           <div>
             <p className="eyebrow">Questions</p>
-            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-[#14241c]">
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-[#0f172a]">
               What people answer
             </h2>
-            <p className="mt-2 text-sm leading-relaxed text-[#3d5247]">{questionCount}</p>
+            <p className="mt-2 text-sm leading-relaxed text-[#475569]">{questionCount}</p>
           </div>
         }
         settings={
@@ -82,7 +82,7 @@ export default async function EnquiryAdminPage({
             <Form action={saveEnquirySettings} className="form-sheet grid gap-5">
               <div>
                 <p className="eyebrow">Settings</p>
-                <h2 className="mt-1 text-2xl font-semibold tracking-tight text-[#14241c]">
+                <h2 className="mt-1 text-2xl font-semibold tracking-tight text-[#0f172a]">
                   About this form
                 </h2>
               </div>
@@ -102,15 +102,15 @@ export default async function EnquiryAdminPage({
             </Form>
 
             <form action={setEnquiryClosed.bind(null, enquiry.id, !enquiry.closedAt)} className="form-sheet">
-              <h2 className="text-lg font-semibold text-[#14241c]">
+              <h2 className="text-lg font-semibold text-[#0f172a]">
                 {enquiry.closedAt ? "Open it again" : "Stop new answers"}
               </h2>
-              <p className="mt-2 text-sm leading-relaxed text-[#3d5247]">
+              <p className="mt-2 text-sm leading-relaxed text-[#475569]">
                 {enquiry.closedAt
                   ? "Opening the form lets people send answers again."
                   : "Closing keeps every answer and stops new ones. You can open it later."}
               </p>
-              <button type="submit" className="btn btn-ghost mt-4 ring-1 ring-[rgba(27,58,47,0.14)]">
+              <button type="submit" className="btn btn-ghost mt-4 ring-1 ring-[rgba(15,23,42,0.14)]">
                 {enquiry.closedAt ? "Open the form" : "Close the form"}
               </button>
             </form>
@@ -125,9 +125,9 @@ export default async function EnquiryAdminPage({
                   <input type="hidden" name="id" value={field.id} />
                   <input type="hidden" name="enquiryId" value={enquiry.id} />
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-[#7a5c22]">
+                    <p className="text-sm font-semibold text-[#b45309]">
                       Question {index + 1}
-                      <span className="ml-2 font-medium text-[#3d5247]">
+                      <span className="ml-2 font-medium text-[#475569]">
                         {FIELD_KINDS.find((kind) => kind.value === field.kind)?.label}
                       </span>
                     </p>
@@ -162,28 +162,28 @@ export default async function EnquiryAdminPage({
                     Save question
                   </button>
                 </Form>
-                <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[rgba(27,58,47,0.08)] pt-4">
+                <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[rgba(15,23,42,0.08)] pt-4">
                   <form action={moveEnquiryField.bind(null, enquiry.id, field.id, -1)}>
-                    <button type="submit" className="btn btn-ghost ring-1 ring-[rgba(27,58,47,0.14)]" disabled={index === 0}>
+                    <button type="submit" className="btn btn-ghost ring-1 ring-[rgba(15,23,42,0.14)]" disabled={index === 0}>
                       Move up
                     </button>
                   </form>
                   <form action={moveEnquiryField.bind(null, enquiry.id, field.id, 1)}>
                     <button
                       type="submit"
-                      className="btn btn-ghost ring-1 ring-[rgba(27,58,47,0.14)]"
+                      className="btn btn-ghost ring-1 ring-[rgba(15,23,42,0.14)]"
                       disabled={index === fields.length - 1}
                     >
                       Move down
                     </button>
                   </form>
                   {answeredFieldIds.has(field.id) ? (
-                    <p className="text-sm leading-relaxed text-[#3d5247]">
+                    <p className="text-sm leading-relaxed text-[#475569]">
                       This question stays, because people have already answered it.
                     </p>
                   ) : null}
                   {!answeredFieldIds.has(field.id) && fields.length === 1 ? (
-                    <p className="text-sm leading-relaxed text-[#3d5247]">
+                    <p className="text-sm leading-relaxed text-[#475569]">
                       This question stays. A form is the questions people answer.
                     </p>
                   ) : null}

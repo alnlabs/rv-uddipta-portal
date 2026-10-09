@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FlatPlan2D } from "@/components/FlatPlan2D";
-import { PageShell, SectionHead, Segmented, TextLink } from "@/components/chrome";
+import { PageShell, Segmented, TextLink } from "@/components/chrome";
 import { JourneyDetail } from "@/components/JourneyDetail";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import UpdateForm from "@/components/UpdateForm";
@@ -15,16 +15,16 @@ import {
   layoutGroups,
   occupancyCopy,
 } from "@/lib/apartmentLayout";
-import { facingLabel, typeLabel } from "@/lib/flatDisplay";
 import { summarize } from "@/lib/flats";
-import { greeting, journeySteps } from "@/lib/homeDisplay";
+import { greeting, journeyHeadline, journeySteps } from "@/lib/homeDisplay";
+import { visibleText } from "@/lib/richText";
 import { relationLabel } from "@/lib/status";
 import type { FlatMember, FlatRenter, OwnedFlat, PublicFlat } from "@/lib/types";
 
 const FlatUnit3D = dynamic(() => import("@/components/FlatUnit3D"), {
   ssr: false,
   loading: () => (
-    <div className="grid h-[22rem] place-items-center bg-[#1b3a2f] text-sm font-semibold text-[#e8d5a3] md:h-[26rem]">
+    <div className="grid h-[22rem] place-items-center bg-[#1e293b] text-sm font-semibold text-[#f8fafc] md:h-[26rem]">
       Loading 3D unit…
     </div>
   ),
@@ -75,19 +75,19 @@ function planInput(flat: PublicFlat) {
 function Mark({ mark }: { readonly mark: "done" | "active" | "upcoming" }) {
   if (mark === "done") {
     return (
-      <span className="grid size-6 place-items-center rounded-full bg-[#1b3a2f] text-[11px] font-bold text-[#e8d5a3]">
+      <span className="grid size-6 place-items-center rounded-full bg-[#f8fafc] text-[11px] font-bold text-[#1e293b]">
         ✓
       </span>
     );
   }
   if (mark === "active") {
     return (
-      <span className="grid size-6 place-items-center rounded-full ring-2 ring-[#c9a45c]">
-        <span className="size-2 rounded-full bg-[#c9a45c]" />
+      <span className="grid size-6 place-items-center rounded-full ring-2 ring-[#059669]">
+        <span className="size-2 rounded-full bg-[#059669]" />
       </span>
     );
   }
-  return <span className="grid size-6 place-items-center rounded-full ring-1 ring-[rgba(27,58,47,0.22)]" />;
+  return <span className="grid size-6 place-items-center rounded-full ring-1 ring-[rgba(15,23,42,0.22)]" />;
 }
 
 export function DashboardHome({
@@ -100,6 +100,9 @@ export function DashboardHome({
   renters = [],
   ownedFlat = null,
   ownerPhoneMasked = "",
+  canEditHome = true,
+  needsAction = [],
+  todayItems = [],
 }: {
   flats: PublicFlat[]
   includeOwners: boolean
@@ -110,6 +113,9 @@ export function DashboardHome({
   renters?: FlatRenter[]
   ownedFlat?: OwnedFlat | null
   ownerPhoneMasked?: string
+  canEditHome?: boolean
+  needsAction?: { title: string; detail: string; href: string }[]
+  todayItems?: { title: string; when: string; href: string }[]
 }) {
   const [mode, setMode] = useState<PlanMode>("2d");
   const [section, setSection] = useState<HomeSection>("hub");
@@ -172,7 +178,7 @@ export function DashboardHome({
       : null);
   const hello = greeting(greetingName || myFlat?.ownerName);
 
-  if (ownedFlat && section === "stay") {
+  if (ownedFlat && section === "stay" && canEditHome) {
     return (
       <UpdateForm
         key={section}
@@ -190,22 +196,24 @@ export function DashboardHome({
     return (
       <PageShell>
         <div className="flex items-start justify-between gap-4">
-          <h1 className="font-semibold tracking-tight text-[#14241c] text-[clamp(2rem,5vw,3.25rem)] leading-[1.05]">
-            Documents & records
+          <h1 className="font-semibold tracking-tight text-[#0f172a] text-[clamp(2rem,5vw,3.25rem)] leading-[1.05]">
+            Home records
           </h1>
           <button
             type="button"
             onClick={() => openSection("hub")}
             aria-label={`Close and return to ${myFlat.flatNumber}`}
-            className="grid size-11 shrink-0 place-items-center rounded-full text-2xl leading-none text-[#14241c] ring-1 ring-[rgba(27,58,47,0.16)] hover:bg-[rgba(27,58,47,0.05)]"
+            className="grid size-11 shrink-0 place-items-center rounded-full text-2xl leading-none text-[#0f172a] ring-1 ring-[rgba(15,23,42,0.16)] hover:bg-[rgba(15,23,42,0.05)]"
           >
             ×
           </button>
         </div>
-        <p className="mt-4 max-w-xl text-[#3d5247]">
-          No apartment files are stored here yet. Floor plans live in Your
-          apartment. Registration papers, allotment records and interior
-          documents will appear here when they are added.
+        <p className="mt-4 max-w-xl text-[#475569]">
+          This is a written list for the home: the possession letter, verification, and where each paper is kept. Floor
+          plans stay in Your apartment.
+        </p>
+        <p className="mt-4">
+          <TextLink href="/documents">Open home records →</TextLink>
         </p>
       </PageShell>
     );
@@ -214,11 +222,11 @@ export function DashboardHome({
   if (!myFlat) {
     return (
       <PageShell wide>
-        <p className="text-sm text-[#7a5c22]">{hello}</p>
-        <h1 className="mt-2 font-semibold tracking-tight text-[#14241c] text-[clamp(2rem,5vw,3.25rem)] leading-[1.05]">
+        <p className="text-sm text-[#b45309]">{hello}</p>
+        <h1 className="mt-2 font-semibold tracking-tight text-[#0f172a] text-[clamp(2rem,5vw,3.25rem)] leading-[1.05]">
           My flat
         </h1>
-        <p className="mt-3 max-w-xl text-[#3d5247]">
+        <p className="mt-3 max-w-xl text-[#475569]">
           {includeOwners
             ? "Explore the community while your flat is linked."
             : "Brochure details only until your flat is approved."}
@@ -234,7 +242,6 @@ export function DashboardHome({
 
   const stay = occupancyCopy(myFlat);
   const steps = journeySteps(myFlat);
-  const journeyComplete = steps.every((step) => step.mark === "done");
   const layout = apartmentLayout(myFlat);
   const groups = layoutGroups(layout);
   const drawing = layout.rooms.find((room) => /drawing/i.test(room.label));
@@ -253,502 +260,296 @@ export function DashboardHome({
     });
   }
 
+  const roomFacts = [
+    ["Bedrooms", String(groups.bedrooms.length || "—")],
+    ["Bathrooms", String(groups.toilets.length || "—")],
+    ["Balconies", String(groups.balconies.length || "—")],
+    ["Kitchen", groups.kitchen?.dim ?? (groups.kitchen ? "In plan" : "—")],
+    ["Drawing", drawing?.dim ?? (drawing ? "In plan" : "—")],
+    ["Dining", dining?.dim ?? (dining ? "In plan" : "—")],
+  ] as const;
+  const people = [
+    {
+      key: "owner",
+      name: myFlat.ownerName || "Owner",
+      role: "Owner",
+      photo: myFlat.ownerPhotoUrl,
+      tone: "owner" as const,
+    },
+    ...members.map((member) => ({
+      key: `member-${member.id}`,
+      name: member.name,
+      role: relationLabel(member.relation),
+      photo: member.photoUrl,
+      tone: "member" as const,
+    })),
+    ...renters.map((renter) => ({
+      key: `renter-${renter.id}`,
+      name: renter.name,
+      role: renter.endDate ? "Former tenant" : "Tenant",
+      photo: null,
+      tone: "member" as const,
+    })),
+  ];
+  const doneCount = steps.filter((step) => step.mark === "done").length;
+
   return (
     <PageShell wide>
-      <header className="flex flex-col gap-5 border-b border-[rgba(27,58,47,0.1)] pb-6 md:flex-row md:items-end md:justify-between">
-        <div className="min-w-0">
-          <p className="text-sm text-[#7a5c22]">{hello}</p>
-          <p className="mt-3 text-xs font-semibold tracking-[0.18em] text-[#7a5c22] uppercase">
-            My flat
-          </p>
-          <p className="mt-1 text-base text-[#3d5247]">Your apartment only.</p>
-          <h1 className="mt-1 font-semibold tracking-tight text-[#14241c] text-[clamp(2.75rem,8vw,4.5rem)] leading-[0.92]">
-            {myFlat.flatNumber}
-          </h1>
-          {myFlat.ownerName ? (
-            <p className="mt-3 text-lg text-[#14241c]">{myFlat.ownerName}</p>
-          ) : null}
-          <p className="mt-1 text-sm text-[#3d5247] md:text-base">{heroMeta(myFlat)}</p>
-          <p className="mt-1 text-sm text-[#3d5247]">{stay}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => showPlan("2d")}
-            className="inline-flex min-h-11 items-center rounded-full bg-[#1b3a2f] px-4 text-sm font-semibold text-[#e8d5a3]"
-          >
-            View 2D Plan
-          </button>
-          <button
-            type="button"
-            onClick={() => showPlan("3d")}
-            className="inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold text-[#1b3a2f] ring-1 ring-[rgba(27,58,47,0.18)]"
-          >
-            View 3D
-          </button>
-        </div>
-      </header>
-
-      <section className="mt-6 border-b border-[rgba(27,58,47,0.1)] pb-6">
-        <p className="text-xs font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">
-          Home at a glance
-        </p>
-        <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 lg:grid-cols-6">
-          {(
-            [
-              [
-                myFlat.areaSqft
-                  ? `${myFlat.areaSqft.toLocaleString("en-IN")} sq ft`
-                  : "—",
-                "Area",
-              ],
-              [typeLabel(myFlat.type), "Configuration"],
-              [`Floor ${myFlat.floor}`, `Wing ${myFlat.wing}`],
-              [myFlat.facing ? facingLabel(myFlat.facing) : "—", "Facing"],
-              [stay, "Occupancy"],
-              [interior?.status ?? "—", "Interior"],
-            ] as const
-          ).map(([value, label]) => (
-            <div key={label}>
-              <dd className="text-lg font-semibold tracking-tight text-[#14241c]">
-                {value}
-              </dd>
-              <dt className="mt-0.5 text-xs text-[#3d5247]">{label}</dt>
-            </div>
-          ))}
-        </dl>
-      </section>
-
-      <section id="your-apartment" className="mt-8 scroll-mt-8">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="text-xl font-semibold tracking-tight text-[#14241c] md:text-2xl">
-              Your apartment
-            </h2>
-            <p className="mt-1 text-sm text-[#3d5247]">
-              Explore the layout of {myFlat.flatNumber}
+      <section id="your-apartment" className="scroll-mt-8 text-[#0f172a]">
+        <div className="home-stage rounded-[1.75rem] px-6 py-6 md:px-8 md:py-8">
+        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div className="min-w-0">
+            <p className="text-sm text-[#b45309]">{hello}</p>
+            <h1 className="mt-1 font-semibold tracking-tight text-[clamp(3.2rem,9vw,5.5rem)] leading-[0.88]">
+              {myFlat.flatNumber}
+            </h1>
+            <p className="mt-4 max-w-xl text-sm text-[#475569] md:text-base">{heroMeta(myFlat)}</p>
+            <p className="mt-1 text-sm text-[#0f172a]">
+              {myFlat.ownerName ? `${myFlat.ownerName} · ` : ""}
+              {stay}
             </p>
-          </div>
-          <Segmented
-            label={`${myFlat.flatNumber} view`}
-            value={mode}
-            onChange={setMode}
-            options={[
-              { id: "2d", label: "2D" },
-              { id: "3d", label: "3D" },
-            ]}
-          />
-        </div>
-
-        <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(14rem,0.6fr)]">
-          <div className="overflow-hidden rounded-[1.5rem] bg-[#ebe6dc] ring-1 ring-[rgba(27,58,47,0.1)]">
-            {mode === "2d" ? (
-              <div className="mx-auto max-w-3xl p-2 md:p-3">
-                <FlatPlan2D
-                  compact
-                  homeLabel={myFlat.flatNumber}
-                  flat={planInput(myFlat)}
-                />
-              </div>
-            ) : (
-              <FlatUnit3D flat={planInput(myFlat)} />
+            {canEditHome ? null : (
+              <p className="mt-1 text-sm text-[#475569]">The owner keeps the records for this home.</p>
             )}
           </div>
-          <aside className="lg:pt-1">
-            <h3 className="text-sm font-semibold text-[#14241c]">Apartment facts</h3>
-            <dl className="mt-4 space-y-3 text-sm">
-              {(
-                [
-                  ["Configuration", typeLabel(myFlat.type)],
-                  [
-                    "Area",
-                    myFlat.areaSqft
-                      ? `${myFlat.areaSqft.toLocaleString("en-IN")} sq ft`
-                      : "—",
-                  ],
-                  ["Floor", String(myFlat.floor)],
-                  ["Wing", myFlat.wing || "—"],
-                  ["Facing", myFlat.facing ? facingLabel(myFlat.facing) : "—"],
-                  ["Bedrooms", String(groups.bedrooms.length || "—")],
-                  ["Bathrooms", String(groups.toilets.length || "—")],
-                  ["Balconies", String(groups.balconies.length || "—")],
-                  [
-                    "Kitchen",
-                    groups.kitchen?.dim ?? (groups.kitchen ? "In plan" : "—"),
-                  ],
-                  ["Drawing", drawing?.dim ?? (drawing ? "In plan" : "—")],
-                  ["Dining", dining?.dim ?? (dining ? "In plan" : "—")],
-                ] as const
-              ).map(([label, value]) => (
-                <div
-                  key={label}
-                  className="flex items-baseline justify-between gap-3 border-b border-[rgba(27,58,47,0.08)] pb-2"
-                >
-                  <dt className="text-[#3d5247]">{label}</dt>
-                  <dd className="font-semibold text-[#14241c]">{value}</dd>
-                </div>
-              ))}
-            </dl>
-            <div className="mt-5 flex flex-col gap-2">
-              <button
-                type="button"
-                onClick={() => showPlan("2d")}
-                className="text-left text-sm font-semibold text-[#1b3a2f] underline-offset-4 hover:underline"
-              >
-                View full 2D plan
-              </button>
-              <button
-                type="button"
-                onClick={() => showPlan("3d")}
-                className="text-left text-sm font-semibold text-[#1b3a2f] underline-offset-4 hover:underline"
-              >
-                Explore in 3D
-              </button>
-            </div>
-          </aside>
-        </div>
-      </section>
-
-      <section className="mt-10">
-        <SectionHead
-          title={journeyComplete ? "Home journey" : "Your home journey"}
-          aside={
-            journeyComplete ? null : (
-              <button
-                type="button"
-                onClick={openJourney}
-                className="text-sm font-semibold text-[#1b3a2f] underline-offset-4 hover:underline"
-              >
-                View journey →
-              </button>
-            )
-          }
-        />
-        {journeyComplete ? (
-          <div className="mt-3">
-            <p className="font-semibold text-[#14241c]">Journey completed</p>
-            <p className="mt-1 text-sm text-[#3d5247]">
-              All major home milestones are complete.
-            </p>
-            <button
-              type="button"
-              onClick={openJourney}
-              className="mt-2 text-sm font-semibold text-[#1b3a2f] underline-offset-4 hover:underline"
-            >
-              View journey →
-            </button>
-          </div>
-        ) : (
-          <>
-            <p className="mt-3 text-sm text-[#3d5247]">
-              {steps.filter((step) => step.mark === "done").length} of{" "}
-              {steps.length} milestones completed
-            </p>
-            <ol className="mt-2">
-              {steps.map((step) => (
-                <li
-                  key={step.key}
-                  className={`flex items-center gap-3 rounded-xl px-2 py-2 ${
-                    step.mark === "active"
-                      ? "bg-[rgba(201,164,92,0.12)]"
-                      : ""
-                  }`}
-                >
-                  <Mark mark={step.mark} />
-                  <p
-                    className={`min-w-0 flex-1 ${
-                      step.mark === "active"
-                        ? "font-semibold text-[#14241c]"
-                        : "font-medium text-[#14241c]"
-                    }`}
-                  >
-                    {step.label}
-                  </p>
-                  <p
-                    className={`text-sm ${
-                      step.mark === "active"
-                        ? "font-semibold text-[#7a5c22]"
-                        : "text-[#3d5247]"
-                    }`}
-                  >
-                    {step.status}
-                  </p>
-                </li>
-              ))}
-            </ol>
-          </>
-        )}
-      </section>
-
-      <section id="interior" className="mt-10 scroll-mt-8">
-        <SectionHead title="Interior" />
-        <p className="mt-4 text-2xl font-semibold tracking-tight text-[#14241c]">
-          {interior?.status ?? "Not started"}
-        </p>
-        <div className="mt-5 flex flex-wrap gap-2">
-          {links.map((item) => {
-            const className =
-              "inline-flex min-h-10 items-center rounded-full px-3.5 text-sm font-semibold ring-1 ring-[rgba(27,58,47,0.14)]";
-            if (item.href && item.ready) {
-              return (
-                <Link key={item.id} href={item.href} className={`${className} text-[#14241c]`}>
-                  {item.label}
-                </Link>
-              );
-            }
-            if (item.action === "3d") {
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => showPlan("3d")}
-                  className={`${className} text-[#14241c]`}
-                >
-                  {item.label}
-                </button>
-              );
-            }
-            return (
-              <span key={item.id} className={`${className} text-[#3d5247]`}>
-                {item.label}
-                <span className="ml-2 font-normal">Coming soon</span>
-              </span>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="mt-10">
-        <SectionHead title={`Everything about ${myFlat.flatNumber}`} />
-        <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {(
-            [
-              {
-                href: "#interior",
-                title: "Interior",
-                copy: "Quotation, designs, materials and progress",
-                action: "View interior",
-              },
-              {
-                href: "#your-apartment",
-                title: "Apartment",
-                copy: "Floor plan, rooms, dimensions and layout",
-                action: "View apartment",
-              },
-              {
-                href: "#documents",
-                title: "Documents",
-                copy: "Important apartment documents and records",
-                action: "View documents",
-              },
-              {
-                href: "#stay",
-                title: "Household",
-                copy: "Owner, family members and occupancy",
-                action: "Manage household",
-              },
-              {
-                href: "/community",
-                title: "Community",
-                copy: "Floor, wing and neighbour information",
-                action: "Explore community",
-              },
-              {
-                href: "#activity",
-                title: "Activity",
-                copy: `Recent updates related to ${myFlat.flatNumber}`,
-                action: "View activity",
-              },
-            ] as const
-          ).map((card) => {
-            const body = (
-              <>
-                <p className="font-semibold text-[#14241c]">{card.title}</p>
-                <p className="mt-1 text-sm text-[#3d5247]">{card.copy}</p>
-                <p className="mt-3 text-sm font-semibold text-[#1b3a2f]">
-                  {card.action} →
-                </p>
-              </>
-            );
-            const className =
-              "block w-full rounded-2xl bg-[#fffcf5] px-5 py-4 text-left ring-1 ring-[rgba(27,58,47,0.1)]";
-            if (card.href === "#stay" || card.href === "#documents") {
-              return (
-                <li key={card.title}>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      openSection(card.href === "#stay" ? "stay" : "documents")
-                    }
-                    className={className}
-                  >
-                    {body}
-                  </button>
-                </li>
-              );
-            }
-            return (
-              <li key={card.title}>
-                <Link href={card.href} className={className}>
-                  {body}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-
-      <section className="mt-10">
-        <SectionHead title="About your apartment" />
-        <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 md:grid-cols-4">
-          {(
-            [
-              ["Configuration", typeLabel(myFlat.type)],
-              [
-                "Area",
-                myFlat.areaSqft
-                  ? `${myFlat.areaSqft.toLocaleString("en-IN")} sq ft`
-                  : "—",
-              ],
-              ["Wing", myFlat.wing || "—"],
-              ["Floor", String(myFlat.floor)],
-              ["Facing", myFlat.facing ? facingLabel(myFlat.facing) : "—"],
-              ["Bedrooms", String(groups.bedrooms.length || "—")],
-              [
-                "Kitchen",
-                groups.kitchen?.dim ?? (groups.kitchen ? "In plan" : "—"),
-              ],
-              ["Drawing", drawing?.dim ?? (drawing ? "In plan" : "—")],
-              ["Dining", dining?.dim ?? (dining ? "In plan" : "—")],
-              ["Bathrooms", String(groups.toilets.length || "—")],
-              ["Balconies", String(groups.balconies.length || "—")],
-            ] as const
-          ).map(([label, value]) => (
-            <div key={label}>
-              <dt className="text-sm text-[#3d5247]">{label}</dt>
-              <dd className="mt-0.5 font-semibold text-[#14241c]">{value}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-
-      <section className="mt-10">
-        <SectionHead
-          title="Household"
-          aside={
-            ownedFlat ? (
+          {ownedFlat && canEditHome ? (
+            <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() => openSection("stay")}
-                className="text-sm font-semibold text-[#1b3a2f] underline-offset-4 hover:underline"
+                className="inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold text-[#1e293b] ring-1 ring-[rgba(15,23,42,0.18)]"
               >
-                Manage household →
-              </button>
-            ) : null
-          }
-        />
-        <div className="mt-5 flex flex-wrap items-center gap-3">
-          <ProfileAvatar
-            name={myFlat.ownerName || myFlat.flatNumber}
-            photoUrl={myFlat.ownerPhotoUrl}
-          />
-          <div>
-            <p className="font-semibold text-[#14241c]">
-              {myFlat.ownerName || "Owner"}
-            </p>
-            <p className="text-sm text-[#3d5247]">Owner · {myFlat.flatNumber}</p>
-          </div>
+              Household
+            </button>
+            </div>
+          ) : null}
         </div>
-        {members.length ? (
-          <ul className="mt-4 divide-y divide-[rgba(27,58,47,0.08)]">
-            {members.map((member) => (
-              <li key={member.id} className="flex items-center gap-3 py-2.5">
-                <ProfileAvatar
-                  name={member.name}
-                  photoUrl={member.photoUrl}
-                  size="sm"
-                  tone="member"
-                />
-                <div>
-                  <p className="font-semibold text-[#14241c]">{member.name}</p>
-                  <p className="text-sm text-[#3d5247]">
-                    {relationLabel(member.relation)}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-4 text-sm text-[#3d5247]">
-            No household members added yet.
-          </p>
-        )}
+        <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 lg:grid-cols-6">
+          {roomFacts.map(([label, value]) => (
+            <div key={label}>
+              <dd className={`font-semibold tracking-tight text-[#0f172a] ${value.length > 6 ? "text-base" : "text-2xl"}`}>
+                {value}
+              </dd>
+              <dt className="mt-1 text-xs text-[#475569]">{label}</dt>
+            </div>
+          ))}
+        </dl>
+        </div>
+        <div className="mt-6">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-[#475569]">Plan</p>
+            <Segmented
+              label={`${myFlat.flatNumber} view`}
+              value={mode}
+              onChange={setMode}
+              options={[
+                { id: "2d", label: "2D" },
+                { id: "3d", label: "3D" },
+              ]}
+            />
+          </div>
+          {mode === "2d" ? (
+            <div className="mx-auto max-w-3xl p-2 md:p-4">
+              <FlatPlan2D compact homeLabel={myFlat.flatNumber} flat={planInput(myFlat)} />
+            </div>
+          ) : (
+            <FlatUnit3D flat={planInput(myFlat)} />
+          )}
+        </div>
       </section>
 
-      <section id="documents" className="mt-10 scroll-mt-8">
-        <SectionHead
-          title="Documents & records"
-          aside={
+      {needsAction.length || todayItems.length ? (
+        <section className={`mt-6 grid gap-4 ${needsAction.length && todayItems.length ? "lg:grid-cols-2" : ""}`}>
+          {needsAction.length ? (
+            <div className="slab p-4">
+              <h2 className="text-sm font-semibold tracking-[0.08em] text-[#64748b] uppercase">
+                Needs action
+              </h2>
+              <ul className="mt-3 grid gap-3">
+                {needsAction.map((item) => (
+                  <li key={`${item.title}-${item.detail}`}>
+                    <Link href={item.href} className="block">
+                      <span className="font-semibold text-[#0f172a]">{item.title}</span>
+                      <span className="mt-1 block text-sm text-[#475569]">{visibleText(item.detail)}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {todayItems.length ? (
+            <div className="slab p-4">
+              <h2 className="text-sm font-semibold tracking-[0.08em] text-[#64748b] uppercase">
+                Today
+              </h2>
+              <ul className="mt-3 grid gap-3">
+                {todayItems.map((item) => (
+                  <li key={`${item.title}-${item.when}`}>
+                    <Link href={item.href} className="block">
+                      <span className="font-semibold text-[#0f172a]">{item.title}</span>
+                      <span className="mt-1 block text-sm text-[#475569]">{item.when}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      <section className="mt-8">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight text-[#0f172a]">Home journey</h2>
+            <p className="mt-1 text-sm text-[#475569]">
+              {journeyHeadline(steps)} · {doneCount} of {steps.length}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={openJourney}
+            className="text-sm font-semibold text-[#1e293b] underline-offset-4 hover:underline"
+          >
+            Open
+          </button>
+        </div>
+        <ol className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {steps.map((step) => (
+            <li key={step.key}>
+              <button
+                type="button"
+                onClick={openJourney}
+                className={`flex h-full w-full flex-col rounded-2xl p-4 text-left ${
+                  step.mark === "active"
+                    ? "bg-[#ecfdf5] ring-1 ring-[#059669]"
+                    : step.mark === "done"
+                      ? "bg-[#1e293b] text-[#f8fafc]"
+                      : "bg-white ring-1 ring-[rgba(15,23,42,0.1)]"
+                }`}
+              >
+                <Mark mark={step.mark} />
+                <p className="mt-4 font-semibold">{step.label}</p>
+                <p className={`mt-1 text-sm ${step.mark === "done" ? "text-[#cbd5e1]" : "text-[#475569]"}`}>
+                  {step.status}
+                </p>
+              </button>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="mt-8">
+        <div className="flex items-end justify-between gap-3">
+          <h2 className="text-xl font-semibold tracking-tight text-[#0f172a]">People in this home</h2>
+          {ownedFlat && canEditHome ? (
+            <button
+              type="button"
+              onClick={() => openSection("stay")}
+              className="text-sm font-semibold text-[#1e293b] underline-offset-4 hover:underline"
+            >
+              Manage
+            </button>
+          ) : null}
+        </div>
+        <ul className="mt-4 flex gap-3 overflow-x-auto pb-1">
+          {people.map((person) => (
+            <li
+              key={person.key}
+              className="flex w-36 shrink-0 flex-col items-center rounded-2xl bg-white px-3 py-4 text-center ring-1 ring-[rgba(15,23,42,0.1)]"
+            >
+              <ProfileAvatar name={person.name} photoUrl={person.photo} tone={person.tone} />
+              <p className="mt-3 line-clamp-2 text-sm font-semibold text-[#0f172a]">{person.name}</p>
+              <p className="mt-1 text-xs text-[#475569]">{person.role}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section id="documents" className="mt-8 scroll-mt-8 grid gap-3 md:grid-cols-3">
+        <article id="interior" className="scroll-mt-8 overflow-hidden rounded-[1.35rem] bg-white ring-1 ring-[rgba(15,23,42,0.1)]">
+          <div className="h-1.5 bg-[#059669]" />
+          <div className="p-5">
+            <p className="text-xs font-semibold tracking-[0.14em] text-[#047857] uppercase">Interior</p>
+            <p className="mt-2 text-2xl font-semibold tracking-tight text-[#0f172a]">
+              {interior?.status ?? "Not started"}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {links.filter((item) => item.ready).map((item) =>
+                item.href ? (
+                  <Link key={item.id} href={item.href} className="text-sm font-semibold text-[#1e293b] underline-offset-4 hover:underline">
+                    {item.label}
+                  </Link>
+                ) : (
+                  <button key={item.id} type="button" onClick={() => showPlan("3d")} className="text-sm font-semibold text-[#1e293b] underline-offset-4 hover:underline">
+                    {item.label}
+                  </button>
+                ),
+              )}
+            </div>
+            {links.some((item) => !item.ready) ? (
+              <p className="mt-3 text-sm text-[#475569]">
+                Still to come: {links.filter((item) => !item.ready).map((item) => item.label).join(", ")}.
+              </p>
+            ) : null}
+          </div>
+        </article>
+        <article className="overflow-hidden rounded-[1.35rem] bg-white ring-1 ring-[rgba(15,23,42,0.1)]">
+          <div className="h-1.5 bg-[#b45309]" />
+          <div className="p-5">
+            <p className="text-xs font-semibold tracking-[0.14em] text-[#b45309] uppercase">Home records</p>
+            <p className="mt-2 text-sm text-[#475569]">
+              Possession letter, verification, and where each paper is kept.
+            </p>
             <button
               type="button"
               onClick={() => openSection("documents")}
-              className="text-sm font-semibold text-[#1b3a2f] underline-offset-4 hover:underline"
+              className="mt-4 text-sm font-semibold text-[#1e293b] underline-offset-4 hover:underline"
             >
-              View documents →
+              View records →
             </button>
-          }
-        />
-        <p className="mt-4 max-w-xl text-sm text-[#3d5247]">
-          Apartment documents, registration records and future interior records
-          will appear here. Nothing is stored yet.
-        </p>
+          </div>
+        </article>
+        <article className="overflow-hidden rounded-[1.35rem] bg-white ring-1 ring-[rgba(15,23,42,0.1)]">
+          <div className="h-1.5 bg-[#1e293b]" />
+          <div className="p-5">
+            <p className="text-xs font-semibold tracking-[0.14em] text-[#1e293b] uppercase">In the building</p>
+            <p className="mt-2 text-sm text-[#475569]">
+              Wing {myFlat.wing} · Floor {myFlat.floor}
+            </p>
+            <p className="mt-1 text-sm text-[#475569]">
+              {summary.sold} occupied · {summary.unsold} available
+            </p>
+            <nav className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
+              <TextLink href="/community?view=building">Building</TextLink>
+              <TextLink href={`/community?view=floor&floor=${myFlat.floor}`}>Floor {myFlat.floor}</TextLink>
+              {includeOwners ? <TextLink href="/members">Neighbours</TextLink> : null}
+              {includeOwners ? <TextLink href="/feed">Updates</TextLink> : null}
+            </nav>
+          </div>
+        </article>
       </section>
 
-      <section className="mt-10">
-        <SectionHead title="Your community" />
-        <p className="mt-4 text-[#14241c]">
-          {myFlat.flatNumber} · Wing {myFlat.wing} · Floor {myFlat.floor}
-        </p>
-        <p className="mt-1 text-sm text-[#3d5247]">
-          {summary.sold} occupied · {summary.unsold} available
-        </p>
-        <nav className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
-          <TextLink href="/community?view=building">See the building</TextLink>
-          <TextLink href={`/community?view=floor&floor=${myFlat.floor}`}>
-            Floor {myFlat.floor}
-          </TextLink>
-          {includeOwners ? <TextLink href="/members">Neighbours</TextLink> : null}
-          {includeOwners ? <TextLink href="/feed">Updates</TextLink> : null}
-        </nav>
-      </section>
-
-      <section id="activity" className="mt-10 scroll-mt-8">
-        <SectionHead
-          title="Recent activity"
-          aside={includeOwners ? <TextLink href="/feed">All</TextLink> : undefined}
-        />
+      <section id="activity" className="mt-8 scroll-mt-8">
+        <div className="flex items-end justify-between gap-3">
+          <h2 className="text-xl font-semibold tracking-tight text-[#0f172a]">Recent activity</h2>
+          {includeOwners ? <TextLink href="/feed">All</TextLink> : null}
+        </div>
         {homeActivity.length ? (
-          <ol className="mt-2 divide-y divide-[rgba(27,58,47,0.08)]">
+          <ol className="mt-4 grid gap-3">
             {homeActivity.map((item) => (
-              <li key={item.id} className="py-3.5">
+              <li key={item.id} className="rounded-2xl bg-white p-4 ring-1 ring-[rgba(15,23,42,0.1)]">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <p className="font-medium text-[#14241c]">{item.title}</p>
-                  <span className="text-sm text-[#3d5247]">
-                    {relativeTime(item.createdAt)}
-                  </span>
+                  <p className="font-semibold text-[#0f172a]">{item.title}</p>
+                  <span className="text-sm text-[#475569]">{relativeTime(item.createdAt)}</span>
                 </div>
                 {item.body ? (
-                  <p className="mt-1 line-clamp-2 text-sm text-[#3d5247]">
-                    {item.body}
-                  </p>
+                  <p className="mt-1 line-clamp-2 text-sm text-[#475569]">{visibleText(item.body)}</p>
                 ) : null}
               </li>
             ))}
           </ol>
         ) : (
-          <p className="mt-4 text-[#3d5247]">
-            No recent updates for {myFlat.flatNumber}.
-          </p>
+          <p className="mt-4 text-[#475569]">No recent updates for {myFlat.flatNumber}.</p>
         )}
       </section>
 

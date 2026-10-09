@@ -14,7 +14,7 @@ import type { FlatPlanInput } from "@/lib/flatPlan";
 const FlatUnit3D = dynamic(() => import("@/components/FlatUnit3D"), {
   ssr: false,
   loading: () => (
-    <div className="grid h-[28rem] place-items-center rounded-2xl bg-[#1b3a2f] text-sm font-semibold text-[#e8d5a3] md:h-[32rem]">
+    <div className="grid h-[28rem] place-items-center rounded-2xl bg-[#1e293b] text-sm font-semibold text-[#f8fafc] md:h-[32rem]">
       Loading 3D unit…
     </div>
   ),
@@ -53,8 +53,8 @@ export function FlatViews({
       <div
         className={`inline-flex gap-px ${
           dark
-            ? "border-b border-[rgba(232,213,163,0.2)]"
-            : "border-b border-[rgba(27,58,47,0.14)]"
+            ? "border-b border-[rgba(226,232,240,0.2)]"
+            : "border-b border-[rgba(15,23,42,0.14)]"
         }`}
         role="tablist"
         aria-label={`${flat.flatNumber} view`}
@@ -71,11 +71,11 @@ export function FlatViews({
               className={`min-h-12 px-5 text-sm font-semibold ${
                 active
                   ? dark
-                    ? "border-b-2 border-[#c9a45c] text-[#f7f2e6]"
-                    : "border-b-2 border-[#14241c] text-[#14241c]"
+                    ? "border-b-2 border-[#059669] text-[#f8fafc]"
+                    : "border-b-2 border-[#0f172a] text-[#0f172a]"
                   : dark
-                    ? "text-[#b0a070]"
-                    : "text-[#3d5247]"
+                    ? "text-[#94a3b8]"
+                    : "text-[#475569]"
               }`}
             >
               {item.label.toUpperCase()}
@@ -100,8 +100,8 @@ export function FlatTextFacts({
   readonly flat: FlatPlanInput
   readonly tone?: "light" | "dark"
 }) {
-  const label = tone === "dark" ? "text-[#b0a070]" : "text-[#3d5247]";
-  const value = tone === "dark" ? "text-[#f7f2e6]" : "text-[#14241c]";
+  const label = tone === "dark" ? "text-[#94a3b8]" : "text-[#475569]";
+  const value = tone === "dark" ? "text-[#f8fafc]" : "text-[#0f172a]";
 
   return (
     <dl className="grid grid-cols-2 gap-3 text-sm">
@@ -175,13 +175,13 @@ export function FlatViewSheet({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="max-h-[min(94dvh,52rem)] w-full max-w-4xl overflow-y-auto rounded-[1.5rem] bg-[#fffcf5] text-[#14241c] shadow-[0_24px_80px_rgba(0,0,0,0.35)] ring-1 ring-[rgba(27,58,47,0.12)]"
+        className="max-h-[min(94dvh,52rem)] w-full max-w-4xl overflow-y-auto rounded-[1.5rem] bg-[#ffffff] text-[#0f172a] shadow-[0_24px_80px_rgba(0,0,0,0.35)] ring-1 ring-[rgba(15,23,42,0.12)]"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-[rgba(27,58,47,0.1)] bg-[#fffcf5]/95 px-5 py-4 backdrop-blur-sm">
+        <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-[rgba(15,23,42,0.1)] bg-[#ffffff]/95 px-5 py-4 backdrop-blur-sm">
           <div className="min-w-0">
             {eyebrow ? (
-              <p className="text-[0.65rem] font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">
+              <p className="text-[0.65rem] font-semibold tracking-[0.16em] text-[#b45309] uppercase">
                 {eyebrow}
               </p>
             ) : null}
@@ -196,7 +196,7 @@ export function FlatViewSheet({
             type="button"
             aria-label="Close views"
             onClick={onClose}
-            className="grid size-10 shrink-0 place-items-center rounded-full text-xl text-[#3d5247] hover:bg-[rgba(27,58,47,0.06)]"
+            className="grid size-10 shrink-0 place-items-center rounded-full text-xl text-[#475569] hover:bg-[rgba(15,23,42,0.06)]"
           >
             ×
           </button>

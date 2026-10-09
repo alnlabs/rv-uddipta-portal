@@ -65,15 +65,15 @@ export function FlatListing({
     <div>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h3 className="text-xl font-semibold tracking-tight text-[#14241c]">
+          <h3 className="text-xl font-semibold tracking-tight text-[#0f172a]">
             Floor {floor}
           </h3>
-          <p className="text-sm text-[#3d5247]">
+          <p className="text-sm text-[#475569]">
             {visible.length} of {flats.length} flats
           </p>
         </div>
         <div
-          className="inline-flex gap-1 rounded-full border border-[rgba(27,58,47,0.12)] bg-[#fffcf5]/90 p-1"
+          className="inline-flex gap-1 rounded-full border border-[rgba(15,23,42,0.12)] bg-[#ffffff]/90 p-1"
           role="group"
           aria-label="Filter by type"
         >
@@ -84,8 +84,8 @@ export function FlatListing({
               onClick={() => setFilter(value)}
               className={`min-h-9 rounded-full px-3.5 text-sm font-semibold transition-colors ${
                 filter === value
-                  ? "bg-[#1b3a2f] text-[#e8d5a3]"
-                  : "text-[#3d5247] hover:bg-[rgba(27,58,47,0.06)]"
+                  ? "bg-[#1e293b] text-[#f8fafc]"
+                  : "text-[#475569] hover:bg-[rgba(15,23,42,0.06)]"
               }`}
             >
               {value === "all" ? "All" : typeLabel(value)}
@@ -95,7 +95,7 @@ export function FlatListing({
       </div>
 
       {wings.length === 0 ? (
-        <p className="rounded-2xl border border-[rgba(27,58,47,0.12)] bg-[#fffcf5]/95 px-4 py-8 text-center text-[#3d5247]">
+        <p className="rounded-2xl border border-[rgba(15,23,42,0.12)] bg-[#ffffff]/95 px-4 py-8 text-center text-[#475569]">
           No flats on this floor match that filter.
         </p>
       ) : (
@@ -103,11 +103,11 @@ export function FlatListing({
           {wings.map((group) => (
             <section key={group.wing} aria-label={`Wing ${group.wing}`}>
               <div className="mb-3 flex items-center gap-3">
-                <p className="text-xs font-semibold tracking-[0.16em] text-[#3d5247] uppercase">
+                <p className="text-xs font-semibold tracking-[0.16em] text-[#475569] uppercase">
                   Wing {group.wing}
                 </p>
-                <span className="h-px flex-1 bg-[rgba(27,58,47,0.12)]" aria-hidden />
-                <span className="text-xs font-semibold text-[#3d5247]">
+                <span className="h-px flex-1 bg-[rgba(15,23,42,0.12)]" aria-hidden />
+                <span className="text-xs font-semibold text-[#475569]">
                   {group.flats.length}
                 </span>
               </div>
@@ -128,11 +128,11 @@ export function FlatListing({
                             ? rented
                               ? "border-[rgba(154,91,60,0.45)] bg-[#f7efe8] shadow-[inset_3px_0_0_#9a5b3c]"
                               : "border-[rgba(47,120,80,0.4)] bg-[#eef6f1] shadow-[inset_3px_0_0_#2f7a55]"
-                            : "border-[rgba(27,58,47,0.12)] bg-[#fffcf5]"
+                            : "border-[rgba(15,23,42,0.12)] bg-[#ffffff]"
                         }`}
                       >
                       <div className="flex items-start justify-between gap-2">
-                        <strong className="text-lg tracking-tight text-[#14241c]">
+                        <strong className="text-lg tracking-tight text-[#0f172a]">
                           {flat.flatNumber}
                         </strong>
                         {showOwners ? (
@@ -140,9 +140,9 @@ export function FlatListing({
                             className={`mt-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold tracking-wide uppercase ${
                               sold
                                 ? rented
-                                  ? "bg-[#9a5b3c] text-[#fffcf5]"
-                                  : "bg-[#2f7a55] text-[#fffcf5]"
-                                : "bg-[#ebe6dc] text-[#3d5247] ring-1 ring-[rgba(27,58,47,0.12)]"
+                                  ? "bg-[#9a5b3c] text-[#ffffff]"
+                                  : "bg-[#2f7a55] text-[#ffffff]"
+                                : "bg-[#f1f5f9] text-[#475569] ring-1 ring-[rgba(15,23,42,0.12)]"
                             }`}
                           >
                             {flat.occupancyLabel || "Unsold"}
@@ -154,27 +154,27 @@ export function FlatListing({
                         {flat.facing ? ` · ${facingLabel(flat.facing)}` : ""}
                       </p>
                       {flat.areaSqft ? (
-                        <p className="text-sm text-[#3d5247]">
+                        <p className="text-sm text-[#475569]">
                           {flat.areaSqft.toLocaleString()} sft
                         </p>
                       ) : null}
                       {sold ? (
-                        <div className="mt-3 border-t border-[rgba(27,58,47,0.08)] pt-2.5">
-                          <p className="truncate text-sm font-medium text-[#14241c]">
+                        <div className="mt-3 border-t border-[rgba(15,23,42,0.08)] pt-2.5">
+                          <p className="truncate text-sm font-medium text-[#0f172a]">
                             {flat.ownerName || "Owner"}
                           </p>
                           {flat.ownerEmail ? (
-                            <p className="truncate text-xs text-[#3d5247]">
+                            <p className="truncate text-xs text-[#475569]">
                               {flat.ownerEmail}
                             </p>
                           ) : null}
                           {flat.phoneMasked ? (
-                            <p className="mt-0.5 text-xs tabular-nums text-[#3d5247]">
+                            <p className="mt-0.5 text-xs tabular-nums text-[#475569]">
                               {flat.phoneMasked}
                             </p>
                           ) : null}
                           {flat.memberNames && flat.memberNames.length > 0 ? (
-                            <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-[#3d5247]">
+                            <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-[#475569]">
                               with {flat.memberNames.join(", ")}
                             </p>
                           ) : null}
@@ -183,11 +183,11 @@ export function FlatListing({
                               <p className="text-[10px] font-semibold tracking-[0.12em] text-[#9a5b3c] uppercase">
                                 Tenant
                               </p>
-                              <p className="truncate text-sm font-medium text-[#14241c]">
+                              <p className="truncate text-sm font-medium text-[#0f172a]">
                                 {flat.tenantName}
                               </p>
                               {flat.tenantPhoneMasked ? (
-                                <p className="text-xs tabular-nums text-[#3d5247]">
+                                <p className="text-xs tabular-nums text-[#475569]">
                                   {flat.tenantPhoneMasked}
                                 </p>
                               ) : null}
@@ -218,11 +218,11 @@ export function FlatListing({
                           </div>
                         </div>
                       ) : showOwners ? (
-                        <p className="mt-3 border-t border-[rgba(27,58,47,0.08)] pt-2.5 text-xs font-semibold text-[#3d5247]">
+                        <p className="mt-3 border-t border-[rgba(15,23,42,0.08)] pt-2.5 text-xs font-semibold text-[#475569]">
                           Unsold
                         </p>
                       ) : null}
-                      <p className="mt-3 text-[10px] font-semibold tracking-[0.14em] text-[#3d5247] uppercase">
+                      <p className="mt-3 text-[10px] font-semibold tracking-[0.14em] text-[#475569] uppercase">
                         Text · 2D · 3D
                       </p>
                       </button>
@@ -249,22 +249,22 @@ export function FlatListing({
             <div className="space-y-4">
               <FlatTextFacts flat={openPlan} />
               {showOwners ? (
-                <div className="border-t border-[rgba(27,58,47,0.08)] pt-3 text-sm">
-                  <p className="text-xs font-semibold tracking-[0.12em] text-[#3d5247] uppercase">
+                <div className="border-t border-[rgba(15,23,42,0.08)] pt-3 text-sm">
+                  <p className="text-xs font-semibold tracking-[0.12em] text-[#475569] uppercase">
                     {open.occupancyLabel || "Unsold"}
                   </p>
                   {open.ownerName ? (
-                    <p className="mt-1 font-semibold text-[#14241c]">
+                    <p className="mt-1 font-semibold text-[#0f172a]">
                       {open.ownerName}
                     </p>
                   ) : null}
                   {open.phoneMasked ? (
-                    <p className="mt-0.5 text-xs tabular-nums text-[#3d5247]">
+                    <p className="mt-0.5 text-xs tabular-nums text-[#475569]">
                       {open.phoneMasked}
                     </p>
                   ) : null}
                   {open.tenantName ? (
-                    <p className="mt-2 text-[#3d5247]">
+                    <p className="mt-2 text-[#475569]">
                       Tenant {open.tenantName}
                     </p>
                   ) : null}

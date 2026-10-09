@@ -10,6 +10,7 @@ import {
   type FlatViewMode,
 } from "@/components/FlatViews";
 import ProfileAvatar from "@/components/ProfileAvatar";
+import { visibleText } from "@/lib/richText";
 import {
   apartmentLayout,
   formatRoomLine,
@@ -43,10 +44,10 @@ function JourneyDot({ mark }: { readonly mark: "done" | "active" | "upcoming" })
   const symbol = mark === "done" ? "✓" : mark === "active" ? "●" : "";
   const tone =
     mark === "done"
-      ? "bg-[#c9a45c] text-[#14241c]"
+      ? "bg-[#059669] text-[#0f172a]"
       : mark === "active"
-        ? "ring-2 ring-[#c9a45c]"
-        : "ring-1 ring-[rgba(232,213,163,0.35)]";
+        ? "ring-2 ring-[#059669]"
+        : "ring-1 ring-[rgba(226,232,240,0.35)]";
   return (
     <span
       className={`grid size-6 shrink-0 place-items-center rounded-full text-[11px] font-bold ${tone}`}
@@ -83,14 +84,14 @@ function HubSection({
 }) {
   return (
     <section id={id} className="scroll-mt-8">
-      <div className="flex items-end justify-between gap-4 border-b border-[rgba(27,58,47,0.1)] pb-2">
+      <div className="flex items-end justify-between gap-4 border-b border-[rgba(15,23,42,0.1)] pb-2">
         <div>
           {kicker ? (
-            <p className="text-xs font-semibold tracking-[0.14em] text-[#7a5c22] uppercase">
+            <p className="text-xs font-semibold tracking-[0.14em] text-[#b45309] uppercase">
               {kicker}
             </p>
           ) : null}
-          <h2 className="text-xl font-semibold tracking-tight text-[#14241c] md:text-2xl">
+          <h2 className="text-xl font-semibold tracking-tight text-[#0f172a] md:text-2xl">
             {title}
           </h2>
         </div>
@@ -103,7 +104,7 @@ function HubSection({
 
 function CreamCard({ children }: { readonly children: ReactNode }) {
   return (
-    <div className="rounded-[1.5rem] bg-[#fffcf5] p-5 text-[#14241c] shadow-[0_16px_48px_rgba(0,0,0,0.2)] md:p-7">
+    <div className="rounded-[1.5rem] bg-[#ffffff] p-5 text-[#0f172a] shadow-[0_16px_48px_rgba(0,0,0,0.2)] md:p-7">
       {children}
     </div>
   );
@@ -122,8 +123,8 @@ function ActionButton({
 }) {
   const className = `inline-flex min-h-11 items-center justify-center rounded-full px-4 text-sm font-semibold ${
     primary
-      ? "bg-[#c9a45c] text-[#14241c]"
-      : "bg-[rgba(232,213,163,0.12)] text-[#e8d5a3] ring-1 ring-[rgba(232,213,163,0.28)]"
+      ? "bg-[#059669] text-[#0f172a]"
+      : "bg-[rgba(226,232,240,0.12)] text-[#f8fafc] ring-1 ring-[rgba(226,232,240,0.28)]"
   }`;
   if (href) {
     return (
@@ -186,19 +187,19 @@ export function ApartmentHub({
     <div className="space-y-10 md:space-y-14">
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.85fr)] lg:items-start">
         <div className="min-w-0">
-          <p className="text-xs font-semibold tracking-[0.18em] text-[#c9a45c] uppercase">
+          <p className="text-xs font-semibold tracking-[0.18em] text-[#059669] uppercase">
             My flat
           </p>
-          <h1 className="mt-2 font-semibold tracking-tight text-[#f7f2e6] text-[clamp(3.5rem,12vw,6.5rem)] leading-[0.84]">
+          <h1 className="mt-2 font-semibold tracking-tight text-[#f8fafc] text-[clamp(3.5rem,12vw,6.5rem)] leading-[0.84]">
             {flat.flatNumber}
           </h1>
           <p className="mt-4 max-w-xl text-sm text-[#d0c090] md:text-base">
             {heroMeta(flat)}
           </p>
           {flat.ownerName ? (
-            <p className="mt-3 text-lg text-[#e8d5a3]">{flat.ownerName}</p>
+            <p className="mt-3 text-lg text-[#f8fafc]">{flat.ownerName}</p>
           ) : null}
-          <p className="mt-1 text-sm text-[#b0a070]">{stay}</p>
+          <p className="mt-1 text-sm text-[#94a3b8]">{stay}</p>
           <div className="mt-6 flex flex-wrap gap-2">
             <ActionButton primary onClick={() => showPlan("2d")}>
               View 2D Plan
@@ -220,7 +221,7 @@ export function ApartmentHub({
 
         <aside className="space-y-8 lg:pt-10">
           <div>
-            <h2 className="border-b border-[rgba(232,213,163,0.2)] pb-2 text-lg font-semibold text-[#f7f2e6]">
+            <h2 className="border-b border-[rgba(226,232,240,0.2)] pb-2 text-lg font-semibold text-[#f8fafc]">
               Apartment facts
             </h2>
             <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
@@ -240,20 +241,20 @@ export function ApartmentHub({
                 ] as const
               ).map(([label, value]) => (
                 <div key={label}>
-                  <dt className="text-[#b0a070]">{label}</dt>
-                  <dd className="mt-0.5 font-semibold text-[#f7f2e6]">{value}</dd>
+                  <dt className="text-[#94a3b8]">{label}</dt>
+                  <dd className="mt-0.5 font-semibold text-[#f8fafc]">{value}</dd>
                 </div>
               ))}
             </dl>
           </div>
 
           <div>
-            <div className="flex items-end justify-between gap-3 border-b border-[rgba(232,213,163,0.2)] pb-2">
-              <h2 className="text-lg font-semibold text-[#f7f2e6]">Home journey</h2>
+            <div className="flex items-end justify-between gap-3 border-b border-[rgba(226,232,240,0.2)] pb-2">
+              <h2 className="text-lg font-semibold text-[#f8fafc]">Home journey</h2>
               <button
                 type="button"
                 onClick={onManageJourney}
-                className="text-sm font-semibold text-[#c9a45c]"
+                className="text-sm font-semibold text-[#059669]"
               >
                 Manage journey
               </button>
@@ -264,12 +265,12 @@ export function ApartmentHub({
                 return (
                   <li
                     key={step.key}
-                    className="flex items-center gap-3 border-b border-[rgba(232,213,163,0.1)] py-3.5 last:border-b-0"
+                    className="flex items-center gap-3 border-b border-[rgba(226,232,240,0.1)] py-3.5 last:border-b-0"
                   >
                     <JourneyDot mark={mark} />
                     <div className="min-w-0">
-                      <p className="font-semibold text-[#f7f2e6]">{step.label}</p>
-                      <p className="text-sm text-[#b0a070]">
+                      <p className="font-semibold text-[#f8fafc]">{step.label}</p>
+                      <p className="text-sm text-[#94a3b8]">
                         {step.status}
                         {step.date ? ` · ${formatShortDate(step.date)}` : ""}
                       </p>
@@ -289,7 +290,7 @@ export function ApartmentHub({
             <button
               type="button"
               onClick={() => setInteriorOpen((open) => !open)}
-              className="text-sm font-semibold text-[#1b3a2f]"
+              className="text-sm font-semibold text-[#1e293b]"
             >
               {interiorOpen ? "Hide" : "Open hub"}
             </button>
@@ -299,7 +300,7 @@ export function ApartmentHub({
             {steps.find((step) => step.key === "interior")?.status ?? "Not started"}
           </p>
           {flat.interiorStartDate || flat.interiorDate ? (
-            <p className="mt-1 text-sm text-[#3d5247]">
+            <p className="mt-1 text-sm text-[#475569]">
               {[
                 flat.interiorStartDate
                   ? `Started ${formatShortDate(flat.interiorStartDate)}`
@@ -318,14 +319,14 @@ export function ApartmentHub({
               {links.map((item) => {
                 const body = (
                   <>
-                    <span className="font-semibold text-[#14241c]">{item.label}</span>
-                    <span className="text-sm text-[#3d5247]">
+                    <span className="font-semibold text-[#0f172a]">{item.label}</span>
+                    <span className="text-sm text-[#475569]">
                       {item.ready ? "Open" : "Coming later"}
                     </span>
                   </>
                 );
                 const className =
-                  "flex min-h-14 items-center justify-between rounded-2xl bg-[rgba(27,58,47,0.05)] px-4 ring-1 ring-[rgba(27,58,47,0.08)]";
+                  "flex min-h-14 items-center justify-between rounded-2xl bg-[rgba(15,23,42,0.05)] px-4 ring-1 ring-[rgba(15,23,42,0.08)]";
                 if (item.href && item.ready) {
                   return (
                     <li key={item.id}>
@@ -364,19 +365,19 @@ export function ApartmentHub({
           <dl className="grid gap-4 sm:grid-cols-2">
             {groups.living.map((room) => (
               <div key={room.id}>
-                <dt className="text-sm text-[#3d5247]">{room.label}</dt>
+                <dt className="text-sm text-[#475569]">{room.label}</dt>
                 <dd className="font-semibold">{room.dim ?? "Brochure typical"}</dd>
               </div>
             ))}
             {groups.bedrooms.map((room) => (
               <div key={room.id}>
-                <dt className="text-sm text-[#3d5247]">{room.label}</dt>
+                <dt className="text-sm text-[#475569]">{room.label}</dt>
                 <dd className="font-semibold">{room.dim ?? "—"}</dd>
               </div>
             ))}
             {groups.kitchen ? (
               <div>
-                <dt className="text-sm text-[#3d5247]">Kitchen</dt>
+                <dt className="text-sm text-[#475569]">Kitchen</dt>
                 <dd className="font-semibold">
                   {groups.kitchen.dim ?? groups.kitchen.label}
                 </dd>
@@ -384,13 +385,13 @@ export function ApartmentHub({
             ) : null}
             {groups.puja ? (
               <div>
-                <dt className="text-sm text-[#3d5247]">Puja</dt>
+                <dt className="text-sm text-[#475569]">Puja</dt>
                 <dd className="font-semibold">{groups.puja.dim ?? "In plan"}</dd>
               </div>
             ) : null}
             {groups.wash ? (
               <div>
-                <dt className="text-sm text-[#3d5247]">Wash / utility</dt>
+                <dt className="text-sm text-[#475569]">Wash / utility</dt>
                 <dd className="font-semibold">
                   {groups.wash.dim ?? groups.wash.label}
                 </dd>
@@ -398,7 +399,7 @@ export function ApartmentHub({
             ) : null}
             {groups.toilets.length ? (
               <div>
-                <dt className="text-sm text-[#3d5247]">Toilets</dt>
+                <dt className="text-sm text-[#475569]">Toilets</dt>
                 <dd className="font-semibold">
                   {groups.toilets.map(formatRoomLine).join(" · ")}
                 </dd>
@@ -406,7 +407,7 @@ export function ApartmentHub({
             ) : null}
             {groups.balconies.length ? (
               <div>
-                <dt className="text-sm text-[#3d5247]">Balconies</dt>
+                <dt className="text-sm text-[#475569]">Balconies</dt>
                 <dd className="font-semibold">
                   {groups.balconies.map(formatRoomLine).join(" · ")}
                 </dd>
@@ -414,7 +415,7 @@ export function ApartmentHub({
             ) : null}
           </dl>
           {layout.stack ? (
-            <p className="mt-5 text-sm text-[#3d5247]">
+            <p className="mt-5 text-sm text-[#475569]">
               Brochure stack {layout.stack}
               {layout.typeCode ? ` · ${layout.typeCode}` : ""}
               {layout.sbuaSft
@@ -428,7 +429,7 @@ export function ApartmentHub({
 
       <CreamCard>
         <HubSection title="Documents & records">
-          <p className="max-w-xl text-[#3d5247]">
+          <p className="max-w-xl text-[#475569]">
             No apartment files are stored here yet. The brochure floor plan is in
             the visualization above. Quotations, allotment papers and interior
             documents will appear in this section when they are added.
@@ -443,7 +444,7 @@ export function ApartmentHub({
             <button
               type="button"
               onClick={onManageStay}
-              className="text-sm font-semibold text-[#1b3a2f]"
+              className="text-sm font-semibold text-[#1e293b]"
             >
               Manage ownership & stay
             </button>
@@ -456,15 +457,15 @@ export function ApartmentHub({
               size="md"
             />
             <div>
-              <p className="text-sm text-[#3d5247]">Owner</p>
+              <p className="text-sm text-[#475569]">Owner</p>
               <p className="font-semibold">{flat.ownerName || "—"}</p>
             </div>
           </div>
 
           <div className="mt-6">
-            <p className="text-sm text-[#3d5247]">Family members</p>
+            <p className="text-sm text-[#475569]">Family members</p>
             {members.length ? (
-              <ul className="mt-2 divide-y divide-[rgba(27,58,47,0.08)]">
+              <ul className="mt-2 divide-y divide-[rgba(15,23,42,0.08)]">
                 {members.map((member) => (
                   <li key={member.id} className="flex items-center gap-3 py-2.5">
                     <ProfileAvatar
@@ -475,7 +476,7 @@ export function ApartmentHub({
                     />
                     <div className="min-w-0">
                       <p className="font-semibold">{member.name}</p>
-                      <p className="text-sm text-[#3d5247]">
+                      <p className="text-sm text-[#475569]">
                         {relationLabel(member.relation)}
                       </p>
                     </div>
@@ -483,24 +484,24 @@ export function ApartmentHub({
                 ))}
               </ul>
             ) : (
-              <p className="mt-1 text-[#3d5247]">No household members added yet.</p>
+              <p className="mt-1 text-[#475569]">No household members added yet.</p>
             )}
           </div>
 
           <dl className="mt-6 grid gap-4 sm:grid-cols-2">
             <div>
-              <dt className="text-sm text-[#3d5247]">Occupancy</dt>
+              <dt className="text-sm text-[#475569]">Occupancy</dt>
               <dd className="font-semibold">{stay}</dd>
             </div>
             <div>
-              <dt className="text-sm text-[#3d5247]">Listings</dt>
+              <dt className="text-sm text-[#475569]">Listings</dt>
               <dd className="font-semibold">
                 {listings.length ? listings.join(" · ") : "None open"}
               </dd>
             </div>
             {stay === "Rented" && currentRenter ? (
               <div>
-                <dt className="text-sm text-[#3d5247]">Current renter</dt>
+                <dt className="text-sm text-[#475569]">Current renter</dt>
                 <dd className="font-semibold">{currentRenter.name}</dd>
               </div>
             ) : null}
@@ -513,13 +514,13 @@ export function ApartmentHub({
           <p className="text-lg font-semibold">
             Wing {flat.wing} · Floor {flat.floor}
           </p>
-          <p className="mt-1 text-sm text-[#3d5247]">
+          <p className="mt-1 text-sm text-[#475569]">
             {neighbors.length
               ? `${neighbors.length} other homes on this floor`
               : "Floor homes from the site inventory"}
           </p>
 
-          <div className="mt-5 overflow-hidden rounded-2xl ring-1 ring-[rgba(27,58,47,0.1)]">
+          <div className="mt-5 overflow-hidden rounded-2xl ring-1 ring-[rgba(15,23,42,0.1)]">
             <FloorPlate2D floor={flat.floor} highlight={flat.flatNumber} />
           </div>
 
@@ -528,18 +529,18 @@ export function ApartmentHub({
               {neighbors.map((home) => (
                 <li
                   key={home.flatNumber}
-                  className="rounded-full bg-[rgba(27,58,47,0.05)] px-3 py-1.5 text-sm text-[#14241c] ring-1 ring-[rgba(27,58,47,0.08)]"
+                  className="rounded-full bg-[rgba(15,23,42,0.05)] px-3 py-1.5 text-sm text-[#0f172a] ring-1 ring-[rgba(15,23,42,0.08)]"
                 >
                   <span className="font-semibold">{home.flatNumber}</span>
                   {home.ownerName ? (
-                    <span className="text-[#3d5247]"> · {home.ownerName}</span>
+                    <span className="text-[#475569]"> · {home.ownerName}</span>
                   ) : null}
                 </li>
               ))}
             </ul>
           ) : null}
 
-          <nav className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-[#1b3a2f]">
+          <nav className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-[#1e293b]">
             <Link className="underline-offset-4 hover:underline" href={`/community?floor=${flat.floor}`}>
               View Floor
             </Link>
@@ -556,23 +557,23 @@ export function ApartmentHub({
       <CreamCard>
         <HubSection title={`${flat.flatNumber} activity`}>
           {activity.length ? (
-            <ol className="divide-y divide-[rgba(27,58,47,0.08)]">
+            <ol className="divide-y divide-[rgba(15,23,42,0.08)]">
               {activity.map((item) => (
                 <li key={item.id} className="py-3.5">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <p className="font-medium">{item.title}</p>
-                    <span className="text-sm text-[#3d5247]">
+                    <span className="text-sm text-[#475569]">
                       {relativeTime(item.createdAt)}
                     </span>
                   </div>
                   {item.body ? (
-                    <p className="mt-1 text-sm text-[#3d5247]">{item.body}</p>
+                    <p className="mt-1 text-sm text-[#475569]">{visibleText(item.body)}</p>
                   ) : null}
                 </li>
               ))}
             </ol>
           ) : (
-            <p className="max-w-xl text-[#3d5247]">
+            <p className="max-w-xl text-[#475569]">
               Nothing new for {flat.flatNumber} yet. Journey changes and community
               notes for this home will appear here.
             </p>

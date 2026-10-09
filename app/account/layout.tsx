@@ -13,9 +13,11 @@ export default async function AccountLayout({
 
   const admin = canManageAdmin(profile.role, user);
   const builder = canEditBuilder(profile.role, user);
-  if (!admin && !builder) redirect("/");
+  const facility = profile.role === "facility";
+  if (!admin && !builder && !facility) redirect("/");
 
-  const workspace = user && isSuperAdmin(user) ? "Super admin" : admin ? "Admin" : "Builder";
+  const workspace =
+    user && isSuperAdmin(user) ? "Super admin" : admin ? "Admin" : facility ? "Facility" : "Builder";
 
   return (
     <div className="page-gutter w-full py-4 md:py-6">

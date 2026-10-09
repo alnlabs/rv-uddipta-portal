@@ -27,13 +27,13 @@ export default async function RegisterPage() {
   if (pending) {
     return (
       <section className="page-gutter max-w-xl py-8">
-        <p className="text-xs font-semibold tracking-[0.16em] text-[#7a5c22] uppercase">
+        <p className="text-xs font-semibold tracking-[0.16em] text-[#b45309] uppercase">
           Pending
         </p>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[#14241c]">
+        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[#0f172a]">
           Waiting for approval
         </h1>
-        <p className="mt-3 text-[#3d5247]">
+        <p className="mt-3 text-[#475569]">
           Signed in as {user.email}. Your request for flat{" "}
           <strong>{pending.flat_number}</strong> is with an admin. When they
           approve it, you get a notice here and the portal opens your home.

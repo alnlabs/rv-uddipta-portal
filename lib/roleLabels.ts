@@ -4,7 +4,11 @@ export type RoleValue =
   | "owner"
   | "co_owner"
   | "visitor"
-  | "tenant";
+  | "tenant"
+  | "committee"
+  | "facility"
+  | "staff"
+  | "security";
 
 export const ROLE_GUIDE: {
   value: RoleValue
@@ -41,7 +45,37 @@ export const ROLE_GUIDE: {
     label: "Admin",
     help: "Approvals, owners, roles, and builder facts.",
   },
+  {
+    value: "committee",
+    label: "Committee",
+    help: "Decisions, policies, and votes. Not tied to a home.",
+  },
+  {
+    value: "facility",
+    label: "Facility manager",
+    help: "Maintenance jobs and who is doing them.",
+  },
+  {
+    value: "staff",
+    label: "Service staff",
+    help: "The jobs assigned to this person.",
+  },
+  {
+    value: "security",
+    label: "Security",
+    help: "The gate. Visitors do not get an account.",
+  },
 ];
+
+export const ROLE_GROUPS: { title: string; roles: RoleValue[] }[] = [
+  { title: "Lives in a home", roles: ["owner", "co_owner", "tenant"] },
+  { title: "Works for the community", roles: ["admin", "builder", "committee", "facility", "staff", "security"] },
+  { title: "Signed in only", roles: ["visitor"] },
+];
+
+export function roleNeedsHome(role: string | null | undefined) {
+  return role === "owner" || role === "co_owner" || role === "tenant";
+}
 
 export function roleLabel(role: string | null | undefined) {
   return ROLE_GUIDE.find((item) => item.value === role)?.label ?? role ?? "Unknown";

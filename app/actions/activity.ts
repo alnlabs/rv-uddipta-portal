@@ -3,9 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { requireDeskManage } from "@/lib/deskAccess";
 import { isMessageKind } from "@/lib/inbox";
 import { publishActivity } from "@/lib/activity";
 import { NOTICE_KINDS, isManagedNotice } from "@/lib/postKinds";
+import { visibleText } from "@/lib/richText";
 import { reachCommunity } from "@/lib/reach";
 import { canEditBuilder, canManageAdmin, ensureProfile } from "@/lib/roles";
 import { createAdminClient } from "@/utils/supabase/admin";
@@ -50,10 +52,11 @@ export async function postAnnouncement(formData: FormData) {
 
   const profile = await ensureProfile(user, supabase);
   if (!canManageAdmin(profile.role, user)) throw new Error("Not allowed");
+  await requireDeskManage(profile.role, user, "announcements");
 
   const title = String(formData.get("title") || "").trim();
   const body = String(formData.get("body") || "").trim();
-  if (title.length < 3) throw new Error("Write a title first.");
+  if (title.length < 3) throw new Error("Write a title of at least 3 characters.");
   const notice = NOTICE_KINDS.find((item) => item.value === String(formData.get("kind") || "announcement"));
   if (!notice) throw new Error("Choose a type.");
 
@@ -81,7 +84,7 @@ export async function postAnnouncement(formData: FormData) {
 
   await reachCommunity({
     title: `${notice.label} · ${title}`,
-    body: body || title,
+    body: visibleText(body) || title,
     exceptUserId: user.id,
   }).catch((error: unknown) => {
     console.warn("announcement reach failed", error instanceof Error ? error.message : error);

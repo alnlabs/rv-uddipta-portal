@@ -482,7 +482,7 @@ export default function FlatUnit3D({ flat }: { readonly flat: FlatPlanInput }) {
     <div className="relative h-[28rem] overflow-hidden rounded-2xl bg-[#0f1c16] ring-1 ring-[rgba(27,58,47,0.2)] md:h-[32rem]">
       <Canvas
         camera={{
-          position: [span * 0.15, span * 1.85, span * 1.45],
+          position: [span * 0.12, span * 0.95, span * 0.75],
           fov: 42,
         }}
         shadows
@@ -508,7 +508,7 @@ export default function FlatUnit3D({ flat }: { readonly flat: FlatPlanInput }) {
         />
         <OrbitControls
           enablePan={false}
-          minDistance={span * 1.15}
+          minDistance={span * 0.55}
           maxDistance={span * 3.6}
           maxPolarAngle={Math.PI / 2.08}
         />

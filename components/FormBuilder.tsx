@@ -24,12 +24,12 @@ export function FormBuilder({
             type="button"
             aria-expanded={open}
             onClick={() => setOpen((next) => !next)}
-            className="btn btn-ghost ring-1 ring-[rgba(27,58,47,0.14)]"
+            className="btn btn-ghost ring-1 ring-[rgba(15,23,42,0.14)]"
           >
             {open ? "Hide settings" : "Settings"}
           </button>
           {summary && !open ? (
-            <p className="text-sm leading-relaxed text-[#3d5247]">{summary}</p>
+            <p className="text-sm leading-relaxed text-[#475569]">{summary}</p>
           ) : null}
         </div>
       </div>
