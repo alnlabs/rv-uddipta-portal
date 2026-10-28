@@ -12,6 +12,7 @@ export async function postLoginPath(
 
   const profile = await ensureProfile(user, supabase);
   if (canManageAdmin(profile.role, user)) return "/account";
+  if (profile.role === "security") return "/gate";
   if (isCommunityRole(profile.role)) return "/feed";
   return "/register";
 }

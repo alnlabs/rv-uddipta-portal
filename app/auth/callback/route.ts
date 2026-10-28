@@ -1,3 +1,4 @@
+import { handoffResponse, appReturnTarget, expoReturnUrl } from "@/lib/phoneHandoff";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { safeNextPath } from "@/lib/enquiries";
@@ -6,6 +7,14 @@ import { createClient } from "@/utils/supabase/server";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
+  const destination = appReturnTarget(searchParams.get("return"));
+  if (destination) {
+    searchParams.forEach((value, key) => {
+      if (key !== "return") destination.searchParams.set(key, value);
+    });
+    return handoffResponse(destination);
+  }
+
   const code = searchParams.get("code");
   const next = searchParams.get("next");
 

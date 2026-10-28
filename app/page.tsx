@@ -17,6 +17,7 @@ export default async function Page() {
 
   if (!user) return <PublicGate />;
   if (isSuperAdmin(user)) redirect("/account");
+  if (profile.role === "security") redirect("/gate");
   const board = await loadBoardPayload(user, supabase, profile.role);
   const community = isCommunityRole(profile.role);
 

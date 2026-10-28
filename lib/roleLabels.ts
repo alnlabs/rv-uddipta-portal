@@ -63,7 +63,7 @@ export const ROLE_GUIDE: {
   {
     value: "security",
     label: "Security",
-    help: "The gate. Visitors do not get an account.",
+    help: "The gate, on the website and on the phone. Visitors do not get an account.",
   },
 ];
 

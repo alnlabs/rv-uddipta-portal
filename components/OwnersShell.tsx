@@ -303,7 +303,7 @@ export function OwnersShell({
   const inAdmin = pathname.startsWith("/account");
   const adminHref = isSuperAdmin || isAdmin ? "/account" : "/account/builder";
   const seeCommunity = showPrivateCommunity || viewingResident;
-  const ownersHome = seeCommunity ? "/feed" : "/";
+  const ownersHome = role === "security" ? "/gate" : seeCommunity ? "/feed" : "/";
 
   const featureOn = (key: string) => !enabledFeatures || enabledFeatures.includes(key);
   const office = isSuperAdmin || isAdmin;
@@ -313,7 +313,7 @@ export function OwnersShell({
   const canCommittee = office || role === "committee";
 
   const ownerNav: NavItem[] = [];
-  if (!isSuperAdmin) {
+  if (!isSuperAdmin && role !== "security") {
     ownerNav.push({ href: "/", label: "My flat", short: "Home", match: (p) => p === "/", icon: "flat" });
   }
   if (
@@ -566,6 +566,8 @@ export function OwnersShell({
           },
           ...adminNav,
         ]
+      : role === "security"
+      ? [pick("/gate"), pick("/visitors"), pick("/feed"), pick("/inbox")]
       : [
           pick("/"),
           pick("/feed"),
