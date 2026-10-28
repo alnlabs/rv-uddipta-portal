@@ -16,7 +16,7 @@ export function mobileJson(body: unknown, status = 200) {
   return Response.json(body, { status });
 }
 
-export async function readMobileMember(request: Request): Promise<MobileMember | Response> {
+async function readBearerUser(request: Request) {
   const header = request.headers.get("authorization") ?? "";
   const token = header.startsWith("Bearer ") ? header.slice("Bearer ".length).trim() : "";
   if (!token) return mobileJson({ message: "Sign in first." }, 401);
@@ -30,13 +30,16 @@ export async function readMobileMember(request: Request): Promise<MobileMember |
   });
   const { data, error } = await authClient.auth.getUser(token);
   if (error || !data.user) return mobileJson({ message: "Sign in first." }, 401);
+  return data.user;
+}
+
+/** Any signed-in Google account — including visitors waiting for flat approval. */
+export async function readMobileAuth(request: Request): Promise<{ user: User; profile: Profile; name: string; flatNumber: string | null } | Response> {
+  const user = await readBearerUser(request);
+  if (user instanceof Response) return user;
 
   const admin = createAdminClient();
-  const profile = await ensureProfile(data.user, admin as never);
-  if (!isCommunityRole(profile.role)) {
-    return mobileJson({ message: "You can do this after your flat is approved." }, 403);
-  }
-
+  const profile = await ensureProfile(user, admin as never);
   let flatNumber: string | null = null;
   if (profile.flatId) {
     const { data: flat } = await admin
@@ -48,11 +51,20 @@ export async function readMobileMember(request: Request): Promise<MobileMember |
   }
 
   return {
-    user: data.user,
+    user,
     profile,
-    name: profile.displayName || data.user.email || "A member",
+    name: profile.displayName || user.email || "A member",
     flatNumber,
   };
+}
+
+export async function readMobileMember(request: Request): Promise<MobileMember | Response> {
+  const auth = await readMobileAuth(request);
+  if (auth instanceof Response) return auth;
+  if (!isCommunityRole(auth.profile.role)) {
+    return mobileJson({ message: "You can do this after your flat is approved." }, 403);
+  }
+  return auth;
 }
 
 export function isMember(value: MobileMember | Response): value is MobileMember {
