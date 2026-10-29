@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HeroBand } from "@/components/HeroBand";
 import { VisitRequestForm } from "@/components/VisitRequestForm";
 import { groupAmenities } from "@/lib/amenityGroups";
 import type { ProjectInfo } from "@/lib/projectInfo";
@@ -15,25 +16,42 @@ export function BuildingGuide({
   const groups = groupAmenities(project.amenities);
   const launch = project.launchDate.trim();
 
-  return (
-    <div className="page-gutter max-w-3xl py-5 md:py-8">
-      <p className="text-sm font-semibold text-[#b45309]">Building</p>
-      <h1 className="mt-2 font-semibold tracking-tight text-[#0f172a] text-[clamp(2.4rem,6vw,4rem)] leading-[0.95]">
+  const intro = (
+    <>
+      <p className={signedIn ? "text-sm font-semibold text-[#b45309]" : "eyebrow-on-dark"}>Building</p>
+      <h1
+        className={`mt-2 font-semibold tracking-tight text-[clamp(2.4rem,6vw,4rem)] leading-[0.95] ${
+          signedIn ? "text-[#0f172a]" : "text-[#f8fafc]"
+        }`}
+      >
         {project.name}
       </h1>
-      <p className="mt-3 max-w-xl text-lg text-[#475569]">
+      <p className={`mt-3 max-w-xl text-lg ${signedIn ? "text-[#475569]" : "text-[#e2e8f0]"}`}>
         About this apartment. Amenities, floor plan, and a view of the building.
       </p>
       {!signedIn ? (
         <Link
           href="/login"
-          className="mt-6 flex min-h-16 w-full max-w-md items-center justify-center rounded-full bg-[#1e293b] px-6 text-xl font-semibold text-[#f8fafc]"
+          className="mt-6 flex min-h-16 w-full max-w-md items-center justify-center rounded-full bg-[#f8fafc] px-6 text-xl font-semibold text-[#0f172a]"
         >
           Sign in
         </Link>
       ) : null}
+    </>
+  );
 
-      <section className="mt-8 border-t border-[rgba(15,23,42,0.1)] pt-6">
+  return (
+    <div>
+      {signedIn ? (
+        <div className="page-gutter max-w-3xl py-5 md:py-8">{intro}</div>
+      ) : (
+        <HeroBand fill>
+          <div className="page-gutter w-full max-w-3xl py-10 md:py-16">{intro}</div>
+        </HeroBand>
+      )}
+
+      <div className="page-gutter max-w-3xl py-5 md:py-8">
+      <section className="border-t border-[rgba(15,23,42,0.1)] pt-6">
         <h2 className="text-2xl font-semibold text-[#0f172a]">About the building</h2>
         <p className="mt-2 text-lg text-[#0f172a]">{project.tagline}</p>
         {launch ? (
@@ -112,6 +130,7 @@ export function BuildingGuide({
       ) : null}
 
       <p className="mt-12 text-sm text-[#475569]">Association — coming later.</p>
+      </div>
     </div>
   );
 }

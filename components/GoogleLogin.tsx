@@ -35,8 +35,15 @@ export default function GoogleLogin({
   }
 
   return (
-    <section className="page-gutter grid max-w-[1100px] place-items-start py-6 md:min-h-[70vh] md:place-items-center md:py-12">
-      <div className="w-full max-w-lg rounded-2xl border border-[rgba(15,23,42,0.14)] bg-[#ffffff] p-4 shadow-xl md:p-6">
+    <section className="relative grid min-h-[calc(100svh-9rem)] place-items-center overflow-hidden px-4 py-8">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/hero-uddiipta.jpg"
+        alt=""
+        className="absolute inset-0 h-full w-full object-cover object-center"
+      />
+      <div className="absolute inset-0 bg-[#0f172a]/55" aria-hidden />
+      <div className="relative w-full max-w-lg rounded-2xl border border-[rgba(15,23,42,0.14)] bg-[#ffffff] p-4 shadow-xl md:p-6">
         <Mark size={72} alt="RV Uddiipta" />
         <h1 className="mt-4 text-[clamp(2rem,6vw,2.75rem)] font-semibold leading-tight tracking-tight text-[#0f172a]">
           Sign in

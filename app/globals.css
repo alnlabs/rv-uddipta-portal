@@ -156,6 +156,10 @@ h1, h2, h3, h4, strong, button, nav, .font-semibold, .font-bold {
   }
 }
 
+.hero-band-fill {
+  min-height: calc(100svh - 5.25rem);
+}
+
 .hero-band-media {
   position: absolute;
   inset: 0;
