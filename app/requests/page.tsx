@@ -89,6 +89,9 @@ export default async function MyRequestsPage() {
       ) : (
         <p className="mt-6 text-sm text-[#475569]">You can see your messages. You cannot send a new one.</p>
       )}
+      {notes.length === 0 ? (
+        <p className="mt-6 text-sm text-[#475569]">No complaints yet.</p>
+      ) : null}
       <ul className="mt-6 grid gap-3">
         {notes.map((note) => {
           const messages = threadFor(threads.get(note.id as number), String(note.body), note.admin_reply);

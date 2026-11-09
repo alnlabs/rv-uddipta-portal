@@ -40,12 +40,15 @@ export async function POST(request: Request) {
   const status = String(body?.status || "");
   if (!id || !["in_progress", "done"].includes(status)) return mobileJson({ message: "Choose start or done." }, 400);
   const admin = createAdminClient();
-  const { data: job } = await admin.from("work_orders").select("assignee_user_id, title").eq("id", id).maybeSingle();
+  const { data: job } = await admin.from("work_orders").select("assignee_user_id, title, source_note_id").eq("id", id).maybeSingle();
   if (!job) return mobileJson({ message: "That job is gone." }, 404);
   if (member.profile.role === "staff" && job.assignee_user_id !== member.user.id) {
     return mobileJson({ message: "This job is not yours." }, 403);
   }
   const { error } = await admin.from("work_orders").update({ status }).eq("id", id);
+  if (!error && status === "done" && job.source_note_id) {
+    await admin.from("member_notes").update({ status: "done" }).eq("id", job.source_note_id);
+  }
   if (error) return mobileJson({ message: error.message }, 500);
   await writeAudit({
     actorUserId: member.user.id,
@@ -56,5 +59,7 @@ export async function POST(request: Request) {
   });
   revalidatePath("/work");
   revalidatePath("/account/jobs");
+  revalidatePath("/account/requests");
+  revalidatePath("/requests");
   return mobileJson({ ok: true });
 }

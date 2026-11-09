@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { writeAudit } from "@/lib/audit";
+import { entryAllowed, hostApprovalRequired, hostForFlat } from "@/lib/gateHost";
+import { indiaDay } from "@/lib/indiaDay";
 import { pushHome } from "@/lib/push";
 import { bookingSlot } from "@/lib/bookingSlots";
 import { requireDeskManage } from "@/lib/deskAccess";
@@ -168,7 +170,7 @@ export async function createVisitorPass(formData: FormData) {
     visitor_name: visitorName,
     visitor_phone: phone || null,
     purpose,
-    visit_on: /^\d{4}-\d{2}-\d{2}$/.test(visitOn) ? visitOn : new Date().toISOString().slice(0, 10),
+    visit_on: /^\d{4}-\d{2}-\d{2}$/.test(visitOn) ? visitOn : indiaDay(),
     status,
   });
   if (error) throw new Error(error.message);
@@ -199,6 +201,16 @@ export async function decideVisitorPass(formData: FormData) {
   } else if (!gate) {
     throw new Error("Only security can update the gate.");
   }
+  if (next === "inside") {
+    const approval = await hostApprovalRequired(admin);
+    if (!entryAllowed({ status: pass.status, hostAnswer: pass.host_answer, approvalRequired: approval })) {
+      throw new Error(
+        pass.status === "pending_approval"
+          ? "The resident has not allowed this visit."
+          : "Wait for the resident to allow this visitor.",
+      );
+    }
+  }
   let bayId = pass.bay_id;
   if (next === "inside" && !bayId) {
     const { data: bays } = await admin.from("parking_bays").select("id").eq("kind", "visitor");
@@ -225,6 +237,7 @@ export async function decideVisitorPass(formData: FormData) {
       hostUserId: pass.host_user_id,
       title: "Visitor at the gate",
       body: `${pass.visitor_name} is waiting for ${pass.flat_number}.`,
+      href: `/pass/${pass.id}`,
     });
   }
   revalidatePath("/visitors");
@@ -243,15 +256,20 @@ export async function walkInVisitor(formData: FormData) {
   if (visitorName.length < 2 || !flatNumber) throw new Error("Enter a name and a home.");
   const { data: flat } = await admin.from("flats").select("id, flat_number").eq("flat_number", flatNumber).maybeSingle();
   if (!flat) throw new Error("That home is not in the brochure.");
-  await admin.from("visitor_passes").insert({
+  const approval = await hostApprovalRequired(admin);
+  const hostUserId = await hostForFlat(admin, flat.id);
+  if (approval && !hostUserId) throw new Error("Nobody at that home can approve a visitor yet.");
+  const { data: created, error } = await admin.from("visitor_passes").insert({
     code: code(),
     flat_id: flat.id,
     flat_number: flat.flat_number,
+    host_user_id: hostUserId,
     visitor_name: visitorName,
     purpose: purpose || "Walk-in",
-    visit_on: new Date().toISOString().slice(0, 10),
+    visit_on: indiaDay(),
     status: "waiting",
-  });
+  }).select("id").single();
+  if (error) throw new Error(error.message);
   await writeAudit({
     actorUserId: user.id,
     actorName: name,
@@ -261,8 +279,10 @@ export async function walkInVisitor(formData: FormData) {
   });
   await pushHome({
     flatId: flat.id,
+    hostUserId,
     title: "Visitor at the gate",
     body: `${visitorName} is waiting for ${flat.flat_number}.`,
+    href: `/pass/${created.id}`,
   });
   revalidatePath("/gate");
 }
@@ -505,13 +525,29 @@ export async function createWorkOrder(formData: FormData) {
   const body = String(formData.get("body") || "").trim();
   const noteId = Number(formData.get("noteId") || 0);
   if (title.length < 2) throw new Error("Name the job.");
-  await admin.from("work_orders").insert({
-    title,
-    place,
-    body,
-    source_note_id: noteId || null,
-    status: "open",
-  });
+  if (noteId) {
+    const { data: existing } = await admin
+      .from("work_orders")
+      .select("id")
+      .eq("source_note_id", noteId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (existing) {
+      await admin.from("work_orders").update({ title, place, body }).eq("id", existing.id);
+    } else {
+      await admin.from("work_orders").insert({
+        title,
+        place,
+        body,
+        source_note_id: noteId,
+        status: "open",
+      });
+    }
+    await admin.from("member_notes").update({ status: "in_progress" }).eq("id", noteId);
+  } else {
+    await admin.from("work_orders").insert({ title, place, body, status: "open" });
+  }
   await writeAudit({ actorUserId: user.id, actorName: name, action: "Opened a job", subject: title, detail: place });
   revalidatePath("/account/jobs");
   revalidatePath("/work");
@@ -530,6 +566,12 @@ export async function assignWorkOrder(formData: FormData) {
   if (assignee) patch.assignee_user_id = assignee;
   if (["open", "in_progress", "done"].includes(status)) patch.status = status;
   await admin.from("work_orders").update(patch).eq("id", id);
+  if (status === "done") {
+    const { data: linked } = await admin.from("work_orders").select("source_note_id").eq("id", id).maybeSingle();
+    if (linked?.source_note_id) {
+      await admin.from("member_notes").update({ status: "done" }).eq("id", linked.source_note_id);
+    }
+  }
   await writeAudit({ actorUserId: user.id, actorName: name, action: "Updated a job", subject: String(id), detail: status });
   revalidatePath("/account/jobs");
   revalidatePath("/work");
@@ -542,12 +584,15 @@ export async function updateMyJob(formData: FormData) {
   const id = Number(formData.get("jobId"));
   const status = String(formData.get("status") || "");
   if (!id || !["in_progress", "done"].includes(status)) return;
-  const { data: job } = await admin.from("work_orders").select("assignee_user_id, title").eq("id", id).maybeSingle();
+  const { data: job } = await admin.from("work_orders").select("assignee_user_id, title, source_note_id").eq("id", id).maybeSingle();
   if (!job) return;
   if (profile.role === "staff" && job.assignee_user_id !== user.id) {
     throw new Error("This job is not yours.");
   }
   await admin.from("work_orders").update({ status }).eq("id", id);
+  if (status === "done" && job.source_note_id) {
+    await admin.from("member_notes").update({ status: "done" }).eq("id", job.source_note_id);
+  }
   await writeAudit({ actorUserId: user.id, actorName: name, action: "Updated a job", subject: job.title, detail: status });
   revalidatePath("/work");
   revalidatePath("/account/jobs");

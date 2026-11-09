@@ -17,7 +17,7 @@ export default async function VisitorsPage() {
   const admin = createAdminClient();
   const query = admin
     .from("visitor_passes")
-    .select("id, code, visitor_name, purpose, visit_on, status, flat_number, host_user_id")
+    .select("id, code, visitor_name, visitor_phone, purpose, visit_on, status, flat_number, host_user_id")
     .order("created_at", { ascending: false })
     .limit(30);
   const { data, error } = profile.flatId
@@ -52,6 +52,9 @@ export default async function VisitorsPage() {
       ) : (
         <p className="mt-6 text-sm text-[#475569]">You can see passes. You cannot create one.</p>
       )}
+      {(data ?? []).length === 0 ? (
+        <p className="mt-6 text-sm text-[#475569]">No visitor passes yet.</p>
+      ) : null}
       <ul className="mt-6 grid gap-3">
         {(data ?? []).map((pass) => (
           <li key={pass.id} className="slab p-4">
@@ -60,6 +63,7 @@ export default async function VisitorsPage() {
             <p className="text-sm text-[#475569]">
               {pass.flat_number} · {pass.visit_on}
               {pass.purpose ? ` · ${pass.purpose}` : ""}
+              {pass.visitor_phone ? ` · ${pass.visitor_phone}` : ""}
             </p>
             <p className="mt-2 text-sm text-[#0f172a]">
               Pass <a className="font-semibold underline" href={`/pass/${pass.code}`}>{pass.code}</a>

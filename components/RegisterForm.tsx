@@ -74,6 +74,7 @@ export default function RegisterForm({
             options={[
               { value: "owner", label: "The owner" },
               { value: "family", label: "Family" },
+              { value: "tenant", label: "A tenant" },
             ]}
           />
           <div className="grid gap-3 sm:grid-cols-2">

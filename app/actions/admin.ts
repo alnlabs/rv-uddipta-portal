@@ -80,6 +80,7 @@ export async function approveRegistration(requestId: number): Promise<ActionResu
     if (!request.email) throw new Error("This person needs a verified email.");
 
     const isFamily = request.request_kind === "family";
+    const isTenant = request.request_kind === "tenant";
     if (isFamily) {
       const { data: home } = await admin
         .from("flats")
@@ -94,7 +95,7 @@ export async function approveRegistration(requestId: number): Promise<ActionResu
       throw new Error(`Flat ${request.flat_number} is already linked to another owner`);
     }
 
-    if (!isFamily) {
+    if (!isFamily && !isTenant) {
     const { error: upsertError } = await admin
       .from("flats")
       .update({
@@ -124,7 +125,7 @@ export async function approveRegistration(requestId: number): Promise<ActionResu
       });
       const { error: profileError } = await admin.from("profiles").upsert({
         user_id: request.user_id,
-        role: isFamily ? "co_owner" : "owner",
+        role: isTenant ? "tenant" : isFamily ? "co_owner" : "owner",
         flat_id: inventory.id,
         display_name: request.owner_name,
       });

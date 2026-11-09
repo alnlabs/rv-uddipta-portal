@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { writeAudit } from "@/lib/audit";
 import { isMember, desk, mobileJson, readMobileMember } from "@/lib/mobileSession";
 import { isCommunityRole } from "@/lib/roles";
+import { indiaDay } from "@/lib/indiaDay";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -86,7 +87,7 @@ export async function POST(request: Request) {
     visitor_name: visitorName,
     visitor_phone: phone || null,
     purpose,
-    visit_on: /^\d{4}-\d{2}-\d{2}$/.test(visitOn) ? visitOn : new Date().toISOString().slice(0, 10),
+    visit_on: /^\d{4}-\d{2}-\d{2}$/.test(visitOn) ? visitOn : indiaDay(),
     status,
   });
   if (error) return mobileJson({ message: error.message }, 500);

@@ -22,7 +22,7 @@ export async function GET(request: Request) {
       id: row.id,
       home: row.flat_number,
       name: row.owner_name,
-      kind: row.request_kind === "family" ? "Family" : "Owner",
+      kind: row.request_kind === "family" ? "Family" : row.request_kind === "tenant" ? "Tenant" : "Owner",
     })),
   });
 }

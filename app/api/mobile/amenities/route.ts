@@ -1,6 +1,7 @@
 import { BOOKING_SLOTS, bookingSlot } from "@/lib/bookingSlots";
 import { desk, isMember, mobileJson, readMobileMember } from "@/lib/mobileSession";
 import { isCommunityRole } from "@/lib/roles";
+import { indiaDay } from "@/lib/indiaDay";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +29,7 @@ export async function GET(request: Request) {
   if (access === "none") return mobileJson({ message: "Amenity booking is turned off." }, 403);
 
   const admin = createAdminClient();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = indiaDay();
   const [{ data: amenities, error: amenityError }, { data: bookings, error: bookingError }] = await Promise.all([
     admin.from("amenities").select("id, name, hours_note, enabled").eq("enabled", true).order("name"),
     admin

@@ -280,8 +280,6 @@ export function OwnersShell({
       "forms",
       "f",
       "members",
-      "inbox",
-      "notifications",
       "messages",
       "community",
       "plans",
@@ -571,7 +569,9 @@ export function OwnersShell({
       : [
           pick("/"),
           pick("/feed"),
-          pick("/community"),
+          pick("/visitors"),
+          pick("/requests"),
+          pick("/work"),
           pick("/inbox"),
           pick("/forms"),
           ...(canSwitch
@@ -651,7 +651,7 @@ export function OwnersShell({
               </span>
             </span>
           </Link>
-          {isSuperAdmin && !viewingResident ? null : <NotificationBell count={notificationBadge} tone="dark" />}
+          <NotificationBell count={notificationBadge} tone="dark" />
         </div>
 
         <SidebarAccountCard
@@ -734,7 +734,7 @@ export function OwnersShell({
           className="sticky top-0 z-20 shrink-0 border-b border-[rgba(15,23,42,0.1)] bg-[#f8fafc]/92 px-3 py-2 backdrop-blur-md md:hidden"
           style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}
         >
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-1">
               <Link href={brandHref} className="flex items-center gap-2">
                 <Mark size={32} />
@@ -742,9 +742,9 @@ export function OwnersShell({
                   {flatNumber || "UDDIIPTA"}
                 </span>
               </Link>
-              {isSuperAdmin && !viewingResident ? null : <NotificationBell count={notificationBadge} tone="light" />}
+              <NotificationBell count={notificationBadge} tone="light" />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
               {canViewAs ? (
                 <button
                   type="button"
@@ -796,7 +796,7 @@ export function OwnersShell({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-[10px] font-semibold ${
+                  className={`relative flex h-12 w-[4.6rem] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-[10px] font-semibold ${
                     active ? "bg-[#1e293b] text-[#f8fafc]" : "text-[#475569]"
                   }`}
                 >

@@ -6,7 +6,7 @@ export default async function PassPage({ params }: { params: Promise<{ code: str
   const admin = createAdminClient();
   const { data: pass } = await admin
     .from("visitor_passes")
-    .select("visitor_name, flat_number, purpose, visit_on, status, code")
+    .select("visitor_name, visitor_phone, flat_number, purpose, visit_on, status, code")
     .eq("code", code.toUpperCase())
     .maybeSingle();
 
@@ -32,6 +32,7 @@ export default async function PassPage({ params }: { params: Promise<{ code: str
         <p className="text-2xl font-semibold tracking-[0.2em] text-[#0f172a]">{pass.code}</p>
         <h2 className="mt-4 text-xl font-semibold text-[#0f172a]">{pass.visitor_name}</h2>
         <p className="mt-1 text-[#475569]">{pass.purpose || "Visitor"}</p>
+        {pass.visitor_phone ? <p className="mt-1 text-sm text-[#475569]">{pass.visitor_phone}</p> : null}
         <p className="mt-4 text-sm font-semibold text-[#0f172a]">Path to {flat}</p>
         <p className="mt-1 text-sm text-[#475569]">
           Wing {wing || "—"}, floor {floor || "—"}, home {flat}. Show this at the gate.

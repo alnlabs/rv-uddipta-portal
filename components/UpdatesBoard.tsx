@@ -450,7 +450,7 @@ function PollChoices({
   return (
     <div className="mt-3 grid gap-2">
       {poll.options.map((option) => {
-        const share = poll.total ? Math.round((option.votes / poll.total) * 100) : 0;
+        const share = poll.total ? Math.min(100, Math.round((option.votes / poll.total) * 100)) : 0;
         const mine = poll.myVotes.includes(option.id);
         return (
           <form key={option.id} action={action}>

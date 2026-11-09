@@ -48,7 +48,8 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const phone = normalizePhone(String(body?.phone || ""));
   const ownerName = String(body?.ownerName || "").trim();
-  const kind = String(body?.kind || "owner") === "family" ? "family" : "owner";
+  const requested = String(body?.kind || "owner");
+  const kind = requested === "family" || requested === "tenant" ? requested : "owner";
   const unit = findInventoryFlat(String(body?.flatNumber || ""));
 
   if (!auth.user.email) return mobileJson({ message: "Your Google account needs an email." }, 400);

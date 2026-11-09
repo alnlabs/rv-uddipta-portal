@@ -18,7 +18,7 @@ export type AdminRegistrationRequest = {
   phone: string
   status: "pending" | "approved" | "rejected"
   reject_reason: string | null
-  request_kind?: "owner" | "family" | null
+  request_kind?: "owner" | "family" | "tenant" | null
 };
 
 type Override = {
@@ -102,7 +102,7 @@ export function ApprovalsList({
                     {row.flat_number}
                   </strong>
                   <span className="rounded-full bg-[#059669] px-2.5 py-1 text-[0.68rem] font-bold tracking-wide text-[#0f172a] uppercase">
-                    {row.request_kind === "family" ? "Family" : "Owner"}
+                    {row.request_kind === "family" ? "Family" : row.request_kind === "tenant" ? "Tenant" : "Owner"}
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-[#059669]">

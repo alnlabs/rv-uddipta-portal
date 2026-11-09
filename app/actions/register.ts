@@ -82,7 +82,8 @@ export async function registerOwner(
 
   const phone = normalizePhone(String(formData.get("phone") || ""));
   const ownerName = String(formData.get("ownerName") || "").trim();
-  const kind = String(formData.get("kind") || "owner") === "family" ? "family" : "owner";
+  const requested = String(formData.get("kind") || "owner");
+  const kind = requested === "family" || requested === "tenant" ? requested : "owner";
   const unit = findInventoryFlat(String(formData.get("flatNumber") || ""));
 
   if (!user.email) {

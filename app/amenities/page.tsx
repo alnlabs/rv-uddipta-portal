@@ -6,6 +6,7 @@ import { BOOKING_SLOTS } from "@/lib/bookingSlots";
 import { resolveDeskAccess } from "@/lib/deskAccess";
 import { canManageAdmin, isCommunityRole } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
+import { indiaDay } from "@/lib/indiaDay";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 export default async function AmenitiesPage() {
@@ -18,7 +19,7 @@ export default async function AmenitiesPage() {
   const admin = createAdminClient();
   const office = access === "manage" && (canManageAdmin(profile.role, user) || profile.role === "facility");
   const canBook = access === "manage";
-  const today = new Date().toISOString().slice(0, 10);
+  const today = indiaDay();
   const [{ data: spaces, error }, { data: bookings }] = await Promise.all([
     admin.from("amenities").select("id, name, hours_note, enabled").eq("enabled", true).order("name"),
     admin

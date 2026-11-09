@@ -10,6 +10,7 @@ import { visibleText } from "@/lib/richText";
 import { isSuperAdmin } from "@/lib/admin";
 import { canEditFlat, isCommunityRole } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
+import { indiaDay } from "@/lib/indiaDay";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 export default async function Page() {
@@ -74,7 +75,7 @@ export default async function Page() {
   }));
 
   const admin = createAdminClient();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = indiaDay();
   const familyWaiting =
     profile.role === "owner" && ownedFlat
       ? (
