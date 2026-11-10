@@ -1,5 +1,6 @@
 import "server-only";
 
+import { societyAdminUserIds } from "@/lib/societyAdmins";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 export type ActivityVisibility = "public" | "community";
@@ -61,12 +62,12 @@ export async function publishActivity(input: ActivityInput) {
           .select("user_id")
           .eq("flat_id", input.flatId)
       : { data: [] as { user_id: string }[] };
-    const { data: admins } = await admin
-      .from("profiles")
-      .select("user_id")
-      .eq("role", "admin");
+    const adminIds = await societyAdminUserIds(admin);
     const seen = new Set<string>();
-    recipients = [...(flatPeople ?? []), ...(admins ?? [])].filter((row) => {
+    recipients = [
+      ...(flatPeople ?? []),
+      ...adminIds.map((user_id) => ({ user_id })),
+    ].filter((row) => {
       if (seen.has(row.user_id)) return false;
       seen.add(row.user_id);
       return true;

@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { disabledRequestKinds } from "@/lib/features";
 import { isMember, desk, mobileJson, readMobileMember } from "@/lib/mobileSession";
 import { loadNoteThreads } from "@/lib/requestThread";
+import { societyAdminUserIds } from "@/lib/societyAdmins";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -125,12 +126,12 @@ export async function POST(request: Request) {
     body: message,
   });
 
-  const { data: admins } = await admin.from("profiles").select("user_id").eq("role", "admin");
+  const adminIds = await societyAdminUserIds(admin);
   const title = kind === "request" ? "New request" : "New feedback";
-  const rows = (admins ?? [])
-    .filter((row) => row.user_id !== member.user.id)
-    .map((row) => ({
-      user_id: row.user_id as string,
+  const rows = adminIds
+    .filter((userId) => userId !== member.user.id)
+    .map((userId) => ({
+      user_id: userId,
       kind,
       title: member.flatNumber ? `${title} · ${member.flatNumber}` : title,
       body: message,
@@ -174,12 +175,12 @@ async function answerRequest(
   });
   if (error) return mobileJson({ message: error.message }, 500);
   await admin.from("member_notes").update({ status: "in_progress" }).eq("id", noteId);
-  const { data: admins } = await admin.from("profiles").select("user_id").eq("role", "admin");
+  const adminIds = await societyAdminUserIds(admin);
   const title = note.kind === "feedback" ? "Reply on feedback" : "Reply on a request";
-  const rows = (admins ?? [])
-    .filter((row) => row.user_id !== member.user.id)
-    .map((row) => ({
-      user_id: row.user_id as string,
+  const rows = adminIds
+    .filter((userId) => userId !== member.user.id)
+    .map((userId) => ({
+      user_id: userId,
       kind: "note_reply",
       title: note.flat_number ? `${title} · ${note.flat_number}` : title,
       body,

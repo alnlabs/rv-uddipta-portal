@@ -30,7 +30,7 @@ export default async function VisitorsPage() {
       <p className="eyebrow">Visitors</p>
       <h1 className="mt-2 text-3xl font-semibold text-[#0f172a]">Visitor passes</h1>
       <p className="mt-2 text-[#475569]">
-        The visitor shows the pass on their phone. They do not get an account.
+        Creates a QR pass. The visitor opens the link on their phone at the gate. They do not get an account.
       </p>
       {access === "manage" ? (
       <form action={createVisitorPass} className="slab mt-6 grid gap-3 p-4">

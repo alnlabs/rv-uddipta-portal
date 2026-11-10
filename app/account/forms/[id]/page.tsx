@@ -5,18 +5,17 @@ import {
   moveEnquiryField,
   saveEnquirySettings,
   setEnquiryClosed,
-  updateEnquiryField,
 } from "@/app/actions/enquiries";
 import { AddQuestionForm } from "@/components/AddQuestionForm";
 import { CopyLink } from "@/components/CopyLink";
+import { EditQuestionForm } from "@/components/EditQuestionForm";
 import { EnquiryResults } from "@/components/EnquiryResults";
 import { EnquirySettingsFields } from "@/components/EnquirySettingsFields";
 import { FormBuilder } from "@/components/FormBuilder";
-import { Form, SwitchField, TextAreaField, TextField, WorkspaceHeader } from "@/components/form-ui";
-import { FIELD_KINDS, RESULT_VIEWS } from "@/lib/enquiries";
+import { Form, WorkspaceHeader } from "@/components/form-ui";
+import { RESULT_VIEWS } from "@/lib/enquiries";
 import { loadAnswers, loadEnquiryById } from "@/lib/enquiryData";
-import { canManageAdmin } from "@/lib/roles";
-import { getAuthState } from "@/lib/session";
+import { canAccessAdminDesk, getAuthState } from "@/lib/session";
 
 export default async function EnquiryAdminPage({
   params,
@@ -25,7 +24,7 @@ export default async function EnquiryAdminPage({
 }) {
   const { user, profile } = await getAuthState();
   if (!user) redirect("/login?next=/account/forms");
-  if (!canManageAdmin(profile.role, user)) redirect("/account/builder");
+  if (!(await canAccessAdminDesk())) redirect("/account/builder");
 
   const { id: raw } = await params;
   const id = Number(raw);
@@ -121,47 +120,7 @@ export default async function EnquiryAdminPage({
           <ol className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {fields.map((field, index) => (
               <li key={field.id} className="form-sheet">
-                <Form action={updateEnquiryField} className="grid gap-4">
-                  <input type="hidden" name="id" value={field.id} />
-                  <input type="hidden" name="enquiryId" value={enquiry.id} />
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-[#b45309]">
-                      Question {index + 1}
-                      <span className="ml-2 font-medium text-[#475569]">
-                        {FIELD_KINDS.find((kind) => kind.value === field.kind)?.label}
-                      </span>
-                    </p>
-                  </div>
-                  <TextField
-                    label="Question"
-                    name="label"
-                    required
-                    minLength={2}
-                    tone="question"
-                    defaultValue={field.label}
-                    hint="This is the sentence people read."
-                  />
-                  {field.kind === "choice" ? (
-                    <TextAreaField
-                      label="Options"
-                      name="choices"
-                      required
-                      rows={4}
-                      tone="question"
-                      defaultValue={field.choices.join("\n")}
-                      hint="One option on each line. People pick one."
-                    />
-                  ) : null}
-                  <SwitchField
-                    label="They must answer this"
-                    hint="The form will not send until this question is filled in."
-                    name="required"
-                    defaultChecked={field.required}
-                  />
-                  <button type="submit" className="btn btn-forest w-full sm:w-fit">
-                    Save question
-                  </button>
-                </Form>
+                <EditQuestionForm enquiryId={enquiry.id} field={field} index={index} />
                 <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[rgba(15,23,42,0.08)] pt-4">
                   <form action={moveEnquiryField.bind(null, enquiry.id, field.id, -1)}>
                     <button type="submit" className="btn btn-ghost ring-1 ring-[rgba(15,23,42,0.14)]" disabled={index === 0}>

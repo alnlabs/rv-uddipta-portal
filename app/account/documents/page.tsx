@@ -3,8 +3,7 @@ import { redirect } from "next/navigation";
 import { saveHomeDocument } from "@/app/actions/community-os";
 import { DeskError } from "@/components/FeatureOff";
 import { ChoiceField, TextAreaField, TextField } from "@/components/form-ui";
-import { canManageAdmin } from "@/lib/roles";
-import { getAuthState } from "@/lib/session";
+import { canAccessAdminDesk, getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 const KINDS = [
@@ -42,7 +41,7 @@ export default async function OfficeDocumentsPage({
 }) {
   const { user, profile } = await getAuthState();
   if (!user) redirect("/login");
-  if (!canManageAdmin(profile.role, user)) redirect("/");
+  if (!(await canAccessAdminDesk())) redirect("/");
   const params = await searchParams;
   const selected = (params.flat || "").trim().toUpperCase();
   const term = searchTerm(params.q || "").toLowerCase();

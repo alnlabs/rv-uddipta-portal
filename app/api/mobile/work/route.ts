@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const member = await readMobileMember(request);
   if (!isMember(member)) return member;
-  if (!canDoStaffWork(member.profile.role, member.user)) return mobileJson({ message: "This desk is for service staff." }, 403);
+  if (!canDoStaffWork(member.profile.role, member.user)) return mobileJson({ message: "This is for service staff." }, 403);
   const access = await desk(member, "maintenance");
   if (access === "none") return mobileJson({ message: "Work is turned off." }, 403);
 
@@ -31,7 +31,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const member = await readMobileMember(request);
   if (!isMember(member)) return member;
-  if (!canDoStaffWork(member.profile.role, member.user)) return mobileJson({ message: "This desk is for service staff." }, 403);
+  if (!canDoStaffWork(member.profile.role, member.user)) return mobileJson({ message: "This is for service staff." }, 403);
   const access = await desk(member, "maintenance");
   if (access !== "manage") return mobileJson({ message: "You can see the jobs. You cannot update them." }, 403);
 

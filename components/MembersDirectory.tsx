@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { answerNeighbourConnect, requestNeighbourConnect } from "@/app/actions/neighbours";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import { facingLabel, typeLabel } from "@/lib/flatDisplay";
 
@@ -103,13 +104,23 @@ function peopleLine(flat: MemberCard) {
 export function MembersDirectory({
   flats,
   initialQuery = "",
+  myFlatNumber = null,
+  connectedHomes = [],
+  incoming = [],
 }: {
   readonly flats: MemberCard[]
   readonly initialQuery?: string
+  readonly myFlatNumber?: string | null
+  readonly connectedHomes?: string[]
+  readonly incoming?: { requestId: number; home: string; note: string }[]
 }) {
   const [query, setQuery] = useState(initialQuery);
   const [filter, setFilter] = useState<Filter>("all");
-  const [openNumber, setOpenNumber] = useState<string | null>(null);
+  const [openNumber, setOpenNumber] = useState<string | null>(initialQuery.toUpperCase() || null);
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const connected = useMemo(() => new Set(connectedHomes), [connectedHomes]);
   const needle = query.trim().toLowerCase();
 
   const homes = useMemo(
@@ -121,6 +132,41 @@ export function MembersDirectory({
   );
   const wings = [...new Set(homes.map((flat) => flat.wing || "A"))];
   const open = homes.find((flat) => flat.flatNumber === openNumber) ?? null;
+
+  async function connect() {
+    if (!open || busy) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const data = new FormData();
+      data.set("home", open.flatNumber);
+      data.set("note", note);
+      await requestNeighbourConnect(data);
+      setNote("");
+      setMessage("Connect request sent.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not send that.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function answer(requestId: number, decision: "accepted" | "refused") {
+    if (busy) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const data = new FormData();
+      data.set("requestId", String(requestId));
+      data.set("decision", decision);
+      await answerNeighbourConnect(data);
+      setMessage(decision === "accepted" ? "You are connected." : "Request declined.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not update that.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="mt-6">
@@ -154,6 +200,30 @@ export function MembersDirectory({
         </p>
       </div>
 
+      {incoming.length ? (
+        <section className="slab mt-5 grid gap-3 p-4">
+          <p className="text-sm font-semibold tracking-[0.08em] text-[#b45309] uppercase">Connect requests</p>
+          {incoming.map((item) => (
+            <div key={item.requestId} className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="font-semibold text-[#0f172a]">{item.home} wants to connect</p>
+                {item.note ? <p className="text-sm text-[#475569]">{item.note}</p> : null}
+              </div>
+              <div className="flex gap-2">
+                <button type="button" disabled={busy} onClick={() => answer(item.requestId, "accepted")} className="btn-slate">
+                  Accept
+                </button>
+                <button type="button" disabled={busy} onClick={() => answer(item.requestId, "refused")} className="btn-line">
+                  Decline
+                </button>
+              </div>
+            </div>
+          ))}
+        </section>
+      ) : null}
+
+      {message ? <p className="mt-4 text-sm text-[#475569]">{message}</p> : null}
+
       {open ? (
         <article className="slab mt-5 p-4 sm:p-5">
           <div className="flex items-start justify-between gap-3">
@@ -168,6 +238,9 @@ export function MembersDirectory({
                 </p>
                 <h2 className="text-2xl font-semibold text-[#0f172a]">{open.flatNumber}</h2>
                 <p className="text-sm text-[#475569]">{open.occupancyLabel}</p>
+                <p className={`mt-1 text-sm font-semibold ${open.ownerRegistered ? "text-[#059669]" : "text-[#475569]"}`}>
+                  {open.ownerRegistered ? "Verified ✓" : "Not verified ?"}
+                </p>
               </div>
             </div>
             <button type="button" onClick={() => setOpenNumber(null)} className="btn-line">
@@ -228,6 +301,28 @@ export function MembersDirectory({
               )}
             </div>
           </div>
+          {myFlatNumber && open.flatNumber !== myFlatNumber ? (
+            <div className="mt-5 border-t border-[rgba(15,23,42,0.08)] pt-4">
+              {connected.has(open.flatNumber) ? (
+                <p className="text-sm font-semibold text-[#059669]">Connected with this home.</p>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                  <label className="grid gap-1 text-sm font-semibold text-[#0f172a]">
+                    Introduce yourself
+                    <input
+                      value={note}
+                      onChange={(event) => setNote(event.target.value)}
+                      placeholder="Optional short note"
+                      className="field-control font-normal"
+                    />
+                  </label>
+                  <button type="button" disabled={busy} onClick={connect} className="btn-slate">
+                    {busy ? "Sending…" : "Connect"}
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : null}
         </article>
       ) : null}
 
@@ -254,7 +349,18 @@ export function MembersDirectory({
                       >
                         <ProfileAvatar name={flat.ownerName} photoUrl={flat.ownerPhotoUrl} size="sm" />
                         <span className="min-w-0">
-                          <span className="block text-lg font-semibold text-[#0f172a]">{flat.flatNumber}</span>
+                          <span className="flex items-center gap-2">
+                            <span className="block text-lg font-semibold text-[#0f172a]">{flat.flatNumber}</span>
+                            <span
+                              className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                                flat.ownerRegistered
+                                  ? "bg-[rgba(5,150,105,0.14)] text-[#059669]"
+                                  : "bg-[rgba(15,23,42,0.06)] text-[#64748b]"
+                              }`}
+                            >
+                              {flat.ownerRegistered ? "Verified ✓" : "Not verified ?"}
+                            </span>
+                          </span>
                           <span className="block truncate font-medium text-[#0f172a]">{flat.ownerName}</span>
                           <span className="mt-1 block text-sm text-[#475569]">
                             Owner{flat.occupancyLabel === "Rented" ? " · Rented" : ""}

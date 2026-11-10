@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
-import { canManageAdmin } from "@/lib/roles";
-import { getAuthState } from "@/lib/session";
+import { canAccessAdminDesk, getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 async function count(table: string, column: string, value?: string) {
@@ -14,7 +13,7 @@ async function count(table: string, column: string, value?: string) {
 export default async function ReportsPage() {
   const { user, profile } = await getAuthState();
   if (!user) redirect("/login");
-  if (!canManageAdmin(profile.role, user)) redirect("/");
+  if (!(await canAccessAdminDesk())) redirect("/");
 
   const [openRequests, visitorsInside, pendingBookings, openJobs] = await Promise.all([
     count("member_notes", "status", "new"),

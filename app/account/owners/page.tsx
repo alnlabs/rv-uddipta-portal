@@ -12,9 +12,9 @@ import {
   TextField,
   WorkspaceHeader,
 } from "@/components/form-ui";
+import { isSuperAdmin } from "@/lib/admin";
 import { roleNeedsHome } from "@/lib/roleLabels";
-import { canManageAdmin } from "@/lib/roles";
-import { getAuthState } from "@/lib/session";
+import { canAccessAdminDesk, getAuthState } from "@/lib/session";
 import { loadSignInPeople } from "@/lib/signInPeople";
 import { createAdminClient } from "@/utils/supabase/admin";
 
@@ -74,9 +74,10 @@ export default async function AdminOwnersPage({
 }: {
   searchParams: Promise<{ q?: string; flat?: string; as?: string }>
 }) {
-  const { user, profile } = await getAuthState();
+  const { user } = await getAuthState();
   if (!user) redirect("/login");
-  if (!canManageAdmin(profile.role, user)) redirect("/account/builder");
+  if (!(await canAccessAdminDesk())) redirect("/account/builder");
+  const superAdmin = isSuperAdmin(user);
 
   const params = await searchParams;
   const q = (params.q || "").trim();
@@ -349,15 +350,17 @@ export default async function AdminOwnersPage({
               flatNumber: person.flatNumber,
             }))}
           />
-          <Disclosure title="Clear this flat" className="mt-4" titleClassName="text-[#8a2f2f]">
-          <OwnerDangerZone
-            flatNumber={editing.flat_number}
-            hasLinkedUser={Boolean(editing.user_id)}
-            isSold={editing.sale_status === "sold"}
-            memberCount={memberCount}
-            renterCount={renterCount}
-          />
-          </Disclosure>
+          {superAdmin ? (
+            <Disclosure title="Clear this flat" className="mt-4" titleClassName="text-[#8a2f2f]">
+              <OwnerDangerZone
+                flatNumber={editing.flat_number}
+                hasLinkedUser={Boolean(editing.user_id)}
+                isSold={editing.sale_status === "sold"}
+                memberCount={memberCount}
+                renterCount={renterCount}
+              />
+            </Disclosure>
+          ) : null}
           </div>
         ) : (
           <div className="field-panel hidden lg:block">

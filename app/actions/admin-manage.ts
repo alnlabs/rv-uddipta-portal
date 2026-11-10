@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { User } from "@supabase/supabase-js";
 import type { ActionResult } from "@/app/actions/admin";
 import { isSuperAdmin, isSuperAdminContact } from "@/lib/admin";
 import { normalizeEmail } from "@/lib/email";
@@ -8,7 +9,7 @@ import { normalizeSaleFields } from "@/lib/flatDisplay";
 import { normalizePhone } from "@/lib/phone";
 import { applyPersonAccess, assertSocietyPerson } from "@/lib/assignAccess";
 import type { AppRole } from "@/lib/roles";
-import { requireAdminUser, requireBuilderEditor } from "@/lib/session";
+import { requireAdminUser, requireBuilderEditor, requireSuperAdmin } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 function fail(error: unknown): ActionResult {
@@ -126,7 +127,7 @@ export async function adminUnlinkFlatUser(
   formData: FormData,
 ): Promise<ActionResult> {
   try {
-    await requireAdminUser();
+    await requireSuperAdmin();
     const admin = createAdminClient();
     const flatNumber = String(formData.get("flatNumber") || "")
       .trim()
@@ -183,7 +184,7 @@ export async function adminReleaseFlat(
   formData: FormData,
 ): Promise<ActionResult> {
   try {
-    await requireAdminUser();
+    await requireSuperAdmin();
     const admin = createAdminClient();
     const flatNumber = String(formData.get("flatNumber") || "")
       .trim()
@@ -235,7 +236,7 @@ export async function adminWipeHousehold(
   formData: FormData,
 ): Promise<ActionResult> {
   try {
-    await requireAdminUser();
+    await requireSuperAdmin();
     const admin = createAdminClient();
     const flatNumber = String(formData.get("flatNumber") || "")
       .trim()
@@ -269,11 +270,32 @@ export async function adminWipeHousehold(
   }
 }
 
+const HOME_ASSIGN_ROLES = new Set<AppRole>(["owner", "co_owner", "tenant", "visitor"]);
+/** Apartment team roles society admin may CRUD. Society admin itself is super-only. */
+const SOCIETY_TEAM_ROLES = new Set<AppRole>([
+  "builder",
+  "committee",
+  "facility",
+  "staff",
+  "security",
+]);
+
+function assertMayAssignOfficeRole(actor: User, role: AppRole, targetRole?: string) {
+  if (HOME_ASSIGN_ROLES.has(role)) return;
+  if (isSuperAdmin(actor)) return;
+  if (!SOCIETY_TEAM_ROLES.has(role)) {
+    throw new Error("Only a super admin can assign society admin.");
+  }
+  if (targetRole === "admin") {
+    throw new Error("Only a super admin can change a society admin.");
+  }
+}
+
 export async function adminAssignRole(
   formData: FormData,
 ): Promise<ActionResult> {
   try {
-    await requireAdminUser();
+    const actor = await requireAdminUser();
     const admin = createAdminClient();
     const userId = String(formData.get("userId") || "").trim();
     const role = String(formData.get("role") || "visitor") as AppRole;
@@ -283,11 +305,19 @@ export async function adminAssignRole(
     const displayName = String(formData.get("displayName") || "").trim();
 
     if (!userId) throw new Error("Choose a person from the list.");
+    if (userId === actor.id) throw new Error("You cannot change your own role here.");
+
     const { data: account, error } = await admin.auth.admin.getUserById(userId);
     if (error) throw new Error(error.message);
     if (!account.user) {
       throw new Error("That person is not in the portal yet.");
     }
+    const { data: targetProfile } = await admin
+      .from("profiles")
+      .select("role")
+      .eq("user_id", userId)
+      .maybeSingle();
+    assertMayAssignOfficeRole(actor, role, targetProfile?.role ? String(targetProfile.role) : undefined);
     await assertSocietyPerson(admin, account.user);
 
     await applyPersonAccess(admin, {
@@ -308,7 +338,7 @@ export async function adminSaveProfile(
   formData: FormData,
 ): Promise<ActionResult> {
   try {
-    await requireAdminUser();
+    const actor = await requireAdminUser();
     const admin = createAdminClient();
     const userId = String(formData.get("userId") || "").trim();
     const role = String(formData.get("role") || "visitor") as AppRole;
@@ -318,9 +348,16 @@ export async function adminSaveProfile(
     const displayName = String(formData.get("displayName") || "").trim();
 
     if (!userId) throw new Error("Person required");
+    if (userId === actor.id) throw new Error("You cannot change your own role here.");
     const { data: account, error } = await admin.auth.admin.getUserById(userId);
     if (error) throw new Error(error.message);
     if (!account.user) throw new Error("Google account not found");
+    const { data: targetProfile } = await admin
+      .from("profiles")
+      .select("role")
+      .eq("user_id", userId)
+      .maybeSingle();
+    assertMayAssignOfficeRole(actor, role, targetProfile?.role ? String(targetProfile.role) : undefined);
     await assertSocietyPerson(admin, account.user);
 
     await applyPersonAccess(admin, {
@@ -341,7 +378,7 @@ export async function adminResetProfile(
   formData: FormData,
 ): Promise<ActionResult> {
   try {
-    await requireAdminUser();
+    const actor = await requireAdminUser();
     const admin = createAdminClient();
     const userId = String(formData.get("userId") || "").trim();
     const confirm = String(formData.get("confirm") || "").trim().toLowerCase();
@@ -352,6 +389,14 @@ export async function adminResetProfile(
     if (!user) throw new Error("Account not found");
     if (isSuperAdmin(user)) {
       throw new Error("Super admin access cannot be reset from this screen.");
+    }
+    const { data: targetProfile } = await admin
+      .from("profiles")
+      .select("role")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (String(targetProfile?.role || "") === "admin" && !isSuperAdmin(actor)) {
+      throw new Error("Only a super admin can reset a society admin.");
     }
     const email = (user.email || "").trim().toLowerCase();
     if (!email || confirm !== email) {

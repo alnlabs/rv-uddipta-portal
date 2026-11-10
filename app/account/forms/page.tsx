@@ -3,25 +3,24 @@ import { redirect } from "next/navigation";
 import { CreateEnquiryForm } from "@/components/CreateEnquiryForm";
 import { WorkspaceHeader } from "@/components/form-ui";
 import { listEnquiries } from "@/lib/enquiryData";
-import { canManageAdmin } from "@/lib/roles";
-import { getAuthState } from "@/lib/session";
+import { canAccessAdminDesk, getAuthState } from "@/lib/session";
 
 export default async function FormsAdminPage() {
   const { user, profile } = await getAuthState();
   if (!user) redirect("/login?next=/account/forms");
-  if (!canManageAdmin(profile.role, user)) redirect("/account/builder");
+  if (!(await canAccessAdminDesk())) redirect("/account/builder");
   const forms = await listEnquiries();
 
   return (
     <section className="w-full">
       <WorkspaceHeader
-        title="Forms"
-        lede="Create a form, share the link, and read what people send back."
+        title="Queries"
+        lede="Create a query, share the link, and read what people send back."
       />
       <div className="mt-6 grid gap-8">
         {forms.length ? (
           <div>
-            <h2 className="text-xl font-semibold tracking-tight text-[#0f172a]">Your forms</h2>
+            <h2 className="text-xl font-semibold tracking-tight text-[#0f172a]">Your queries</h2>
             <ul className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {forms.map((form) => (
                 <li key={form.id}>

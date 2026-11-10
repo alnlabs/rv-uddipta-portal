@@ -1,13 +1,13 @@
 import { redirect } from "next/navigation";
 import { setFeatureEnabled } from "@/app/actions/community-os";
 import { FEATURE_CATALOG, loadEnabledFeatures } from "@/lib/features";
-import { canManageAdmin } from "@/lib/roles";
+import { isSuperAdmin } from "@/lib/admin";
 import { getAuthState } from "@/lib/session";
 
 export default async function FeaturesPage() {
-  const { user, profile } = await getAuthState();
+  const { user } = await getAuthState();
   if (!user) redirect("/login");
-  if (!canManageAdmin(profile.role, user)) redirect("/");
+  if (!isSuperAdmin(user)) redirect("/account");
   const enabled = new Set(await loadEnabledFeatures());
   const groups = [...new Set(FEATURE_CATALOG.map((item) => item.group))];
 
@@ -15,7 +15,7 @@ export default async function FeaturesPage() {
     <section>
       <h1 className="text-3xl font-semibold text-[#0f172a]">Features</h1>
       <p className="mt-2 max-w-2xl text-[#475569]">
-        Turn a desk off for the whole community. A role permission cannot turn it back on.
+        Turn a feature off for the whole community. A role permission cannot turn it back on.
       </p>
       {groups.map((group) => (
         <section key={group} className="mt-6">

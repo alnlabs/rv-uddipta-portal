@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { writeAudit } from "@/lib/audit";
 import { entryAllowed, hostApprovalRequired, hostForFlat } from "@/lib/gateHost";
 import { indiaDay } from "@/lib/indiaDay";
-import { pushHome } from "@/lib/push";
+import { pushHome, pushUsers } from "@/lib/push";
 import { bookingSlot } from "@/lib/bookingSlots";
 import { requireDeskManage } from "@/lib/deskAccess";
 import { homeForRole } from "@/lib/heldRoles";
@@ -70,7 +70,7 @@ function code() {
 
 export async function setFeatureEnabled(formData: FormData) {
   const { user, profile, admin, name } = await session();
-  if (!canManageAdmin(profile.role, user)) throw new Error("Only an admin can change features.");
+  if (!isSuperAdmin(user)) throw new Error("Only a super admin can change features.");
   const key = String(formData.get("key") || "");
   const enabled = String(formData.get("enabled") || "") === "true";
   if (!FEATURE_CATALOG.some((item) => item.key === key)) return;
@@ -417,16 +417,14 @@ export async function decideBooking(formData: FormData) {
   const id = Number(formData.get("bookingId"));
   const status = String(formData.get("status") || "");
   if (!id || (status !== "confirmed" && status !== "refused")) return;
+  const { data: booking } = await admin
+    .from("amenity_bookings")
+    .select("id, amenity_id, starts_on, slot, user_id, status")
+    .eq("id", id)
+    .maybeSingle();
+  if (!booking || booking.status !== "pending") return;
   if (status === "confirmed") {
-    const { data: booking } = await admin
-      .from("amenity_bookings")
-      .select("amenity_id, starts_on, slot")
-      .eq("id", id)
-      .maybeSingle();
-    if (
-      booking &&
-      (await slotTaken(admin, booking.amenity_id, booking.starts_on, booking.slot, id))
-    ) {
+    if (await slotTaken(admin, booking.amenity_id, booking.starts_on, booking.slot, id)) {
       throw new Error("That time is already taken. Refuse this one.");
     }
   }
@@ -440,7 +438,22 @@ export async function decideBooking(formData: FormData) {
     action: status === "confirmed" ? "Confirmed a booking" : "Refused a booking",
     subject: String(id),
   });
+  if (booking.user_id) {
+    const { data: space } = await admin.from("amenities").select("name").eq("id", booking.amenity_id).maybeSingle();
+    const spaceName = space?.name || "Amenity";
+    const title = status === "confirmed" ? "Booking confirmed" : "Booking refused";
+    const detail = `${spaceName} · ${booking.starts_on} · ${booking.slot}`;
+    await admin.from("notifications").insert({
+      user_id: booking.user_id,
+      kind: "booking",
+      title,
+      body: detail,
+      href: "/amenities",
+    });
+    await pushUsers([booking.user_id], title, detail, { href: "/amenities", kind: "booking" });
+  }
   revalidatePath("/amenities");
+  revalidatePath("/notifications");
 }
 
 export async function saveAmenityHours(formData: FormData) {
@@ -519,7 +532,7 @@ export async function assignRequest(formData: FormData) {
 export async function createWorkOrder(formData: FormData) {
   const { user, profile, admin, name } = await session();
   await requireDeskManage(profile.role, user, "maintenance");
-  if (!canRunFacility(profile.role, user)) throw new Error("Only the facility desk can open a job.");
+  if (!canRunFacility(profile.role, user)) throw new Error("Only the facility manager can open a job.");
   const title = String(formData.get("title") || "").trim();
   const place = String(formData.get("place") || "").trim();
   const body = String(formData.get("body") || "").trim();
@@ -557,7 +570,7 @@ export async function createWorkOrder(formData: FormData) {
 export async function assignWorkOrder(formData: FormData) {
   const { user, profile, admin, name } = await session();
   await requireDeskManage(profile.role, user, "maintenance");
-  if (!canRunFacility(profile.role, user)) throw new Error("Only the facility desk can assign a job.");
+  if (!canRunFacility(profile.role, user)) throw new Error("Only the facility manager can assign a job.");
   const id = Number(formData.get("jobId"));
   const assignee = String(formData.get("assignee") || "");
   const status = String(formData.get("status") || "");
@@ -580,7 +593,7 @@ export async function assignWorkOrder(formData: FormData) {
 export async function updateMyJob(formData: FormData) {
   const { user, profile, admin, name } = await session();
   await requireDeskManage(profile.role, user, "maintenance");
-  if (!canDoStaffWork(profile.role, user)) throw new Error("This desk is for service staff.");
+  if (!canDoStaffWork(profile.role, user)) throw new Error("This is for service staff.");
   const id = Number(formData.get("jobId"));
   const status = String(formData.get("status") || "");
   if (!id || !["in_progress", "done"].includes(status)) return;
@@ -620,7 +633,7 @@ export async function saveCommitteeItem(formData: FormData) {
 
 export async function savePermission(formData: FormData) {
   const { user, profile, admin, name } = await session();
-  if (!canManageAdmin(profile.role, user)) throw new Error("Only an admin can change permissions.");
+  if (!isSuperAdmin(user)) throw new Error("Only a super admin can change permissions.");
   const role = String(formData.get("role") || "");
   const feature = String(formData.get("feature") || "");
   const access = String(formData.get("access") || "none");
@@ -640,7 +653,7 @@ export async function savePermission(formData: FormData) {
 export async function setOnDuty(formData: FormData) {
   const { user, profile, admin, name } = await session();
   await requireDeskManage(profile.role, user, "maintenance");
-  if (!canRunFacility(profile.role, user)) throw new Error("Only the facility desk can set who is on duty.");
+  if (!canRunFacility(profile.role, user)) throw new Error("Only the facility manager can set who is on duty.");
   const personId = String(formData.get("personId") || "");
   const onDuty = String(formData.get("onDuty") || "") === "true";
   if (!personId) return;

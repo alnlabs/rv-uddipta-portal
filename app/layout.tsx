@@ -61,7 +61,6 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
 
   if (user && profile) {
     const superAdmin = isSuperAdmin(user);
-    isAdmin = canManageAdmin(profile.role, user);
     builderEdit = canEditBuilder(profile.role, user);
 
     const [{ data: ownFlat }, { count }] = await Promise.all([
@@ -83,6 +82,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       flatNumber = ownFlat?.flat_number ?? null;
       heldRoles = await loadHeldRoles(user.id);
     }
+    // Apartment admins keep Manage even when switched to a home role.
+    isAdmin =
+      canManageAdmin(profile.role, user)
+      || heldRoles.some((item) => item.role === "admin");
     unreadNotifications = count ?? 0;
 
     if (isAdmin) {
@@ -134,7 +137,13 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             heldRoles={heldRoles}
             enabledFeatures={enabledFeatures}
             showPrivateCommunity={
-              isCommunityRole(profile.role) && !isSuperAdmin(user)
+              !isSuperAdmin(user)
+              && (
+                isCommunityRole(profile.role)
+                || heldRoles.some((item) =>
+                  item.role === "owner" || item.role === "co_owner" || item.role === "tenant",
+                )
+              )
             }
           >
             {children}

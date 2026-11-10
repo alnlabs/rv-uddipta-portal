@@ -2,8 +2,7 @@ import { redirect } from "next/navigation";
 import { CategoryRow } from "@/components/CategoryRow";
 import { DeskError } from "@/components/FeatureOff";
 import { POST_GROUPS, postKind } from "@/lib/postKinds";
-import { canManageAdmin } from "@/lib/roles";
-import { getAuthState } from "@/lib/session";
+import { canAccessAdminDesk, getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 const ABOUT: Record<string, string> = {
@@ -53,7 +52,7 @@ type CategoryRowData = {
 export default async function CategoriesPage() {
   const { user, profile } = await getAuthState();
   if (!user) redirect("/login");
-  if (!canManageAdmin(profile.role, user)) redirect("/");
+  if (!(await canAccessAdminDesk())) redirect("/");
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("categories")

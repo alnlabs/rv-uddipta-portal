@@ -1,4 +1,5 @@
 import type { User } from "@supabase/supabase-js";
+import { isSuperAdmin } from "@/lib/admin";
 import { canManageAdmin, ensureProfile, isCommunityRole } from "@/lib/roles";
 import type { createClient } from "@/utils/supabase/server";
 
@@ -11,6 +12,7 @@ export async function postLoginPath(
   if (!user) return "/login";
 
   const profile = await ensureProfile(user, supabase);
+  if (isSuperAdmin(user)) return "/account/roles";
   if (canManageAdmin(profile.role, user)) return "/account";
   if (profile.role === "security") return "/gate";
   if (isCommunityRole(profile.role)) return "/feed";

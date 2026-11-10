@@ -3,7 +3,7 @@ import { savePermission } from "@/app/actions/community-os";
 import { fallbackDeskAccess } from "@/lib/deskAccess";
 import { FEATURE_CATALOG } from "@/lib/features";
 import { ROLE_GROUPS, ROLE_GUIDE, type RoleValue } from "@/lib/roleLabels";
-import { canManageAdmin } from "@/lib/roles";
+import { isSuperAdmin } from "@/lib/admin";
 import { getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
 
@@ -24,9 +24,9 @@ export default async function PermissionsPage({
 }: {
   searchParams: Promise<{ role?: string }>
 }) {
-  const { user, profile } = await getAuthState();
+  const { user } = await getAuthState();
   if (!user) redirect("/login");
-  if (!canManageAdmin(profile.role, user)) redirect("/");
+  if (!isSuperAdmin(user)) redirect("/account");
   const params = await searchParams;
   const role: RoleValue = isRole(params.role) ? params.role : "owner";
   const guide = ROLE_GUIDE.find((item) => item.value === role);
@@ -38,7 +38,7 @@ export default async function PermissionsPage({
     <section>
       <h1 className="text-3xl font-semibold text-[#0f172a]">Permissions</h1>
       <p className="mt-2 max-w-3xl text-[#475569]">
-        Pick a role, then set each desk. No access hides it. Can look opens it without changes. Can change lets them update it. A desk turned off under Features stays closed for everyone.
+        Pick a role, then set each feature. No access hides it. Can look opens it without changes. Can change lets them update it. A feature turned off under Features stays closed for everyone.
       </p>
 
       <div className="mt-6 grid gap-4">

@@ -1,13 +1,13 @@
 import { redirect } from "next/navigation";
 import { DeskError } from "@/components/FeatureOff";
-import { canManageAdmin } from "@/lib/roles";
+import { isSuperAdmin } from "@/lib/admin";
 import { getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 export default async function AuditPage() {
-  const { user, profile } = await getAuthState();
+  const { user } = await getAuthState();
   if (!user) redirect("/login");
-  if (!canManageAdmin(profile.role, user)) redirect("/");
+  if (!isSuperAdmin(user)) redirect("/account");
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("audit_log")

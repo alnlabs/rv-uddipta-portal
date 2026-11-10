@@ -7,7 +7,7 @@ export const FEATURE_CATALOG = [
   { key: "announcements", group: "Community", label: "Announcements", summary: "Official notices." },
   { key: "events", group: "Community", label: "Events", summary: "Gatherings and RSVPs." },
   { key: "polls", group: "Community", label: "Polls", summary: "Votes from residents." },
-  { key: "forms", group: "Community", label: "Forms", summary: "One answer per home." },
+  { key: "forms", group: "Community", label: "Queries", summary: "One answer per home." },
   { key: "neighbours", group: "Home", label: "Neighbours", summary: "Who lives in each home." },
   { key: "requests", group: "Services", label: "Requests", summary: "Tracked help and feedback." },
   { key: "visitor_passes", group: "Visitors", label: "Visitor passes", summary: "A pass for someone coming to a home." },

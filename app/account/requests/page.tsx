@@ -4,8 +4,7 @@ import { deleteNote, replyToNote } from "@/app/actions/updates";
 import { Form, TextAreaField, WorkspaceHeader } from "@/components/form-ui";
 import { loadCategoryLabels } from "@/lib/features";
 import { loadNoteThreads } from "@/lib/requestThread";
-import { canManageAdmin } from "@/lib/roles";
-import { getAuthState } from "@/lib/session";
+import { canAccessAdminDesk, getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 export default async function RequestsPage({
@@ -15,7 +14,7 @@ export default async function RequestsPage({
 }) {
   const { user, profile } = await getAuthState();
   if (!user) redirect("/login");
-  if (!canManageAdmin(profile.role, user)) redirect("/account/builder");
+  if (!(await canAccessAdminDesk())) redirect("/account/builder");
 
   const params = await searchParams;
   const kind = params.kind === "feedback" ? "feedback" : "request";

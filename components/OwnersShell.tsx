@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import { signOut } from "@/app/actions/auth";
 import { switchRole } from "@/app/actions/community-os";
@@ -253,25 +253,10 @@ export function OwnersShell({
   const pathname = usePathname();
   const router = useRouter();
   const canSwitch = isSuperAdmin || isAdmin || canEditBuilder;
-  const canViewAs = isSuperAdmin;
-  const [viewReady, setViewReady] = useState(false);
-  const [viewAs, setViewAs] = useState<"manage" | "resident">("manage");
-  const viewingResident = canViewAs && viewAs === "resident";
 
+  // Super admin never uses resident/community UI — only data + platform controls.
   useEffect(() => {
-    const saved = window.localStorage.getItem("uddipta-view");
-    if (saved === "resident") setViewAs("resident");
-    setViewReady(true);
-  }, []);
-
-  function chooseView(next: "manage" | "resident") {
-    setViewAs(next);
-    window.localStorage.setItem("uddipta-view", next);
-    router.push(next === "resident" ? "/feed" : "/account");
-  }
-
-  useEffect(() => {
-    if (!viewReady || !isSuperAdmin || viewAs === "resident") return;
+    if (!isSuperAdmin) return;
     const resident = [
       "feed",
       "announcements",
@@ -290,17 +275,16 @@ export function OwnersShell({
       "documents",
       "work",
       "requests",
+      "inbox",
+      "committee",
+      "gate",
     ].some((root) => pathname === `/${root}` || pathname.startsWith(`/${root}/`));
     if (pathname === "/" || resident) router.replace("/account");
-  }, [viewReady, isSuperAdmin, viewAs, pathname, router]);
+  }, [isSuperAdmin, pathname, router]);
 
-  useEffect(() => {
-    if (!viewReady || !canViewAs || viewAs !== "resident") return;
-    if (pathname.startsWith("/account")) router.replace("/feed");
-  }, [viewReady, canViewAs, viewAs, pathname, router]);
   const inAdmin = pathname.startsWith("/account");
   const adminHref = isSuperAdmin || isAdmin ? "/account" : "/account/builder";
-  const seeCommunity = showPrivateCommunity || viewingResident;
+  const seeCommunity = showPrivateCommunity && !isSuperAdmin;
   const ownersHome = role === "security" ? "/gate" : seeCommunity ? "/feed" : "/";
 
   const featureOn = (key: string) => !enabledFeatures || enabledFeatures.includes(key);
@@ -399,7 +383,7 @@ export function OwnersShell({
       icon: "form",
     });
   }
-  if (canGate && !viewingResident && featureOn("gate")) {
+  if (canGate && !isSuperAdmin && featureOn("gate")) {
     ownerNav.push({
       href: "/gate",
       label: "Gate",
@@ -416,7 +400,7 @@ export function OwnersShell({
       icon: "flat",
     });
   }
-  if (canCommittee && !viewingResident && featureOn("committee")) {
+  if (canCommittee && !isSuperAdmin && featureOn("committee")) {
     ownerNav.push({
       href: "/committee",
       label: "Committee",
@@ -426,6 +410,16 @@ export function OwnersShell({
   }
 
   const adminNav: NavItem[] = [];
+  // Super assigns society admin; society admin assigns facility/security/committee/staff/builder.
+  if (isSuperAdmin || isAdmin) {
+    adminNav.push({
+      href: "/account/roles",
+      label: "Roles",
+      short: "Roles",
+      match: (p) => p.startsWith("/account/roles"),
+      icon: "people",
+    });
+  }
   if (isSuperAdmin || isAdmin) {
     adminNav.push(
       {
@@ -438,14 +432,9 @@ export function OwnersShell({
       {
         href: "/account/owners",
         label: "Flats",
+        short: "Flats",
         match: (p) => p.startsWith("/account/owners"),
         icon: "flat",
-      },
-      {
-        href: "/account/roles",
-        label: "Roles",
-        match: (p) => p.startsWith("/account/roles"),
-        icon: "people",
       },
     );
   }
@@ -454,12 +443,14 @@ export function OwnersShell({
       {
         href: "/account/requests",
         label: "Requests",
+        short: "Reqs",
         match: (p) => p.startsWith("/account/requests"),
         icon: "bell",
       },
       {
         href: "/account/forms",
         label: "Forms",
+        short: "Forms",
         match: (p) => p.startsWith("/account/forms"),
         icon: "form",
       },
@@ -469,7 +460,7 @@ export function OwnersShell({
     adminNav.push({
       href: "/account/builder",
       label: "Building details",
-      short: "Details",
+      short: "Build",
       match: (p) => p.startsWith("/account/builder"),
       icon: "model",
     });
@@ -478,47 +469,56 @@ export function OwnersShell({
     adminNav.push({
       href: "/account/jobs",
       label: "Jobs",
+      short: "Jobs",
       match: (p) => p.startsWith("/account/jobs"),
       icon: "flat",
     });
   }
   if (office) {
+    adminNav.push({
+      href: "/account/categories",
+      label: "Categories",
+      short: "Types",
+      match: (p) => p.startsWith("/account/categories"),
+      icon: "form",
+    });
+    if (isSuperAdmin) {
+      adminNav.push(
+        {
+          href: "/account/features",
+          label: "Features",
+          short: "Apps",
+          match: (p) => p.startsWith("/account/features"),
+          icon: "model",
+        },
+        {
+          href: "/account/permissions",
+          label: "Permissions",
+          short: "Access",
+          match: (p) => p.startsWith("/account/permissions"),
+          icon: "admin",
+        },
+        {
+          href: "/account/audit",
+          label: "Activity record",
+          short: "Log",
+          match: (p) => p.startsWith("/account/audit"),
+          icon: "bell",
+        },
+      );
+    }
     adminNav.push(
-      {
-        href: "/account/features",
-        label: "Features",
-        match: (p) => p.startsWith("/account/features"),
-        icon: "model",
-      },
-      {
-        href: "/account/categories",
-        label: "Categories",
-        match: (p) => p.startsWith("/account/categories"),
-        icon: "form",
-      },
-      {
-        href: "/account/permissions",
-        label: "Permissions",
-        match: (p) => p.startsWith("/account/permissions"),
-        icon: "admin",
-      },
-      {
-        href: "/account/audit",
-        label: "Activity record",
-        short: "Record",
-        match: (p) => p.startsWith("/account/audit"),
-        icon: "bell",
-      },
       {
         href: "/account/reports",
         label: "Reports",
+        short: "Stats",
         match: (p) => p.startsWith("/account/reports"),
         icon: "feed",
       },
       {
         href: "/account/documents",
         label: "Home records",
-        short: "Records",
+        short: "Docs",
         match: (p) => p.startsWith("/account/documents"),
         icon: "form",
       },
@@ -527,6 +527,7 @@ export function OwnersShell({
             {
               href: "/account/parking",
               label: "Parking",
+              short: "Park",
               match: (p: string) => p.startsWith("/account/parking"),
               icon: "flat" as const,
             },
@@ -535,25 +536,16 @@ export function OwnersShell({
     );
   }
 
-  if (canViewAs && !viewingResident) {
-    for (const href of ["/gate", "/committee"]) {
-      const item = ownerNav.find((entry) => entry.href === href);
-      if (item && !adminNav.some((entry) => entry.href === href)) adminNav.push(item);
-    }
-    ownerNav.length = 0;
-  }
-  if (viewingResident) adminNav.length = 0;
+  if (isSuperAdmin) ownerNav.length = 0;
 
-  const brandHref = viewingResident ? "/feed" : canViewAs ? "/account" : ownersHome;
+  const brandHref = isSuperAdmin ? "/account" : ownersHome;
   const pick = (href: string) => ownerNav.find((item) => item.href === href);
   const notificationBadge =
     unreadNotifications > 0 && !pathname.startsWith("/inbox") ? unreadNotifications : 0;
 
   const mobileItems: NavItem[] = (
-    canViewAs
-      ? viewingResident
-        ? [pick("/"), pick("/feed"), pick("/community"), pick("/inbox"), pick("/forms")]
-        : adminNav
+    isSuperAdmin
+      ? adminNav
       : inAdmin
       ? [
           {
@@ -662,15 +654,6 @@ export function OwnersShell({
           pendingApproval={pendingApproval}
         />
 
-        {canViewAs ? (
-          <button
-            type="button"
-            onClick={() => chooseView(viewingResident ? "manage" : "resident")}
-            className="relative mb-4 flex min-h-11 w-full items-center justify-center rounded-xl bg-white/8 px-3 text-sm font-semibold text-[#f8fafc] ring-1 ring-white/15"
-          >
-            {viewingResident ? "Back to management" : "View as resident"}
-          </button>
-        ) : null}
         {heldRoles.length > 1 ? (
           <form action={switchRole} className="relative mb-4 px-1">
             <label className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#64748b] uppercase">
@@ -745,15 +728,6 @@ export function OwnersShell({
               <NotificationBell count={notificationBadge} tone="light" />
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
-              {canViewAs ? (
-                <button
-                  type="button"
-                  onClick={() => chooseView(viewingResident ? "manage" : "resident")}
-                  className="inline-flex min-h-12 items-center rounded-full px-3 text-sm font-semibold text-[#1e293b] ring-1 ring-[rgba(15,23,42,0.16)]"
-                >
-                  {viewingResident ? "Management" : "View as resident"}
-                </button>
-              ) : null}
               {heldRoles.length > 1 ? (
                 <form action={switchRole}>
                   <select
@@ -796,12 +770,12 @@ export function OwnersShell({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`relative flex h-12 w-[4.6rem] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-[10px] font-semibold ${
+                  className={`relative flex h-12 min-w-[3.75rem] max-w-[4.75rem] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-[10px] font-semibold leading-tight ${
                     active ? "bg-[#1e293b] text-[#f8fafc]" : "text-[#475569]"
                   }`}
                 >
                   <NavIcon name={item.icon} className="size-4" />
-                  <span className="max-w-full truncate">{item.short ?? item.label}</span>
+                  <span className="max-w-full truncate text-center">{item.short ?? item.label}</span>
                   {showBadge ? (
                     <span className="absolute top-1.5 right-[22%] size-2 rounded-full bg-[#059669]" />
                   ) : null}

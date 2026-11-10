@@ -65,7 +65,7 @@ export default async function GatePage({
   return (
     <section className="page-gutter max-w-5xl py-8 md:py-12">
       <p className="eyebrow">Gate</p>
-      <h1 className="mt-2 text-3xl font-semibold text-[#0f172a]">Gate desk</h1>
+      <h1 className="mt-2 text-3xl font-semibold text-[#0f172a]">Gate</h1>
       <p className="mt-2 text-[#475569]">
         {waiting} waiting · {inside} inside · {left} left recently
       </p>
@@ -111,10 +111,10 @@ export default async function GatePage({
       ) : null}
       {access === "manage" ? (
       <form action={walkInVisitor} className="slab mt-4 grid gap-3 p-4 md:grid-cols-4">
-        <input name="visitorName" required placeholder="Name" className="field-control" />
+        <input name="visitorName" required placeholder="Unplanned guest name" className="field-control" />
         <input name="flatNumber" required placeholder="Home, such as B804" className="field-control" />
-        <input name="purpose" placeholder="Courier, guest, staff" className="field-control" />
-        <button type="submit" className="btn-slate">Log at gate</button>
+        <input name="purpose" placeholder="Guest, delivery, cab, service" className="field-control" />
+        <button type="submit" className="btn-slate">Notify home</button>
       </form>
       ) : null}
       <div className="mt-6 grid gap-4 lg:grid-cols-2">

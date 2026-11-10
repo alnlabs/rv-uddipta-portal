@@ -1,14 +1,13 @@
 import { redirect } from "next/navigation";
 import { AdminHome } from "@/components/AdminHome";
 import type { AdminRegistrationRequest } from "@/components/ApprovalsList";
-import { canManageAdmin } from "@/lib/roles";
-import { getAuthState } from "@/lib/session";
+import { canAccessAdminDesk, getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 export default async function AccountApprovalsPage() {
   const { user, profile } = await getAuthState();
   if (!user) redirect("/login");
-  if (!canManageAdmin(profile.role, user)) redirect("/account/builder");
+  if (!(await canAccessAdminDesk())) redirect("/account/builder");
 
   const admin = createAdminClient();
   const requestColumns =

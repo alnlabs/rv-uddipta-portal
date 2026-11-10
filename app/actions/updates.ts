@@ -18,6 +18,7 @@ import { pushUsers } from "@/lib/push";
 import { visibleText } from "@/lib/richText";
 import { reachCommunity } from "@/lib/reach";
 import { canManageAdmin, ensureProfile, isCommunityRole } from "@/lib/roles";
+import { societyAdminUserIds } from "@/lib/societyAdmins";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 
@@ -510,15 +511,12 @@ export async function sendNote(
       body,
     });
 
-    const { data: admins } = await admin
-      .from("profiles")
-      .select("user_id")
-      .eq("role", "admin");
+    const adminIds = await societyAdminUserIds(admin);
     const title = kind === "request" ? "New request" : "New feedback";
-    const rows = (admins ?? [])
-      .filter((row) => row.user_id !== user.id)
-      .map((row) => ({
-        user_id: row.user_id as string,
+    const rows = adminIds
+      .filter((userId) => userId !== user.id)
+      .map((userId) => ({
+        user_id: userId,
         kind,
         title: flatNumber ? `${title} · ${flatNumber}` : title,
         body,
@@ -632,12 +630,12 @@ export async function answerNote(formData: FormData) {
   });
   if (error) throw new Error(error.message);
   await admin.from("member_notes").update({ status: "in_progress" }).eq("id", noteId);
-  const { data: admins } = await admin.from("profiles").select("user_id").eq("role", "admin");
+  const adminIds = await societyAdminUserIds(admin);
   const title = note.kind === "feedback" ? "Reply on feedback" : "Reply on a request";
-  const rows = (admins ?? [])
-    .filter((row) => row.user_id !== user.id)
-    .map((row) => ({
-      user_id: row.user_id as string,
+  const rows = adminIds
+    .filter((userId) => userId !== user.id)
+    .map((userId) => ({
+      user_id: userId,
       kind: "note_reply",
       title: note.flat_number ? `${title} · ${note.flat_number}` : title,
       body,

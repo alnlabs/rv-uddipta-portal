@@ -1,13 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { publishActivity } from "@/lib/activity";
-import { reachPerson } from "@/lib/reach";
-import { isSuperAdmin, isSuperAdminContact, SUPER_ADMIN_NO_FLAT } from "@/lib/admin";
+import {
+  approveRegistrationAs,
+  rejectRegistrationAs,
+  type ReviewResult,
+} from "@/lib/registrationReview";
 import { getAuthState, requireAdminUser } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { reachPerson } from "@/lib/reach";
 
-export type ActionResult = { ok: true } | { ok: false; error: string };
+export type ActionResult = ReviewResult;
 
 function fail(error: unknown): ActionResult {
   return {
@@ -50,137 +53,10 @@ async function notifyApprovedPerson(input: {
 export async function approveRegistration(requestId: number): Promise<ActionResult> {
   try {
     const adminUser = await requireAdminUser();
-    const admin = createAdminClient();
-
-    const { data: request, error: loadError } = await admin
-      .from("registration_requests")
-      .select("*")
-      .eq("id", requestId)
-      .single();
-    if (loadError || !request) throw new Error("Request not found");
-    if (request.status !== "pending") throw new Error("This request is no longer pending");
-    if (isSuperAdminContact(request.email, request.phone)) {
-      throw new Error(SUPER_ADMIN_NO_FLAT);
-    }
-    if (request.user_id) {
-      const { data: account } = await admin.auth.admin.getUserById(request.user_id);
-      if (account.user && isSuperAdmin(account.user)) {
-        throw new Error(SUPER_ADMIN_NO_FLAT);
-      }
-    }
-
-    const { data: inventory, error: inventoryError } = await admin
-      .from("flats")
-      .select("id, flat_number, user_id")
-      .eq("flat_number", request.flat_number)
-      .maybeSingle();
-    if (inventoryError) throw new Error(inventoryError.message);
-    if (!inventory) throw new Error(`Flat ${request.flat_number} is not in the brochure inventory`);
-    if (!request.phone) throw new Error("This person needs a phone number.");
-    if (!request.email) throw new Error("This person needs a verified email.");
-
-    const isFamily = request.request_kind === "family";
-    const isTenant = request.request_kind === "tenant";
-    if (isFamily) {
-      const { data: home } = await admin
-        .from("flats")
-        .select("owner_name, email, phone, user_id")
-        .eq("id", inventory.id)
-        .maybeSingle();
-      const hasOwner = Boolean(home?.user_id || (home?.owner_name && home?.email && home?.phone));
-      if (!hasOwner) {
-        throw new Error("This flat needs an owner before family can be approved.");
-      }
-    } else if (inventory.user_id && inventory.user_id !== request.user_id) {
-      throw new Error(`Flat ${request.flat_number} is already linked to another owner`);
-    }
-
-    if (!isFamily && !isTenant) {
-    const { error: upsertError } = await admin
-      .from("flats")
-      .update({
-        user_id: request.user_id,
-        owner_name: request.owner_name,
-        email: request.email || null,
-        phone: request.phone,
-        sale_status: "sold",
-        occupancy: "owner_stay",
-        tenant_name: null,
-        tenant_phone: null,
-        open_for_rent: false,
-        open_for_resale: false,
-      })
-      .eq("flat_number", request.flat_number);
-    if (upsertError) throw new Error(upsertError.message);
-    }
-
-    if (request.user_id) {
-      await admin.auth.admin.updateUserById(request.user_id, {
-        user_metadata: {
-          phone: request.phone,
-          flatNumber: request.flat_number,
-          ownerName: request.owner_name,
-          registrationStatus: "approved",
-        },
-      });
-      const { error: profileError } = await admin.from("profiles").upsert({
-        user_id: request.user_id,
-        role: isTenant ? "tenant" : isFamily ? "co_owner" : "owner",
-        flat_id: inventory.id,
-        display_name: request.owner_name,
-      });
-      if (profileError) throw new Error(profileError.message);
-    }
-
-    const { error: updateError } = await admin
-      .from("registration_requests")
-      .update({
-        status: "approved",
-        reviewed_at: new Date().toISOString(),
-        reviewed_by: adminUser.id,
-      })
-      .eq("id", requestId);
-    if (updateError) throw new Error(updateError.message);
-
-    if (request.user_id) {
-      await publishActivity({
-        actorUserId: adminUser.id,
-        flatId: inventory.id,
-        kind: "owner_joined",
-        title: `${request.owner_name} linked to ${request.flat_number}`,
-        visibility: "community",
-        href: "/community",
-        notify: "community",
-      });
-    }
-
-    if (request.user_id) {
-      await notifyApprovedPerson({
-        userId: request.user_id,
-        flatNumber: request.flat_number,
-        family: isFamily,
-        email: request.email,
-        phone: request.phone,
-      });
-    }
-
-    revalidatePath("/");
-    revalidatePath("/account");
-    revalidatePath("/register");
-    revalidatePath("/update");
-    revalidatePath("/feed");
-    revalidatePath("/members");
-    revalidatePath("/community");
-    revalidatePath("/notifications");
-    const { writeAudit } = await import("@/lib/audit");
-    await writeAudit({
-      actorUserId: adminUser.id,
-      actorName: adminUser.email,
-      action: "Approved a member",
-      subject: request.flat_number,
-      detail: request.owner_name,
-    });
-    return { ok: true };
+    return approveRegistrationAs(
+      { id: adminUser.id, email: adminUser.email },
+      requestId,
+    );
   } catch (error) {
     return fail(error);
   }
@@ -254,26 +130,11 @@ export async function rejectRegistration(
 ): Promise<ActionResult> {
   try {
     const adminUser = await requireAdminUser();
-    const trimmed = reason.trim();
-    if (trimmed.length < 3) {
-      throw new Error("Type a short reason before rejecting.");
-    }
-    const admin = createAdminClient();
-
-    const { error } = await admin
-      .from("registration_requests")
-      .update({
-        status: "rejected",
-        reject_reason: trimmed,
-        reviewed_at: new Date().toISOString(),
-        reviewed_by: adminUser.id,
-      })
-      .eq("id", requestId)
-      .eq("status", "pending");
-    if (error) throw new Error(error.message);
-
-    revalidatePath("/account");
-    return { ok: true };
+    return rejectRegistrationAs(
+      { id: adminUser.id, email: adminUser.email },
+      requestId,
+      reason,
+    );
   } catch (error) {
     return fail(error);
   }

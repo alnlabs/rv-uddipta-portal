@@ -23,15 +23,22 @@ export type AssignCandidate = {
 export function RoleAssignForm({
   candidates,
   defaultRole = "admin",
+  allowAdmin = true,
 }: {
   readonly candidates: AssignCandidate[]
   readonly defaultRole?: string
+  readonly allowAdmin?: boolean
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [formEpoch, setFormEpoch] = useState(0);
-  const [role, setRole] = useState(roleNeedsHome(defaultRole) ? "admin" : defaultRole);
+  const fallback = allowAdmin ? "admin" : "facility";
+  const [role, setRole] = useState(
+    roleNeedsHome(defaultRole) || (!allowAdmin && defaultRole === "admin")
+      ? fallback
+      : defaultRole,
+  );
   const [pending, startTransition] = useTransition();
 
   if (!candidates.length) {
@@ -87,7 +94,7 @@ export function RoleAssignForm({
       </FieldGrid>
 
       <div className="mt-4">
-        <RoleChoice kind="office" value={role} onChange={setRole} />
+        <RoleChoice kind="office" value={role} onChange={setRole} allowAdmin={allowAdmin} />
       </div>
 
       <FieldGrid className="mt-4">

@@ -6,15 +6,23 @@ export function RoleChoice({
   value,
   onChange,
   kind,
+  allowAdmin = true,
 }: {
   readonly value: string
   readonly onChange: (next: string) => void
   readonly kind: "office" | "home"
+  /** When false, society admin cannot pick the society-admin role. */
+  readonly allowAdmin?: boolean
 }) {
   const selected = ROLE_GUIDE.find((item) => item.value === value);
   const groups = ROLE_GROUPS.filter((group) =>
     kind === "home" ? group.title === "Lives in a home" : group.title !== "Lives in a home",
-  );
+  ).map((group) => ({
+    ...group,
+    roles: kind === "office" && !allowAdmin
+      ? group.roles.filter((role) => role !== "admin")
+      : group.roles,
+  })).filter((group) => group.roles.length > 0);
 
   return (
     <fieldset>

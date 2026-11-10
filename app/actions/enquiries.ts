@@ -238,23 +238,22 @@ export async function updateEnquiryField(formData: FormData): Promise<EnquirySta
   if (!id || !enquiryId || label.length < 2) {
     return { ok: false, message: "Give the question a label." };
   }
+  const read = readQuestion(
+    label,
+    formData.get("kind"),
+    formData.get("choices"),
+    formData.get("required") === "on",
+  );
+  if (!read.ok) return { ok: false, message: read.message };
+  const { kind, choices, required } = read.row;
   const admin = createAdminClient();
-  const { data: current } = await admin
-    .from("enquiry_fields")
-    .select("kind")
-    .eq("id", id)
-    .maybeSingle();
-  const choices =
-    current?.kind === "choice" ? parseChoices(String(formData.get("choices") || "")) : [];
-  if (current?.kind === "choice" && choices.length < 2) {
-    return { ok: false, message: "A choice question needs at least two options." };
-  }
   const { error } = await admin
     .from("enquiry_fields")
     .update({
       label,
-      required: formData.get("required") === "on",
-      ...(current?.kind === "choice" ? { choices } : {}),
+      kind,
+      required,
+      choices: kind === "choice" ? choices : [],
     })
     .eq("id", id);
   if (error) return { ok: false, message: "Could not save that question." };

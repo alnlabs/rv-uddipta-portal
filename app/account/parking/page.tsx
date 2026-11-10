@@ -3,8 +3,7 @@ import { addParkingBay, removeVehicle, setParkingBay } from "@/app/actions/commu
 import { DeskError, FeatureOff } from "@/components/FeatureOff";
 import { TextField } from "@/components/form-ui";
 import { resolveDeskAccess } from "@/lib/deskAccess";
-import { canManageAdmin } from "@/lib/roles";
-import { getAuthState } from "@/lib/session";
+import { canAccessAdminDesk, getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 type Bay = { id: number; label: string; kind: string; flat_id: number | null };
@@ -14,7 +13,7 @@ type Guest = { id: number; visitor_name: string; flat_number: string; bay_id: nu
 export default async function OfficeParkingPage() {
   const { user, profile } = await getAuthState();
   if (!user) redirect("/login");
-  if (!canManageAdmin(profile.role, user)) redirect("/");
+  if (!(await canAccessAdminDesk())) redirect("/");
   if ((await resolveDeskAccess(profile.role, user, "parking")) === "none") {
     return <FeatureOff label="Parking" />;
   }

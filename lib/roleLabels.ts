@@ -43,7 +43,7 @@ export const ROLE_GUIDE: {
   {
     value: "admin",
     label: "Admin",
-    help: "Approvals, owners, roles, and builder facts.",
+    help: "Approvals, flats, notices, and apartment team roles (facility, security, committee, staff, builder). Society admin is assigned by super admin.",
   },
   {
     value: "committee",

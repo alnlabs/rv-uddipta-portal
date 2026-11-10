@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const member = await readMobileMember(request);
   if (!isMember(member)) return member;
-  if (!canRunFacility(member.profile.role, member.user)) return mobileJson({ message: "Jobs are for the facility desk." }, 403);
+  if (!canRunFacility(member.profile.role, member.user)) return mobileJson({ message: "Jobs are for the facility manager." }, 403);
   const access = await desk(member, "maintenance");
   if (access === "none") return mobileJson({ message: "Jobs are turned off." }, 403);
 
@@ -34,6 +34,7 @@ export async function GET(request: Request) {
       body: job.body || "",
       status: job.status === "in_progress" ? "In progress" : job.status === "done" ? "Done" : "Open",
       state: job.status,
+      assigneeId: job.assignee_user_id || null,
       who: job.assignee_user_id ? names.get(job.assignee_user_id) || "Assigned" : "Unassigned",
     })),
   });
@@ -42,7 +43,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const member = await readMobileMember(request);
   if (!isMember(member)) return member;
-  if (!canRunFacility(member.profile.role, member.user)) return mobileJson({ message: "Jobs are for the facility desk." }, 403);
+  if (!canRunFacility(member.profile.role, member.user)) return mobileJson({ message: "Jobs are for the facility manager." }, 403);
   const access = await desk(member, "maintenance");
   if (access !== "manage") return mobileJson({ message: "You can see the jobs. You cannot change them." }, 403);
 
@@ -50,6 +51,14 @@ export async function POST(request: Request) {
   const admin = createAdminClient();
   const personId = String(body?.personId || "");
   if (personId) {
+    const { data: person } = await admin
+      .from("profiles")
+      .select("user_id, role")
+      .eq("user_id", personId)
+      .maybeSingle();
+    if (!person || (person.role !== "staff" && person.role !== "facility")) {
+      return mobileJson({ message: "Choose someone from facility or service staff." }, 400);
+    }
     const onDuty = Boolean(body?.onDuty);
     const { error } = await admin.from("profiles").update({ on_duty: onDuty }).eq("user_id", personId);
     if (error) return mobileJson({ message: error.message }, 500);
@@ -61,7 +70,47 @@ export async function POST(request: Request) {
     });
     revalidatePath("/account/jobs");
     revalidatePath("/work");
-    return mobileJson({ ok: true });
+    return mobileJson({ ok: true, message: onDuty ? "On duty." : "Off duty." });
+  }
+
+  const jobId = Number(body?.jobId || 0);
+  if (jobId) {
+    const assignee = String(body?.assignee || "");
+    const status = String(body?.status || "");
+    const patch: { assignee_user_id?: string | null; status?: string } = {};
+    if (assignee) {
+      const { data: person } = await admin
+        .from("profiles")
+        .select("user_id, role")
+        .eq("user_id", assignee)
+        .maybeSingle();
+      if (!person || (person.role !== "staff" && person.role !== "facility")) {
+        return mobileJson({ message: "Choose someone from facility or service staff." }, 400);
+      }
+      patch.assignee_user_id = assignee;
+    }
+    if (["open", "in_progress", "done"].includes(status)) patch.status = status;
+    if (!Object.keys(patch).length) return mobileJson({ message: "Choose an assignee or status." }, 400);
+    const { data: existing } = await admin.from("work_orders").select("id").eq("id", jobId).maybeSingle();
+    if (!existing) return mobileJson({ message: "That job is gone." }, 404);
+    const { error } = await admin.from("work_orders").update(patch).eq("id", jobId);
+    if (error) return mobileJson({ message: error.message }, 500);
+    if (status === "done") {
+      const { data: linked } = await admin.from("work_orders").select("source_note_id").eq("id", jobId).maybeSingle();
+      if (linked?.source_note_id) {
+        await admin.from("member_notes").update({ status: "done" }).eq("id", linked.source_note_id);
+      }
+    }
+    await writeAudit({
+      actorUserId: member.user.id,
+      actorName: member.name,
+      action: "Updated a job",
+      subject: String(jobId),
+      detail: status || assignee,
+    });
+    revalidatePath("/account/jobs");
+    revalidatePath("/work");
+    return mobileJson({ ok: true, message: "Job updated." });
   }
 
   const title = String(body?.title || "").trim();
@@ -79,5 +128,5 @@ export async function POST(request: Request) {
   });
   revalidatePath("/account/jobs");
   revalidatePath("/work");
-  return mobileJson({ ok: true });
+  return mobileJson({ ok: true, message: "Job opened." });
 }

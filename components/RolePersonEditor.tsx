@@ -26,22 +26,23 @@ export type RolePerson = {
 export function RolePersonEditor({
   person,
   kind,
+  allowAdmin = true,
 }: {
   readonly person: RolePerson
   readonly kind: "office" | "home"
+  readonly allowAdmin?: boolean
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [role, setRole] = useState(
-    kind === "home"
-      ? roleNeedsHome(person.role)
-        ? person.role
-        : "owner"
-      : roleNeedsHome(person.role)
-        ? "visitor"
-        : person.role,
-  );
+  const [role, setRole] = useState(() => {
+    if (kind === "home") {
+      return roleNeedsHome(person.role) ? person.role : "owner";
+    }
+    if (roleNeedsHome(person.role)) return "visitor";
+    if (!allowAdmin && person.role === "admin") return "facility";
+    return person.role;
+  });
   const [pending, startTransition] = useTransition();
   const needsHome = kind === "home" && roleNeedsHome(role);
 
@@ -84,7 +85,7 @@ export function RolePersonEditor({
         }}
       >
         <input type="hidden" name="userId" value={person.userId} />
-        <RoleChoice kind={kind} value={role} onChange={setRole} />
+        <RoleChoice kind={kind} value={role} onChange={setRole} allowAdmin={allowAdmin} />
         <FieldGrid className="mt-4">
           {needsHome ? (
             <TextField
