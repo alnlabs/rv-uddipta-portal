@@ -554,6 +554,7 @@ declare
   post public.member_posts%rowtype;
   feature text;
   object_name text;
+  photo_url text := attach_my_post_photo.image_url;
 begin
   select * into post from public.member_posts where id = target;
   if not found then
@@ -562,7 +563,7 @@ begin
   if post.author_user_id <> auth.uid() then
     raise exception 'You can add a photo to your own post.';
   end if;
-  if post.kind not in ('sale', 'lost', 'event', 'recommendation', 'wanted', 'giveaway', 'parking', 'celebration', 'emergency') then
+  if post.kind not in ('sale', 'lost', 'event', 'recommendation', 'wanted', 'giveaway', 'parking', 'celebration', 'emergency', 'alert') then
     raise exception 'This type does not take a photo.';
   end if;
   feature := case
@@ -570,7 +571,7 @@ begin
     else 'feed'
   end;
   perform public.phone_require(feature, 'manage');
-  object_name := substring(image_url from '/post-photos/(posts/[0-9]+/[0-9]+\.(jpg|jpeg|png|webp))$');
+  object_name := substring(photo_url from '/post-photos/(posts/[0-9]+/[0-9]+\.(jpg|jpeg|png|webp))$');
   if object_name is null or object_name not like 'posts/' || target::text || '/%' then
     raise exception 'That photo is not saved.';
   end if;
@@ -580,7 +581,9 @@ begin
   ) then
     raise exception 'That photo is not saved.';
   end if;
-  update public.member_posts set image_url = image_url where id = target;
+  update public.member_posts
+  set image_url = photo_url
+  where id = target;
 end;
 $$;
 

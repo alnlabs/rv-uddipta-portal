@@ -172,7 +172,7 @@ function SidebarAccountCard({
       href="/register"
       className="relative mb-5 rounded-2xl bg-[rgba(5,150,105,0.14)] px-3.5 py-3.5 text-sm font-semibold text-[#f8fafc] ring-1 ring-[rgba(5,150,105,0.22)]"
     >
-      Link your flat →
+      Request access →
     </Link>
   );
 }
@@ -289,7 +289,7 @@ export function OwnersShell({
 
   const featureOn = (key: string) => !enabledFeatures || enabledFeatures.includes(key);
   const office = isSuperAdmin || isAdmin;
-  const canGate = office || role === "security";
+  const canGate = role === "security";
   const canFacility = office || role === "facility";
   const canStaff = office || canFacility || role === "staff";
   const canCommittee = office || role === "committee";

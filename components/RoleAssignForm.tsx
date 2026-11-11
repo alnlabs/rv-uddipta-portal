@@ -44,7 +44,7 @@ export function RoleAssignForm({
   if (!candidates.length) {
     return (
       <p className="mt-5 text-sm text-[#475569]">
-        No one else has signed in yet. They need a Google sign-in before you can give them an office role.
+        No one else has signed in yet. Use Create staff above, or wait until they sign in.
       </p>
     );
   }
@@ -72,9 +72,9 @@ export function RoleAssignForm({
       }}
     >
       <div className="mb-4 border-b border-[rgba(15,23,42,0.08)] pb-3">
-        <h2 className="text-xl font-semibold tracking-tight">Give an office role</h2>
+        <h2 className="text-xl font-semibold tracking-tight">Give a society role</h2>
         <p className="mt-1 text-sm text-[#475569]">
-          Choose someone who has signed in. Their home stays with them. This sets the office role they use.
+          Choose someone who has signed in. Their home stays with them. This sets the society role they use.
         </p>
       </div>
 
@@ -119,7 +119,7 @@ export function RoleAssignForm({
       ) : null}
 
       <Button disabled={pending} className="mt-4 w-full sm:w-auto">
-        {pending ? "Saving…" : "Save office role"}
+        {pending ? "Saving…" : "Save society role"}
       </Button>
     </Form>
   );

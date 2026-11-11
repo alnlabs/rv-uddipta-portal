@@ -11,7 +11,7 @@ export default async function AccountApprovalsPage() {
 
   const admin = createAdminClient();
   const requestColumns =
-    "id, flat_number, floor, type, owner_name, email, phone, status, reject_reason, request_kind";
+    "id, flat_number, floor, type, owner_name, email, phone, status, reject_reason, request_kind, intent_path, why_note";
   const requestsWithEmail = await admin
     .from("registration_requests")
     .select(requestColumns)
@@ -22,7 +22,7 @@ export default async function AccountApprovalsPage() {
       ? await admin
           .from("registration_requests")
           .select(
-            "id, flat_number, floor, type, owner_name, email, phone, status, reject_reason",
+            "id, flat_number, floor, type, owner_name, email, phone, status, reject_reason, request_kind",
           )
           .order("created_at", { ascending: false })
       : requestsWithEmail;

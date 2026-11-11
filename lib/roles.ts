@@ -60,8 +60,8 @@ export function isOfficeRole(role: AppRole | null | undefined) {
   return Boolean(role && OFFICE_ROLES.includes(role) && role !== "visitor");
 }
 
-export function canRunGate(role: AppRole | null | undefined, user: User | null) {
-  return role === "security" || canManageAdmin(role, user);
+export function canRunGate(role: AppRole | null | undefined, _user: User | null) {
+  return role === "security";
 }
 
 export function canRunFacility(role: AppRole | null | undefined, user: User | null) {

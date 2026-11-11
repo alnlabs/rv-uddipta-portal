@@ -69,7 +69,7 @@ export const ROLE_GUIDE: {
 
 export const ROLE_GROUPS: { title: string; roles: RoleValue[] }[] = [
   { title: "Lives in a home", roles: ["owner", "co_owner", "tenant"] },
-  { title: "Works for the community", roles: ["admin", "builder", "committee", "facility", "staff", "security"] },
+  { title: "Society roles", roles: ["admin", "builder", "committee", "facility", "staff", "security"] },
   { title: "Signed in only", roles: ["visitor"] },
 ];
 

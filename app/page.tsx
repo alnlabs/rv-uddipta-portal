@@ -19,6 +19,24 @@ export default async function Page() {
   if (!user) return <PublicGate />;
   if (isSuperAdmin(user)) redirect("/account");
   if (profile.role === "security") redirect("/gate");
+
+  if (!isCommunityRole(profile.role)) {
+    const { data: joinRequest } = await supabase
+      .from("registration_requests")
+      .select("status")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const browsing = String(user.user_metadata?.joinIntent || "") === "browse";
+    if (joinRequest?.status === "pending" || browsing) {
+      redirect("/register");
+    }
+    if (joinRequest?.status !== "approved") {
+      redirect("/register");
+    }
+  }
+
   const board = await loadBoardPayload(user, supabase, profile.role);
   const community = isCommunityRole(profile.role);
 

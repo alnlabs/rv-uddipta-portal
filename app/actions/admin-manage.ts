@@ -8,6 +8,7 @@ import { normalizeEmail } from "@/lib/email";
 import { normalizeSaleFields } from "@/lib/flatDisplay";
 import { normalizePhone } from "@/lib/phone";
 import { applyPersonAccess, assertSocietyPerson } from "@/lib/assignAccess";
+import { provisionOfficeUser } from "@/lib/provisionOfficeUser";
 import type { AppRole } from "@/lib/roles";
 import { requireAdminUser, requireBuilderEditor, requireSuperAdmin } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
@@ -329,6 +330,29 @@ export async function adminAssignRole(
     revalidateOwnerSurfaces();
     revalidatePath("/account/roles");
     return { ok: true };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+/** Create staff with phone + PIN. Email is optional contact only. */
+export async function adminCreateOfficeUser(
+  formData: FormData,
+): Promise<ActionResult & { message?: string }> {
+  try {
+    const actor = await requireAdminUser();
+    const admin = createAdminClient();
+    const result = await provisionOfficeUser(admin, {
+      actor,
+      phone: String(formData.get("phone") || ""),
+      pin: String(formData.get("pin") || ""),
+      email: String(formData.get("email") || ""),
+      role: String(formData.get("role") || ""),
+      displayName: String(formData.get("displayName") || ""),
+    });
+    revalidateOwnerSurfaces();
+    revalidatePath("/account/roles");
+    return { ok: true, message: result.message };
   } catch (error) {
     return fail(error);
   }

@@ -4,6 +4,15 @@ import { revalidatePath } from "next/cache";
 import { publishActivity } from "@/lib/activity";
 import { writeAudit } from "@/lib/audit";
 import { isSuperAdmin, isSuperAdminContact, SUPER_ADMIN_NO_FLAT } from "@/lib/admin";
+import {
+  isHomeJoinKind,
+  isJoinKind,
+  isWorkJoinKind,
+  joinKindLabel,
+  pathForJoinKind,
+  roleForJoinKind,
+  type JoinKind,
+} from "@/lib/join";
 import { reachPerson } from "@/lib/reach";
 import { createAdminClient } from "@/utils/supabase/admin";
 
@@ -20,8 +29,9 @@ type Reviewer = { id: string; email?: string | null; name?: string | null };
 
 async function notifyApprovedPerson(input: {
   userId: string
-  flatNumber: string
-  family: boolean
+  title: string
+  body: string
+  href: string
   email?: string | null
   phone?: string | null
 }) {
@@ -29,19 +39,15 @@ async function notifyApprovedPerson(input: {
   const { error } = await admin.from("notifications").insert({
     user_id: input.userId,
     kind: "registration_approved",
-    title: input.family
-      ? `You're approved as family on ${input.flatNumber}`
-      : `You're approved for ${input.flatNumber}`,
-    body: "Your home is open. The portal will refresh.",
-    href: "/feed",
+    title: input.title,
+    body: input.body,
+    href: input.href,
   });
   if (error) console.warn("approval notice failed", error.message);
   const site = process.env.NEXT_PUBLIC_SITE_URL || "https://uddipta.vercel.app";
   await reachPerson({
-    title: input.family
-      ? `You're approved as family on ${input.flatNumber}`
-      : `You're approved for ${input.flatNumber}`,
-    body: `Your home is open. Sign in at ${site}/feed`,
+    title: input.title,
+    body: `${input.body} Sign in at ${site}${input.href}`,
     email: input.email,
     phone: input.phone,
   }).catch((error: unknown) => {
@@ -58,6 +64,8 @@ function revalidateJoinPaths() {
   revalidatePath("/members");
   revalidatePath("/community");
   revalidatePath("/notifications");
+  revalidatePath("/gate");
+  revalidatePath("/work");
 }
 
 export async function approveRegistrationAs(
@@ -83,6 +91,77 @@ export async function approveRegistrationAs(
       }
     }
 
+    if (!request.phone) throw new Error("This person needs a phone number.");
+    if (!request.email) throw new Error("This person needs a verified email.");
+
+    const rawKind = String(request.request_kind || "owner");
+    if (!isJoinKind(rawKind)) throw new Error("Unknown request kind.");
+    const kind: JoinKind = rawKind;
+    const path =
+      request.intent_path === "work" || request.intent_path === "home"
+        ? request.intent_path
+        : pathForJoinKind(kind);
+    const nextRole = roleForJoinKind(kind);
+
+    if (isWorkJoinKind(kind) || path === "work") {
+      if (request.user_id) {
+        await admin.auth.admin.updateUserById(request.user_id, {
+          user_metadata: {
+            phone: request.phone,
+            ownerName: request.owner_name,
+            registrationStatus: "approved",
+            joinIntent: null,
+          },
+        });
+        const { error: profileError } = await admin.from("profiles").upsert({
+          user_id: request.user_id,
+          role: nextRole,
+          flat_id: null,
+          display_name: request.owner_name,
+        });
+        if (profileError) throw new Error(profileError.message);
+        await admin.from("person_roles").upsert(
+          { user_id: request.user_id, role: nextRole, flat_id: null },
+          { onConflict: "user_id,role" },
+        );
+        await admin.from("flats").update({ user_id: null }).eq("user_id", request.user_id);
+      }
+
+      const { error: updateError } = await admin
+        .from("registration_requests")
+        .update({
+          status: "approved",
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: reviewer.id,
+        })
+        .eq("id", requestId);
+      if (updateError) throw new Error(updateError.message);
+
+      if (request.user_id) {
+        await notifyApprovedPerson({
+          userId: request.user_id,
+          title: `You're approved as ${joinKindLabel(kind)}`,
+          body: "Your work access is open.",
+          href: nextRole === "security" ? "/gate" : nextRole === "staff" || nextRole === "facility" ? "/work" : "/feed",
+          email: request.email,
+          phone: request.phone,
+        });
+      }
+
+      revalidateJoinPaths();
+      await writeAudit({
+        actorUserId: reviewer.id,
+        actorName: reviewer.name || reviewer.email,
+        action: "Approved a work request",
+        subject: joinKindLabel(kind),
+        detail: request.owner_name,
+      });
+      return { ok: true };
+    }
+
+    if (!isHomeJoinKind(kind)) throw new Error("Unknown home request kind.");
+    if (!request.flat_number) throw new Error("This home request needs a flat number.");
+
     const { data: inventory, error: inventoryError } = await admin
       .from("flats")
       .select("id, flat_number, user_id")
@@ -90,11 +169,9 @@ export async function approveRegistrationAs(
       .maybeSingle();
     if (inventoryError) throw new Error(inventoryError.message);
     if (!inventory) throw new Error(`Flat ${request.flat_number} is not in the brochure inventory`);
-    if (!request.phone) throw new Error("This person needs a phone number.");
-    if (!request.email) throw new Error("This person needs a verified email.");
 
-    const isFamily = request.request_kind === "family";
-    const isTenant = request.request_kind === "tenant";
+    const isFamily = kind === "family";
+    const isTenant = kind === "tenant";
     if (isFamily) {
       const { data: home } = await admin
         .from("flats")
@@ -135,15 +212,20 @@ export async function approveRegistrationAs(
           flatNumber: request.flat_number,
           ownerName: request.owner_name,
           registrationStatus: "approved",
+          joinIntent: null,
         },
       });
       const { error: profileError } = await admin.from("profiles").upsert({
         user_id: request.user_id,
-        role: isTenant ? "tenant" : isFamily ? "co_owner" : "owner",
+        role: nextRole,
         flat_id: inventory.id,
         display_name: request.owner_name,
       });
       if (profileError) throw new Error(profileError.message);
+      await admin.from("person_roles").upsert(
+        { user_id: request.user_id, role: nextRole, flat_id: inventory.id },
+        { onConflict: "user_id,role" },
+      );
     }
 
     const { error: updateError } = await admin
@@ -168,8 +250,11 @@ export async function approveRegistrationAs(
       });
       await notifyApprovedPerson({
         userId: request.user_id,
-        flatNumber: request.flat_number,
-        family: isFamily,
+        title: isFamily
+          ? `You're approved as family on ${request.flat_number}`
+          : `You're approved for ${request.flat_number}`,
+        body: "Your home is open.",
+        href: "/feed",
         email: request.email,
         phone: request.phone,
       });

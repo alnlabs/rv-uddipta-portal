@@ -77,7 +77,7 @@ export function HomeAssignForm({
         {home ? `Who can sign in at ${home}` : "Who can sign in for a home"}
       </h2>
       <p className="mt-1 text-sm text-[#475569]">
-        Owner, family, or tenant. Office roles stay on the Roles screen.
+        Owner, family, or tenant. Society roles stay on the Roles screen.
       </p>
 
       <FieldGrid key={formEpoch} className="mt-4">

@@ -20,8 +20,9 @@ const COMMUNITY = new Set([
 ]);
 
 export function fallbackDeskAccess(role: string, key: string): DeskAccess {
-  if (role === "admin") return "manage";
+  // Gate is security-only — society admin does not run the desk.
   if (key === "gate") return role === "security" ? "manage" : "none";
+  if (role === "admin") return "manage";
   if (key === "maintenance") return role === "facility" || role === "staff" ? "manage" : "none";
   if (key === "committee") return role === "committee" ? "manage" : "none";
   if (!COMMUNITY.has(role) && !RESIDENTS.has(role)) return "none";
@@ -57,6 +58,8 @@ export async function resolveDeskAccess(
 ): Promise<DeskAccess> {
   const enabled = await loadEnabledFeatures();
   if (!enabled.includes(key)) return "none";
+  // Gate stays with security even for super / permission overrides.
+  if (key === "gate") return role === "security" ? "manage" : "none";
   if (user && isSuperAdmin(user)) return "manage";
   const grants = await grantsFor(role);
   const saved = grants.get(key);
@@ -66,9 +69,12 @@ export async function resolveDeskAccess(
 
 export async function visibleDeskKeys(role: string, user: User | null) {
   const enabled = await loadEnabledFeatures();
-  if (user && isSuperAdmin(user)) return enabled;
+  if (user && isSuperAdmin(user)) {
+    return enabled.filter((key) => key !== "gate");
+  }
   const grants = await grantsFor(role);
   return enabled.filter((key) => {
+    if (key === "gate") return role === "security";
     const saved = grants.get(key);
     const access = saved === "none" || saved === "view" || saved === "manage"
       ? saved

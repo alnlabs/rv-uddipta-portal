@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { RoleAssignForm } from "@/components/RoleAssignForm";
+import { RoleCreateOfficeForm } from "@/components/RoleCreateOfficeForm";
 import { RolePersonEditor } from "@/components/RolePersonEditor";
 import { ROLE_GUIDE, accessSummary, roleLabel, roleNeedsHome } from "@/lib/roleLabels";
 import { isSuperAdmin } from "@/lib/admin";
@@ -56,8 +57,8 @@ export default async function AdminRolesPage({
       <h1 className="text-3xl font-semibold text-[#0f172a]">Roles</h1>
       <p className="mt-2 max-w-2xl text-[#475569]">
         {superAdmin
-          ? "Assign society admin and every office role. Home membership stays on Flats."
-          : "Assign facility, security, committee, staff, or builder. Society admin is set only by the super admin."}
+          ? "Create staff with phone + PIN, or assign society admin and every society role. Home membership stays on Flats."
+          : "Create staff with phone + PIN, or assign facility, security, committee, staff, or builder. Society admin is set only by the super admin."}
       </p>
 
       <ul className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -77,17 +78,23 @@ export default async function AdminRolesPage({
           </Link>
         </div>
       ) : (
-        <RoleAssignForm
-          allowAdmin={superAdmin}
-          defaultRole={superAdmin ? "admin" : "facility"}
-          candidates={accounts
-            .filter((person) => !person.locked && person.userId !== user.id)
-            .map((person) => ({
-              userId: person.userId,
-              label: `${person.displayName || person.email || "Signed-in person"} · ${roleLabel(person.role)}`,
-              flatNumber: person.flatNumber,
-            }))}
-        />
+        <>
+          <RoleCreateOfficeForm
+            allowAdmin={superAdmin}
+            defaultRole={superAdmin ? "admin" : "security"}
+          />
+          <RoleAssignForm
+            allowAdmin={superAdmin}
+            defaultRole={superAdmin ? "admin" : "facility"}
+            candidates={accounts
+              .filter((person) => !person.locked && person.userId !== user.id)
+              .map((person) => ({
+                userId: person.userId,
+                label: `${person.displayName || person.email || "Signed-in person"} · ${roleLabel(person.role)}`,
+                flatNumber: person.flatNumber,
+              }))}
+          />
+        </>
       )}
 
       <form className="mt-8 flex gap-2" action="/account/roles">

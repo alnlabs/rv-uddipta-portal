@@ -63,7 +63,7 @@ export async function POST(request: Request) {
 
   if (!userId) return mobileJson({ message: "Choose a person." }, 400);
   if (!OFFICE_ROLES.includes(role as RoleValue)) {
-    return mobileJson({ message: "Pick an office role (admin, facility, security, and so on)." }, 400);
+    return mobileJson({ message: "Pick a society role (admin, facility, security, and so on)." }, 400);
   }
 
   const admin = createAdminClient();
