@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createVisitorPass, decideVisitorPass } from "@/app/actions/community-os";
 import { DeskError, FeatureOff } from "@/components/FeatureOff";
 import { DateField } from "@/components/form-ui";
+import { PassShare } from "@/components/PassShare";
 import { resolveDeskAccess } from "@/lib/deskAccess";
 import { isCommunityRole } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
@@ -30,7 +31,7 @@ export default async function VisitorsPage() {
       <p className="eyebrow">Visitors</p>
       <h1 className="mt-2 text-3xl font-semibold text-[#0f172a]">Visitor passes</h1>
       <p className="mt-2 text-[#475569]">
-        Creates a QR pass. The visitor opens the link on their phone at the gate. They do not get an account.
+        Creates a visitor pass. Share the text link — the guest opens it to show a QR at the gate. They do not get an account.
       </p>
       {access === "manage" ? (
       <form action={createVisitorPass} className="slab mt-6 grid gap-3 p-4">
@@ -68,6 +69,15 @@ export default async function VisitorsPage() {
             <p className="mt-2 text-sm text-[#0f172a]">
               Pass <a className="font-semibold underline" href={`/pass/${pass.code}`}>{pass.code}</a>
             </p>
+            {!["refused", "cancelled", "left"].includes(String(pass.status)) ? (
+              <PassShare
+                code={String(pass.code)}
+                visitorName={String(pass.visitor_name)}
+                home={String(pass.flat_number || "")}
+                date={String(pass.visit_on || "")}
+                phone={pass.visitor_phone}
+              />
+            ) : null}
             {pass.status === "pending_approval" && pass.host_user_id === user.id ? (
               <div className="mt-3 flex gap-2">
                 <form action={decideVisitorPass}>
