@@ -60,7 +60,12 @@ export function RoleChoice({
           </div>
         ))}
       </div>
-      {selected ? <p className="mt-3 text-sm leading-relaxed text-[#475569]">{selected.help}</p> : null}
+      {selected ? (
+        <p className="mt-2 text-xs leading-snug text-[#64748b]">
+          <span className="font-semibold text-[#475569]">{selected.label}: </span>
+          {selected.help}
+        </p>
+      ) : null}
     </fieldset>
   );
 }

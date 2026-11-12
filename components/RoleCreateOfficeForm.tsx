@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { adminCreateOfficeUser } from "@/app/actions/admin-manage";
+import { PeopleRolesHelp } from "@/components/PeopleRolesHelp";
 import { RoleChoice } from "@/components/RoleChoice";
 import {
   Button,
@@ -54,7 +55,10 @@ export function RoleCreateOfficeForm({
       }}
     >
       <div className="mb-4 border-b border-[rgba(15,23,42,0.08)] pb-3">
-        <h2 className="text-xl font-semibold tracking-tight">Create staff</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-xl font-semibold tracking-tight">Create staff</h2>
+          <PeopleRolesHelp />
+        </div>
         <p className="mt-1 text-sm text-[#475569]">
           Phone + PIN for Security, Facility, Staff, and other society roles. Email is optional. OTP can replace PIN later.
         </p>

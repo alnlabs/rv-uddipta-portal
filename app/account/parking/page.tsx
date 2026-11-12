@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { setBaySticker } from "@/app/actions/business-pack";
 import { addParkingBay, removeVehicle, setParkingBay } from "@/app/actions/community-os";
 import { DeskError, FeatureOff } from "@/components/FeatureOff";
 import { TextField } from "@/components/form-ui";
@@ -6,7 +7,7 @@ import { resolveDeskAccess } from "@/lib/deskAccess";
 import { canAccessAdminDesk, getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
 
-type Bay = { id: number; label: string; kind: string; flat_id: number | null };
+type Bay = { id: number; label: string; kind: string; flat_id: number | null; sticker: string | null };
 type Vehicle = { id: number; plate: string; label: string | null; flat_id: number };
 type Guest = { id: number; visitor_name: string; flat_number: string; bay_id: number | null };
 
@@ -20,7 +21,7 @@ export default async function OfficeParkingPage() {
 
   const admin = createAdminClient();
   const [baysResult, vehiclesResult, insideResult, flatsResult] = await Promise.all([
-    admin.from("parking_bays").select("id, label, kind, flat_id").order("label"),
+    admin.from("parking_bays").select("id, label, kind, flat_id, sticker").order("label"),
     admin.from("vehicles").select("id, plate, label, flat_id").order("plate"),
     admin.from("visitor_passes").select("id, visitor_name, flat_number, bay_id").eq("status", "inside"),
     admin.from("flats").select("id, flat_number"),
@@ -39,7 +40,7 @@ export default async function OfficeParkingPage() {
     <section>
       <h1 className="text-3xl font-semibold text-[#0f172a]">Parking</h1>
       <p className="mt-2 max-w-3xl text-[#475569]">
-        Give a bay to a home, or keep it for visitors. A visitor who is inside stays in that bay until the gate frees it.
+        Give a bay to a home, or keep it for visitors. Add a sticker code for the gate. A visitor who is inside stays in that bay until the gate frees it.
       </p>
 
       <form action={addParkingBay} className="field-panel mt-6 grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
@@ -111,6 +112,7 @@ function BayCard({
         <p className="text-lg font-semibold text-[#0f172a]">{bay.label}</p>
         <p className="text-sm text-[#475569]">
           {home ? `${home}'s bay` : "Visitor bay"}
+          {bay.sticker ? ` · sticker ${bay.sticker}` : ""}
           {guest ? ` · ${guest.visitor_name} for ${guest.flat_number} is inside` : home ? "" : " · Free"}
         </p>
       </div>
@@ -127,6 +129,17 @@ function BayCard({
           <button type="submit" className="btn-slate">Save</button>
         </form>
       )}
+      <form action={setBaySticker} className="flex flex-wrap items-end gap-2">
+        <input type="hidden" name="bayId" value={bay.id} />
+        <TextField
+          label="Sticker"
+          name="sticker"
+          defaultValue={bay.sticker || ""}
+          hint="Gate sticker or tag code."
+          className="min-w-[10rem] flex-1"
+        />
+        <button type="submit" className="btn-line">Save sticker</button>
+      </form>
       <div className="flex flex-wrap gap-2">
         {home && !guest ? (
           <form action={setParkingBay}>

@@ -17,8 +17,14 @@ export const FEATURE_CATALOG = [
   { key: "building", group: "Building", label: "Building", summary: "Floors, plans, and the 3D view." },
   { key: "amenities", group: "Services", label: "Amenities", summary: "Book a shared space." },
   { key: "maintenance", group: "Services", label: "Maintenance", summary: "Jobs for the team." },
+  { key: "billing", group: "Services", label: "Dues and billing", summary: "Society dues, invoices, and office ledger (no online payment)." },
   { key: "committee", group: "Community", label: "Committee", summary: "Decisions for the committee." },
   { key: "documents", group: "Home", label: "Home records", summary: "Possession letter, verification, and where each paper is kept." },
+  { key: "workforce", group: "Visitors", label: "Helpers and vendors", summary: "Domestic help, vendors, and cab passes." },
+  { key: "ops", group: "Building", label: "Building ops", summary: "Outages, tankers, and building status logs." },
+  { key: "assets", group: "Building", label: "Assets and AMC", summary: "Lifts, pumps, fire systems and contracts." },
+  { key: "circulars", group: "Community", label: "Circulars", summary: "Official circulars with read acknowledgement." },
+  { key: "security_ops", group: "Visitors", label: "Security ops", summary: "Blacklist, material exit, and incidents." },
 ] as const;
 
 export type FeatureKey = (typeof FEATURE_CATALOG)[number]["key"];

@@ -156,12 +156,7 @@ export async function createVisitorPass(formData: FormData) {
     .select("flat_number")
     .eq("id", profile.flatId)
     .maybeSingle();
-  const { data: settings } = await admin
-    .from("project_info")
-    .select("host_approval")
-    .eq("id", 1)
-    .maybeSingle();
-  const status = settings?.host_approval ? "pending_approval" : "expected";
+  // Host-created invites are already allowed. Gate walk-ins still ask the home.
   const { error } = await admin.from("visitor_passes").insert({
     code: code(),
     flat_id: profile.flatId,
@@ -171,7 +166,8 @@ export async function createVisitorPass(formData: FormData) {
     visitor_phone: phone || null,
     purpose,
     visit_on: /^\d{4}-\d{2}-\d{2}$/.test(visitOn) ? visitOn : indiaDay(),
-    status,
+    status: "expected",
+    host_answer: "allowed",
   });
   if (error) throw new Error(error.message);
   await writeAudit({
@@ -333,14 +329,18 @@ export async function setParkingBay(formData: FormData) {
     await admin.from("parking_bays").delete().eq("id", bayId);
     await writeAudit({ actorUserId: user.id, actorName: name, action: "Removed a parking bay", subject: String(bayId) });
   } else if (mode === "visitor") {
-    await admin.from("parking_bays").update({ kind: "visitor", flat_id: null }).eq("id", bayId);
+    await admin.from("parking_bays").update({ kind: "visitor", flat_id: null, flat_number: null }).eq("id", bayId);
     await writeAudit({ actorUserId: user.id, actorName: name, action: "Set a bay for visitors", subject: String(bayId) });
   } else if (mode === "home") {
     const flatNumber = String(formData.get("flatNumber") || "").trim().toUpperCase();
     if (!flatNumber) throw new Error("Enter the home number for this bay.");
     const { data: flat } = await admin.from("flats").select("id, flat_number").eq("flat_number", flatNumber).maybeSingle();
     if (!flat) throw new Error("That home is not in the brochure.");
-    await admin.from("parking_bays").update({ kind: "resident", flat_id: flat.id }).eq("id", bayId);
+    await admin.from("parking_bays").update({
+      kind: "resident",
+      flat_id: flat.id,
+      flat_number: flat.flat_number,
+    }).eq("id", bayId);
     await writeAudit({
       actorUserId: user.id,
       actorName: name,
@@ -368,6 +368,7 @@ export async function addParkingBay(formData: FormData) {
     label,
     kind: flatId ? "resident" : "visitor",
     flat_id: flatId,
+    flat_number: flatNumber || null,
   });
   await writeAudit({ actorUserId: user.id, actorName: name, action: "Added a parking bay", subject: label });
   revalidatePath("/parking");

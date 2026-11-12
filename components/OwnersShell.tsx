@@ -273,6 +273,11 @@ export function OwnersShell({
       "parking",
       "amenities",
       "documents",
+      "nocs",
+      "billing",
+      "workforce",
+      "circulars",
+      "ops",
       "work",
       "requests",
       "inbox",
@@ -382,12 +387,58 @@ export function OwnersShell({
       match: (p) => p.startsWith("/documents"),
       icon: "form",
     });
+    ownerNav.push({
+      href: "/nocs",
+      label: "NOC requests",
+      match: (p) => p.startsWith("/nocs"),
+      icon: "form",
+    });
+  }
+  if (seeCommunity && featureOn("billing")) {
+    ownerNav.push({
+      href: "/billing",
+      label: "Dues",
+      match: (p) => p.startsWith("/billing"),
+      icon: "form",
+    });
+  }
+  if (seeCommunity && featureOn("workforce")) {
+    ownerNav.push({
+      href: "/workforce",
+      label: "Helpers",
+      match: (p) => p.startsWith("/workforce"),
+      icon: "people",
+    });
+  }
+  if (seeCommunity && featureOn("circulars")) {
+    ownerNav.push({
+      href: "/circulars",
+      label: "Circulars",
+      match: (p) => p.startsWith("/circulars"),
+      icon: "bell",
+    });
+  }
+  if (seeCommunity && featureOn("ops")) {
+    ownerNav.push({
+      href: "/ops",
+      label: "Building ops",
+      match: (p) => p.startsWith("/ops"),
+      icon: "floors",
+    });
   }
   if (canGate && !isSuperAdmin && featureOn("gate")) {
     ownerNav.push({
       href: "/gate",
       label: "Gate",
       match: (p) => p.startsWith("/gate"),
+      icon: "admin",
+    });
+  }
+  if (canGate && !isSuperAdmin && featureOn("security_ops")) {
+    ownerNav.push({
+      href: "/account/security-ops",
+      label: "Security ops",
+      match: (p) => p.startsWith("/account/security-ops"),
       icon: "admin",
     });
   }
@@ -515,6 +566,17 @@ export function OwnersShell({
         match: (p) => p.startsWith("/account/reports"),
         icon: "feed",
       },
+      ...(featureOn("billing")
+        ? [
+            {
+              href: "/account/billing",
+              label: "Dues and billing",
+              short: "Dues",
+              match: (p: string) => p.startsWith("/account/billing"),
+              icon: "form" as const,
+            },
+          ]
+        : []),
       {
         href: "/account/documents",
         label: "Home records",
@@ -522,6 +584,28 @@ export function OwnersShell({
         match: (p) => p.startsWith("/account/documents"),
         icon: "form",
       },
+      ...(featureOn("documents")
+        ? [
+            {
+              href: "/account/nocs",
+              label: "NOC requests",
+              short: "NOC",
+              match: (p: string) => p.startsWith("/account/nocs"),
+              icon: "form" as const,
+            },
+          ]
+        : []),
+      ...(featureOn("workforce")
+        ? [
+            {
+              href: "/account/workforce",
+              label: "Helpers and vendors",
+              short: "Help",
+              match: (p: string) => p.startsWith("/account/workforce"),
+              icon: "people" as const,
+            },
+          ]
+        : []),
       ...(featureOn("parking")
         ? [
             {
@@ -530,6 +614,50 @@ export function OwnersShell({
               short: "Park",
               match: (p: string) => p.startsWith("/account/parking"),
               icon: "flat" as const,
+            },
+          ]
+        : []),
+      ...(featureOn("ops")
+        ? [
+            {
+              href: "/account/ops",
+              label: "Building ops",
+              short: "Ops",
+              match: (p: string) => p.startsWith("/account/ops"),
+              icon: "floors" as const,
+            },
+          ]
+        : []),
+      ...(featureOn("assets")
+        ? [
+            {
+              href: "/account/assets",
+              label: "Assets and AMC",
+              short: "AMC",
+              match: (p: string) => p.startsWith("/account/assets"),
+              icon: "model" as const,
+            },
+          ]
+        : []),
+      ...(featureOn("circulars")
+        ? [
+            {
+              href: "/account/circulars",
+              label: "Circulars",
+              short: "Circ",
+              match: (p: string) => p.startsWith("/account/circulars"),
+              icon: "bell" as const,
+            },
+          ]
+        : []),
+      ...(featureOn("security_ops")
+        ? [
+            {
+              href: "/account/security-ops",
+              label: "Security ops",
+              short: "Sec",
+              match: (p: string) => p.startsWith("/account/security-ops"),
+              icon: "admin" as const,
             },
           ]
         : []),

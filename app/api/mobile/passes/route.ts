@@ -72,13 +72,8 @@ export async function POST(request: Request) {
   if (visitorName.length < 2) return mobileJson({ message: "Enter the visitor's name." }, 400);
 
   const admin = createAdminClient();
-  const { data: settings } = await admin
-    .from("project_info")
-    .select("host_approval")
-    .eq("id", 1)
-    .maybeSingle();
-  const status = settings?.host_approval ? "pending_approval" : "expected";
   const code = passCode();
+  const status = "expected";
   const { error } = await admin.from("visitor_passes").insert({
     code,
     flat_id: member.profile.flatId,
@@ -89,6 +84,7 @@ export async function POST(request: Request) {
     purpose,
     visit_on: /^\d{4}-\d{2}-\d{2}$/.test(visitOn) ? visitOn : indiaDay(),
     status,
+    host_answer: "allowed",
   });
   if (error) return mobileJson({ message: error.message }, 500);
 

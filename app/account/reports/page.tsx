@@ -15,11 +15,24 @@ export default async function ReportsPage() {
   if (!user) redirect("/login");
   if (!(await canAccessAdminDesk())) redirect("/");
 
-  const [openRequests, visitorsInside, pendingBookings, openJobs] = await Promise.all([
+  const [
+    openRequests,
+    visitorsInside,
+    pendingBookings,
+    openJobs,
+    openInvoices,
+    openNocs,
+    openOps,
+    openIncidents,
+  ] = await Promise.all([
     count("member_notes", "status", "new"),
     count("visitor_passes", "status", "inside"),
     count("amenity_bookings", "status", "pending"),
     count("work_orders", "status", "open"),
+    count("invoices", "status", "open"),
+    count("document_requests", "status", "submitted"),
+    count("ops_logs", "status", "open"),
+    count("security_incidents", "status", "open"),
   ]);
 
   const cards = [
@@ -27,12 +40,16 @@ export default async function ReportsPage() {
     ["Visitors inside", visitorsInside],
     ["Bookings waiting", pendingBookings],
     ["Jobs still open", openJobs],
+    ["Open dues invoices", openInvoices],
+    ["NOCs waiting", openNocs],
+    ["Building ops open", openOps],
+    ["Security incidents open", openIncidents],
   ];
 
   return (
     <section>
       <h1 className="text-3xl font-semibold text-[#0f172a]">Reports</h1>
-      <p className="mt-2 text-[#475569]">A fixed picture of requests, visitors, bookings, and jobs.</p>
+      <p className="mt-2 text-[#475569]">A fixed picture of requests, visitors, bookings, jobs, dues, and security.</p>
       <ul className="mt-6 grid gap-3 sm:grid-cols-2">
         {cards.map(([label, total]) => (
           <li key={String(label)} className="slab p-4">

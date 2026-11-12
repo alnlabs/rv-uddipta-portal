@@ -2,6 +2,7 @@ import "server-only";
 
 import type { User } from "@supabase/supabase-js";
 import { isSuperAdmin } from "@/lib/admin";
+import { normalizeEmail } from "@/lib/email";
 import { createAdminClient } from "@/utils/supabase/admin";
 import type { createClient } from "@/utils/supabase/server";
 
@@ -89,6 +90,157 @@ async function detachFlatFromUser(userId: string) {
   return admin;
 }
 
+type FlatHome = {
+  id: number
+  owner_name: string | null
+  user_id?: string | null
+};
+
+/** Resolve the sold unit this Google login should open (linked user_id, then owner email). */
+async function findOwnedFlat(user: User): Promise<FlatHome | null> {
+  const admin = createAdminClient();
+  const { data: byUser } = await admin
+    .from("flats")
+    .select("id, owner_name, user_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (byUser) return byUser;
+
+  const email = normalizeEmail(user.email);
+  if (!email) return null;
+
+  const { data: matches } = await admin
+    .from("flats")
+    .select("id, owner_name, user_id, email")
+    .eq("sale_status", "sold")
+    .ilike("email", email)
+    .limit(5);
+  const open = (matches ?? []).filter(
+    (row) => !row.user_id || row.user_id === user.id,
+  );
+  if (open.length !== 1) return null;
+
+  const home = open[0];
+  if (!home.user_id) {
+    const { error } = await admin
+      .from("flats")
+      .update({ user_id: user.id })
+      .eq("id", home.id)
+      .is("user_id", null);
+    if (error) return null;
+  }
+  return { id: home.id, owner_name: home.owner_name, user_id: user.id };
+}
+
+async function findHeldHomeRole(userId: string) {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("person_roles")
+    .select("role, flat_id")
+    .eq("user_id", userId)
+    .in("role", ["owner", "co_owner", "tenant"])
+    .not("flat_id", "is", null)
+    .order("role", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (!data?.flat_id) return null;
+  return { role: data.role as AppRole, flatId: Number(data.flat_id) };
+}
+
+async function writeHomeProfile(
+  user: User,
+  input: {
+    role: AppRole
+    flatId: number
+    displayName: string | null
+  },
+): Promise<Profile> {
+  const admin = createAdminClient();
+  const { data: inserted, error } = await admin
+    .from("profiles")
+    .upsert(
+      {
+        user_id: user.id,
+        role: input.role,
+        flat_id: input.flatId,
+        display_name: input.displayName,
+      },
+      { onConflict: "user_id" },
+    )
+    .select("user_id, role, flat_id, display_name")
+    .single();
+  await admin.from("person_roles").upsert(
+    { user_id: user.id, role: input.role, flat_id: input.flatId },
+    { onConflict: "user_id,role" },
+  );
+  if (input.role === "owner") {
+    await admin.from("flats").update({ user_id: user.id }).eq("id", input.flatId);
+  }
+  if (error || !inserted) {
+    return {
+      userId: user.id,
+      role: input.role,
+      flatId: input.flatId,
+      displayName: input.displayName,
+    };
+  }
+  return {
+    userId: inserted.user_id,
+    role: inserted.role as AppRole,
+    flatId: inserted.flat_id,
+    displayName: inserted.display_name,
+  };
+}
+
+const DESK_ROLES = new Set([
+  "admin",
+  "builder",
+  "committee",
+  "facility",
+  "staff",
+  "security",
+]);
+
+/** Attach a home when the office already linked the flat but the profile is still visitor. */
+async function healMissingHome(
+  user: User,
+  existing: {
+    role: string
+    flat_id: number | null
+    display_name: string | null
+  },
+): Promise<Profile | null> {
+  // Never demote society desk roles to owner because a flat email matches.
+  if (DESK_ROLES.has(existing.role)) return null;
+  if (existing.flat_id && existing.role !== "visitor") return null;
+
+  const owned = await findOwnedFlat(user);
+  if (owned) {
+    return writeHomeProfile(user, {
+      role: "owner",
+      flatId: owned.id,
+      displayName:
+        existing.display_name
+        || owned.owner_name
+        || (user.user_metadata?.full_name as string | undefined)
+        || user.email
+        || null,
+    });
+  }
+
+  const held = await findHeldHomeRole(user.id);
+  if (!held) return null;
+  return writeHomeProfile(user, {
+    role: held.role,
+    flatId: held.flatId,
+    displayName:
+      existing.display_name
+      || (user.user_metadata?.full_name as string | undefined)
+      || user.email
+      || null,
+  });
+}
+
 export async function ensureProfile(
   user: User,
   userClient: ServerClient,
@@ -115,6 +267,8 @@ export async function ensureProfile(
         displayName: existing.display_name,
       };
     }
+    const healed = await healMissingHome(user, existing);
+    if (healed) return healed;
     return {
       userId: existing.user_id,
       role: existing.role as AppRole,
@@ -153,27 +307,34 @@ export async function ensureProfile(
     };
   }
 
+  const owned = await findOwnedFlat(user);
+  const held = owned ? null : await findHeldHomeRole(user.id);
+  const role: AppRole = owned ? "owner" : held?.role || "visitor";
+  const flatId = owned?.id ?? held?.flatId ?? null;
+
+  if (flatId && role !== "visitor") {
+    return writeHomeProfile(user, {
+      role,
+      flatId,
+      displayName:
+        owned?.owner_name
+        || (user.user_metadata?.ownerName as string | undefined)
+        || (user.user_metadata?.full_name as string | undefined)
+        || user.email
+        || null,
+    });
+  }
+
   const admin = createAdminClient();
-  let role: AppRole = "visitor";
-
-  const { data: owned } = await admin
-    .from("flats")
-    .select("id, owner_name")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (owned && role === "visitor") role = "owner";
-
   const row = {
     user_id: user.id,
-    role,
-    flat_id: owned?.id ?? null,
+    role: "visitor" as const,
+    flat_id: null as number | null,
     display_name:
-      owned?.owner_name ||
-      user.user_metadata?.ownerName ||
-      user.user_metadata?.full_name ||
-      user.email ||
-      null,
+      (user.user_metadata?.ownerName as string | undefined)
+      || (user.user_metadata?.full_name as string | undefined)
+      || user.email
+      || null,
   };
 
   const { data: inserted, error } = await admin
