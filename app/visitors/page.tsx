@@ -4,6 +4,7 @@ import { DeskError, FeatureOff } from "@/components/FeatureOff";
 import { DateField } from "@/components/form-ui";
 import { PassShare } from "@/components/PassShare";
 import { resolveDeskAccess } from "@/lib/deskAccess";
+import { planDayLabel } from "@/lib/indiaDay";
 import { isCommunityRole } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
@@ -62,7 +63,7 @@ export default async function VisitorsPage() {
             <p className="text-xs font-semibold tracking-[0.08em] text-[#b45309] uppercase">{pass.status.replaceAll("_", " ")}</p>
             <h2 className="mt-1 text-lg font-semibold text-[#0f172a]">{pass.visitor_name}</h2>
             <p className="text-sm text-[#475569]">
-              {pass.flat_number} · {pass.visit_on}
+              {pass.flat_number} · {planDayLabel(String(pass.visit_on || "")) || pass.visit_on}
               {pass.purpose ? ` · ${pass.purpose}` : ""}
               {pass.visitor_phone ? ` · ${pass.visitor_phone}` : ""}
             </p>

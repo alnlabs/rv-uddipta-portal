@@ -1,5 +1,6 @@
 import QRCode from "qrcode";
 import { Mark } from "@/components/Mark";
+import { planDayLabel } from "@/lib/indiaDay";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 export default async function PassPage({ params }: { params: Promise<{ code: string }> }) {
@@ -65,7 +66,7 @@ export default async function PassPage({ params }: { params: Promise<{ code: str
           Wing {wing || "—"}, floor {floor || "—"}, home {flat}. Security scans the QR.
         </p>
         <p className="badge-notice mt-4">{String(pass.status).replaceAll("_", " ")}</p>
-        <p className="mt-3 text-sm text-[#475569]">{pass.visit_on}</p>
+        <p className="mt-3 text-sm text-[#475569]">{planDayLabel(String(pass.visit_on || "")) || pass.visit_on}</p>
       </div>
     </section>
   );

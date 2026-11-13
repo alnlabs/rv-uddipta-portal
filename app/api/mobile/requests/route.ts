@@ -3,6 +3,7 @@ import { disabledRequestKinds } from "@/lib/features";
 import { isMember, desk, mobileJson, readMobileMember } from "@/lib/mobileSession";
 import { loadNoteThreads } from "@/lib/requestThread";
 import { societyAdminUserIds } from "@/lib/societyAdmins";
+import { relativeTime } from "@/lib/indiaDay";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -17,11 +18,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 function when(value: string) {
-  return new Date(value).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return relativeTime(value);
 }
 
 export async function GET(request: Request) {

@@ -57,8 +57,8 @@ export default async function AdminRolesPage({
       <h1 className="text-3xl font-semibold text-[#0f172a]">Roles</h1>
       <p className="mt-2 max-w-2xl text-[#475569]">
         {superAdmin
-          ? "Create staff with phone + PIN, or assign society admin and every society role. Home membership stays on Flats."
-          : "Create staff with phone + PIN, or assign facility, security, committee, staff, or builder. Society admin is set only by the super admin."}
+          ? "Open Create staff for phone + PIN accounts, or assign society admin and every society role. Home membership stays on Flats."
+          : "Open Create staff for phone + PIN accounts, or assign facility, security, committee, staff, or builder. Society admin is set only by the super admin."}
       </p>
 
       <ul className="mt-6 grid gap-3 sm:grid-cols-2">

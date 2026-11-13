@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { answerNeighbourConnect, requestNeighbourConnect } from "@/app/actions/neighbours";
 import ProfileAvatar from "@/components/ProfileAvatar";
 import { facingLabel, typeLabel } from "@/lib/flatDisplay";
+import { planDayLabel } from "@/lib/indiaDay";
 
 export type MemberPerson = {
   name: string
@@ -56,9 +57,7 @@ const FILTERS: { id: Filter; label: string }[] = [
 
 function formatDate(value: string | null) {
   if (!value) return null;
-  const [year, month, day] = value.slice(0, 10).split("-");
-  if (!year || !month || !day) return value;
-  return `${day}/${month}/${year}`;
+  return planDayLabel(value) || value;
 }
 
 function stayLabel(renter: MemberRenter) {

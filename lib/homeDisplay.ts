@@ -1,4 +1,5 @@
 import { facingLabel, typeLabel } from "@/lib/flatDisplay";
+import { planDayLabel } from "@/lib/indiaDay";
 import { STATUS_FIELDS, type StatusKey } from "@/lib/status";
 
 export type JourneyMark = "done" | "active" | "upcoming";
@@ -19,14 +20,8 @@ function isDone(key: StatusKey, value: string) {
 
 export function formatShortDate(value: string | null | undefined) {
   if (!value) return null;
-  const [year, month, day] = value.slice(0, 10).split("-");
-  if (!year || !month || !day) return value;
-  const date = new Date(Number(year), Number(month) - 1, Number(day));
-  return date.toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  const label = planDayLabel(value);
+  return label || null;
 }
 
 export function firstName(full: string | null | undefined) {

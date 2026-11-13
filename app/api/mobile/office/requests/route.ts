@@ -4,6 +4,7 @@ import { desk, isMember, mobileJson, readMobileMember } from "@/lib/mobileSessio
 import { pushUsers } from "@/lib/push";
 import { loadNoteThreads } from "@/lib/requestThread";
 import { canManageAdmin, canRunFacility } from "@/lib/roles";
+import { relativeTime } from "@/lib/indiaDay";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -24,11 +25,7 @@ function normalizeStatus(value: string | null | undefined) {
 }
 
 function when(value: string) {
-  return new Date(value).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return relativeTime(value);
 }
 
 export async function GET(request: Request) {

@@ -56,7 +56,7 @@ Dependency rules in UI + RPCs:
 
 ## Docs follow-up (when implementing)
 
-- Update `ROLES.md` help diagram: Task (none) → Role ↔ Task and Role ↔ Employee; Employee → Role
+- Update `docs/ROLES.md` help diagram: Task (none) → Role ↔ Task and Role ↔ Employee; Employee → Role
 - Refresh People **?** copy to match (plain words)
 
 ## Out of scope for this pass
@@ -69,4 +69,4 @@ Dependency rules in UI + RPCs:
 - [ ] Migration: `society_roles`, `society_tasks`, `society_role_tasks` + community-standard seeds + `maps_to` for custom roles
 - [ ] RPCs to list/save tasks, roles, role-task links; validate employee create against enabled roles
 - [ ] Split admin UI into Tasks / Roles / People (mobile + portal) with dependency rules
-- [ ] Update `ROLES.md` and People ? help to plain-language employee/role/task model
+- [ ] Update `docs/ROLES.md` and People ? help to plain-language employee/role/task model

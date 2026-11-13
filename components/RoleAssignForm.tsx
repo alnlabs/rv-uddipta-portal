@@ -44,7 +44,7 @@ export function RoleAssignForm({
   if (!candidates.length) {
     return (
       <p className="mt-5 text-sm text-[#475569]">
-        No one else has signed in yet. Use Create staff above, or wait until they sign in.
+        No one else has signed in yet. Use Create staff, or wait until they sign in.
       </p>
     );
   }

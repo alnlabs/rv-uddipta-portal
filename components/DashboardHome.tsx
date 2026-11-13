@@ -17,6 +17,7 @@ import {
 } from "@/lib/apartmentLayout";
 import { summarize } from "@/lib/flats";
 import { greeting, journeyHeadline, journeySteps } from "@/lib/homeDisplay";
+import { relativeTime } from "@/lib/indiaDay";
 import { visibleText } from "@/lib/richText";
 import { relationLabel } from "@/lib/status";
 import type { FlatMember, FlatRenter, OwnedFlat, PublicFlat } from "@/lib/types";
@@ -47,17 +48,6 @@ function sectionFromHash(): HomeSection {
   const hash = window.location.hash.replace("#", "");
   if (hash === "stay" || hash === "documents") return hash;
   return "hub";
-}
-
-function relativeTime(iso: string) {
-  const ms = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(ms / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
 }
 
 function planInput(flat: PublicFlat) {

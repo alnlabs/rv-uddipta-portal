@@ -1,3 +1,5 @@
+import { planDayLabel } from "@/lib/indiaDay";
+
 const DEFAULT_SITE = "https://uddipta.vercel.app";
 
 export function siteBaseUrl() {
@@ -21,7 +23,8 @@ export function passShareMessage(input: {
 }) {
   const code = passShareCode(input.code);
   const link = passShareUrl(code);
-  const when = input.date ? ` on ${input.date}` : "";
+  const day = input.date ? (planDayLabel(input.date) || input.date) : "";
+  const when = day ? ` on ${day}` : "";
   return `Visitor pass for ${input.visitorName} at RV Uddiipta ${input.home}${when}.\nOpen this link and show the QR at the gate:\n${link}\nOr show code ${code}.`;
 }
 

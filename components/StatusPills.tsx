@@ -1,3 +1,4 @@
+import { planDayLabel } from "@/lib/indiaDay";
 import type { PublicFlat } from "@/lib/types";
 import { STATUS_FIELDS, STATUS_LABELS } from "@/lib/status";
 
@@ -51,9 +52,7 @@ function labelFor(kind: keyof typeof STATUS_LABELS, value: string) {
 
 function formatDate(value: string | null) {
   if (!value) return null;
-  const [year, month, day] = value.slice(0, 10).split("-");
-  if (!year || !month || !day) return value;
-  return `${day}/${month}/${year}`;
+  return planDayLabel(value) || value;
 }
 
 function dateSuffix(kind: string, flat: PublicFlat) {

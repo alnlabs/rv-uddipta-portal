@@ -173,8 +173,9 @@ export default async function FeedPage({
   const [hiddenKinds, labels] = await Promise.all([disabledCommunityKinds(), loadCategoryLabels()]);
 
   return (
-    <section className="page-gutter max-w-2xl py-5 md:py-6">
+    <section className="page-gutter max-w-2xl py-4 md:py-5">
       <h1 className="text-2xl font-semibold tracking-tight text-[#0f172a]">Updates</h1>
+      <p className="mt-1 text-sm leading-5 text-[#475569]">Notices, neighbour posts, events, and polls.</p>
       <UpdatesBoard
         posts={feedPosts}
         notices={notices}

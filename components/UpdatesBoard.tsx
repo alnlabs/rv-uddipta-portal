@@ -31,6 +31,7 @@ import {
   type PostGroup,
   type PostKind,
 } from "@/lib/postKinds";
+import { planDayLabel } from "@/lib/indiaDay";
 
 const initial: UpdateState = { ok: false, message: "" };
 
@@ -164,7 +165,7 @@ function Composer({
   if (!typeGroups.length) return null;
 
   return (
-    <Form handled action={formAction} className="field-panel mt-3 grid gap-2">
+    <Form handled action={formAction} className="field-panel mt-3 grid gap-2.5">
       <div className="flex flex-wrap items-center gap-2">
         <label className="flex items-center gap-1.5 text-xs font-semibold text-[#475569]">
           Type
@@ -333,13 +334,7 @@ function isRecentEmergency(kind: string | null | undefined, createdAt: string) {
 }
 
 function formatDay(iso: string) {
-  const [year, month, day] = iso.slice(0, 10).split("-").map(Number);
-  if (!year || !month || !day) return iso;
-  return new Date(year, month - 1, day).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return planDayLabel(iso) || iso;
 }
 
 async function shrinkPhotoInput(event: ChangeEvent<HTMLInputElement>) {
@@ -448,7 +443,7 @@ function PollChoices({
 }) {
   const [state, action, pending] = useActionState(voteOnPoll, initial);
   return (
-    <div className="mt-3 grid gap-2">
+    <div className="mt-2.5 grid gap-2">
       {poll.options.map((option) => {
         const share = poll.total ? Math.min(100, Math.round((option.votes / poll.total) * 100)) : 0;
         const mine = poll.myVotes.includes(option.id);
@@ -496,7 +491,7 @@ function PollChoices({
 function ReplyBox({ postId, label = "Reply" }: { postId: number; label?: string }) {
   const [state, action, pending] = useActionState(replyToPost, initial);
   return (
-    <Form handled action={action} className="mt-3">
+    <Form handled action={action} className="mt-2.5">
       <input type="hidden" name="postId" value={postId} />
       <div className="flex items-center gap-2">
         <input
@@ -520,7 +515,7 @@ function ReplyBox({ postId, label = "Reply" }: { postId: number; label?: string 
 }
 
 function cardFace(kind: string) {
-  const shell = "rounded-[1.35rem] p-4";
+  const shell = "rounded-[1.25rem] px-4 py-3.5";
   switch (kind) {
     case "celebration":
       return `${shell} celebration-face shadow-[inset_0_0_0_1px_rgba(180,83,9,0.16)]`;
@@ -564,7 +559,7 @@ function labelTone(kind: string) {
 }
 
 function noticeFace(kind: string) {
-  const shell = "rounded-[1.35rem] p-4";
+  const shell = "rounded-[1.25rem] px-4 py-3.5";
   if (kind === "maintenance") return `${shell} bg-[#fff7ed] shadow-[inset_0_0_0_1px_rgba(180,83,9,0.28)]`;
   if (kind === "meeting") return `${shell} bg-white shadow-[inset_0_0_0_1px_rgba(30,41,59,0.2)]`;
   return `${shell} border-l-4 border-[#059669] bg-white shadow-[inset_0_0_0_1px_rgba(15,23,42,0.08)]`;
@@ -605,7 +600,7 @@ function PostEntry({
         : title;
 
   const reactions = social ? (
-    <div className="mt-3 flex flex-wrap gap-2">
+    <div className="mt-2.5 flex flex-wrap gap-2">
       {canWrite ? (
         <>
           <ReactionButton postId={post.id} kind="helpful" count={post.reactions?.helpful ?? 0} active={post.reactions?.mine === "helpful"} />
@@ -620,7 +615,7 @@ function PostEntry({
   ) : null;
 
   const manage = (
-    <div className="mt-2 flex flex-wrap gap-4">
+    <div className="mt-1.5 flex flex-wrap gap-3">
       {canWrite && kind === "poll" && !post.closedAt && (post.author_user_id === userId || canModerate) ? (
         <form action={closePoll}>
           <input type="hidden" name="postId" value={post.id} />
@@ -651,15 +646,15 @@ function PostEntry({
   const thread = (
     <>
       {post.replies.length ? (
-        <ul className={`mt-3 space-y-2 border-l pl-3 ${kind === "question" ? "border-[#1e293b]" : "border-[rgba(15,23,42,0.12)]"}`}>
+        <ul className={`mt-2.5 space-y-2 border-l pl-3 ${kind === "question" ? "border-[#1e293b]" : "border-[rgba(15,23,42,0.12)]"}`}>
           {kind === "question" ? <li className="text-xs font-semibold tracking-wide text-[#475569] uppercase">Answers</li> : null}
           {post.replies.map((reply) => (
-            <li key={reply.id}>
+            <li key={reply.id} className="space-y-0.5">
               <p className="text-sm font-semibold text-[#475569]">
                 {reply.author_name}
                 {reply.flat_number ? ` · ${reply.flat_number}` : ""}
               </p>
-              <p className="text-base text-[#0f172a]">{reply.body}</p>
+              <p className="text-[15px] leading-snug text-[#0f172a]">{reply.body}</p>
               {canWrite && (reply.author_user_id === userId || canModerate) ? (
                 <form action={deleteReply}>
                   <input type="hidden" name="replyId" value={reply.id} />
@@ -683,8 +678,8 @@ function PostEntry({
       </p>
       {kind === "quote" ? (
         <>
-          <RichTextView text={post.body} className="mt-2 border-l-2 border-[#b45309] pl-3 text-lg leading-snug text-[#0f172a]" />
-          <p className="mt-2 text-sm font-semibold text-[#475569]">— {who}</p>
+          <RichTextView text={post.body} className="mt-1.5 border-l-2 border-[#b45309] pl-3 text-lg leading-snug text-[#0f172a]" />
+          <p className="mt-1.5 text-sm font-semibold text-[#475569]">— {who}</p>
         </>
       ) : (
         <>
@@ -692,7 +687,7 @@ function PostEntry({
             <p className="mt-1 text-sm text-[#475569]">Only the office sees this.</p>
           ) : null}
           <p className="mt-1 text-sm font-semibold text-[#475569]">{who}</p>
-          <RichTextView text={post.body} className="mt-1 text-base text-[#0f172a]" />
+          <RichTextView text={post.body} className="mt-1 text-[15px] leading-snug text-[#0f172a]" />
         </>
       )}
       {kind === "poll" && post.poll ? (
@@ -702,19 +697,19 @@ function PostEntry({
         <img
           src={post.imageUrl}
           alt=""
-          className={`mt-3 max-h-64 w-full rounded-2xl object-cover ${post.soldAt ? "opacity-60" : ""}`}
+          className={`mt-2.5 max-h-60 w-full rounded-xl object-cover ${post.soldAt ? "opacity-60" : ""}`}
         />
       ) : null}
       {kind === "event" && post.rsvp ? (
         canPostEvents ? (
-          <form action={rsvpEvent} className="mt-3">
+          <form action={rsvpEvent} className="mt-2.5">
             <input type="hidden" name="postId" value={post.id} />
             <button type="submit" className="btn btn-forest">
               {post.rsvp.going ? "You're coming" : "I'm coming"} · {post.rsvp.count}
             </button>
           </form>
         ) : (
-          <p className="mt-3 text-sm text-[#475569]">
+          <p className="mt-2.5 text-sm text-[#475569]">
             {post.rsvp.going ? "You're coming" : "Going"} · {post.rsvp.count}
           </p>
         )
@@ -812,19 +807,19 @@ export function UpdatesBoard({
   return (
     <div>
       {recentEmergencies.length && activeSlice !== "notices" ? (
-        <section className="mt-5 rounded-[1.35rem] bg-[#f8e8e4] p-4 ring-1 ring-[rgba(138,47,47,0.28)]">
-          <h2 className="text-sm font-semibold tracking-wide text-[#8a2f2f] uppercase">
+        <section className="mt-3 rounded-[1.25rem] bg-[#f8e8e4] px-4 py-3.5 ring-1 ring-[rgba(138,47,47,0.28)]">
+          <h2 className="text-xs font-semibold tracking-wide text-[#8a2f2f] uppercase">
             Emergencies in the last 24 hours
           </h2>
-          <ul className="mt-3 grid gap-3">
+          <ul className="mt-2.5 grid gap-2.5">
             {recentEmergencies.map((post) => (
-              <li key={post.id}>
-                <p className="font-semibold text-[#6d2424]">
+              <li key={post.id} className="space-y-0.5">
+                <p className="text-sm font-semibold text-[#6d2424]">
                   {kindName(post.kind, post.topic, labels)}
                   {post.flat_number ? ` · ${post.flat_number}` : ""}
                   {post.author_name ? ` · ${post.author_name}` : ""}
                 </p>
-                <RichTextView text={post.body} className="mt-1 text-[#3d2420]" />
+                <RichTextView text={post.body} className="text-[15px] leading-snug text-[#3d2420]" />
               </li>
             ))}
           </ul>
@@ -842,7 +837,7 @@ export function UpdatesBoard({
         />
       ) : null}
 
-      <div className="mt-4 flex flex-wrap items-center gap-1.5">
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
         {slices.map(([id, label]) => (
           <FilterChip key={id} active={activeSlice === id} onClick={() => setSlice(id)}>
             {label}
@@ -851,7 +846,7 @@ export function UpdatesBoard({
       </div>
 
       {visibleNotices.length ? (
-        <ul className="mt-6 grid gap-3">
+        <ul className="mt-3 grid gap-2.5">
           {visibleNotices.map((notice) => {
             const when = meetingDay(notice.payload);
             return (
@@ -859,15 +854,15 @@ export function UpdatesBoard({
               key={notice.id}
               className={noticeFace(notice.kind)}
             >
-              <p className={`text-xs font-semibold tracking-[0.14em] uppercase ${notice.kind === "announcement" || notice.kind === "builder_update" ? "text-[#047857]" : notice.kind === "meeting" ? "text-[#1e293b]" : "text-[#b45309]"}`}>
+              <p className={`text-xs font-semibold tracking-[0.12em] uppercase ${notice.kind === "announcement" || notice.kind === "builder_update" ? "text-[#047857]" : notice.kind === "meeting" ? "text-[#1e293b]" : "text-[#b45309]"}`}>
                 {notice.pinned ? "At the top · " : ""}
                 {noticeLabel(notice.kind)}
                 {when ? ` · ${when}` : ""}
               </p>
-              <p className="mt-1 text-lg font-semibold text-[#0f172a]">{notice.title}</p>
-              {notice.body ? <RichTextView text={notice.body} className="mt-1 text-[#475569]" /> : null}
+              <p className="mt-1 text-base font-semibold leading-snug text-[#0f172a]">{notice.title}</p>
+              {notice.body ? <RichTextView text={notice.body} className="mt-1 text-[15px] leading-snug text-[#475569]" /> : null}
               {canModerate ? (
-                <div className="mt-2 flex gap-4">
+                <div className="mt-2 flex gap-3">
                   <form action={pinAnnouncement}>
                     <input type="hidden" name="id" value={notice.id} />
                     <input type="hidden" name="pinned" value={notice.pinned ? "false" : "true"} />
@@ -888,13 +883,13 @@ export function UpdatesBoard({
           })}
         </ul>
       ) : activeSlice === "notices" ? (
-        <p className="py-6 text-[#475569]">No notices yet.</p>
+        <p className="py-5 text-sm text-[#475569]">No notices yet.</p>
       ) : null}
 
       {activeSlice === "notices" ? null : (
-      <ul className="mt-4 grid gap-3">
+      <ul className="mt-3 grid gap-2.5">
         {visible.length === 0 ? (
-          <li className="py-6 text-[#475569]">
+          <li className="py-5 text-sm text-[#475569]">
             {activeSlice === "all"
               ? "No posts yet."
               : `Nothing in ${slices.find(([id]) => id === activeSlice)?.[1] ?? "this list"} yet.`}
