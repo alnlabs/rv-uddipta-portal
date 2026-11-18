@@ -328,7 +328,7 @@ export function OwnersShell({
   if (featureOn("forms")) {
     ownerNav.push({
       href: "/forms",
-      label: "Forms",
+      label: "Queries",
       match: (p) => p.startsWith("/forms") || p.startsWith("/f/"),
       icon: "form",
     });
@@ -511,8 +511,8 @@ export function OwnersShell({
       },
       {
         href: "/account/forms",
-        label: "Forms",
-        short: "Forms",
+        label: "Queries",
+        short: "Queries",
         match: (p) => p.startsWith("/account/forms"),
         icon: "form",
       },

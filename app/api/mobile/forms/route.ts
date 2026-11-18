@@ -38,7 +38,7 @@ export async function GET(request: Request) {
   const member = await readMobileMember(request);
   if (!isMember(member)) return member;
   const access = await desk(member, "forms");
-  if (access === "none") return mobileJson({ message: "Forms are turned off." }, 403);
+  if (access === "none") return mobileJson({ message: "Queries are turned off." }, 403);
 
   const admin = createAdminClient();
   const isAdmin = canManageAdmin(member.profile.role, member.user);

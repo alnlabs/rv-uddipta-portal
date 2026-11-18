@@ -51,12 +51,12 @@ export default async function EnquiryAdminPage({
         title={enquiry.title}
         lede={
           enquiry.closedAt
-            ? "Closed forms keep the answers already sent. Nobody can send a new one until you open it again."
+            ? "Closed queries keep the answers already sent. Nobody can send a new one until you open it again."
             : "People with the link can fill this in. Edit the questions here, then share it."
         }
         action={
           <Link href="/account/forms" className="text-sm font-semibold text-[#1e293b]">
-            All forms
+            All queries
           </Link>
         }
       />

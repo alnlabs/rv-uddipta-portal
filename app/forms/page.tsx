@@ -11,7 +11,7 @@ export default async function OpenFormsPage() {
   const { user, profile } = await getAuthState();
   if (!user) redirect("/login?next=/forms");
   if ((await resolveDeskAccess(profile.role, user, "forms")) === "none") {
-    return <FeatureOff label="Forms" />;
+    return <FeatureOff label="Queries" />;
   }
   const community = isCommunityRole(profile.role);
   const forms = await listEnquiries();
@@ -41,15 +41,15 @@ export default async function OpenFormsPage() {
       <header>
         <p className="eyebrow">Community</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#0f172a] md:text-4xl">
-          Forms
+          Queries
         </h1>
         <p className="mt-3 max-w-2xl text-base leading-relaxed text-[#475569]">
-          Forms still waiting for your home, answers you already sent, and forms that are closed.
+          Queries still waiting for your home, answers you already sent, and queries that are closed.
         </p>
       </header>
       {visible.length ? (
         <>
-          <FormGroup title="To answer" forms={waiting} action="Fill this form" />
+          <FormGroup title="To answer" forms={waiting} action="Answer this query" />
           <FormGroup title="Your answers" forms={answered} action="Change your answer" />
           <FormGroup
             title="Closed"
@@ -60,7 +60,7 @@ export default async function OpenFormsPage() {
         </>
       ) : (
         <p className="form-sheet mt-6 text-base leading-relaxed text-[#475569]">
-          No forms right now. When one is shared, it will show up here.
+          No queries right now. When one is shared, it will show up here.
         </p>
       )}
     </div>
@@ -89,7 +89,7 @@ function FormGroup({
             <li key={form.id}>
               <Link href={`/f/${form.slug}`} className="form-sheet block transition hover:-translate-y-0.5">
                 <p className="text-xs font-semibold tracking-[0.14em] text-[#b45309] uppercase">
-                  {form.closedAt ? (yours ? "Closed · your answer" : "Closed") : form.visibility === "private" ? "Residents only" : "Open form"}
+                  {form.closedAt ? (yours ? "Closed · your answer" : "Closed") : form.visibility === "private" ? "Residents only" : "Open query"}
                 </p>
                 <span className="mt-2 block text-xl font-semibold text-[#0f172a]">{form.title}</span>
                 <span className="mt-2 block text-sm leading-relaxed text-[#475569]">
