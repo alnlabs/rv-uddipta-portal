@@ -26,6 +26,12 @@ export async function POST(request: Request) {
   }
 
   const admin = createAdminClient();
+  // Due society duty reminders → notifications (trigger fills push_outbox).
+  await admin.rpc("flush_due_society_reminders").then(
+    () => undefined,
+    () => undefined,
+  );
+
   const { data: rows, error } = await admin
     .from("push_outbox")
     .select("id, user_id, title, body, data")

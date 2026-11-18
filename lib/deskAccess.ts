@@ -2,6 +2,7 @@ import "server-only";
 
 import type { User } from "@supabase/supabase-js";
 import { isSuperAdmin } from "@/lib/admin";
+import { currentAreaOwnerRole } from "@/lib/areaOwners";
 import { FEATURE_CATALOG, loadEnabledFeatures } from "@/lib/features";
 import { createAdminClient } from "@/utils/supabase/admin";
 
@@ -61,6 +62,11 @@ export async function resolveDeskAccess(
   // Gate stays with security even for super / permission overrides.
   if (key === "gate") return role === "security" ? "manage" : "none";
   if (user && isSuperAdmin(user)) return "manage";
+  // Period owner for repairs can run Jobs even when the matrix says none (e.g. builder).
+  if (key === "maintenance") {
+    const owner = await currentAreaOwnerRole("repairs");
+    if (owner && role === owner) return "manage";
+  }
   const grants = await grantsFor(role);
   const saved = grants.get(key);
   if (saved === "none" || saved === "view" || saved === "manage") return saved;
@@ -73,8 +79,12 @@ export async function visibleDeskKeys(role: string, user: User | null) {
     return enabled.filter((key) => key !== "gate");
   }
   const grants = await grantsFor(role);
+  const repairsOwner = enabled.includes("maintenance")
+    ? await currentAreaOwnerRole("repairs")
+    : null;
   return enabled.filter((key) => {
     if (key === "gate") return role === "security";
+    if (key === "maintenance" && repairsOwner && role === repairsOwner) return true;
     const saved = grants.get(key);
     const access = saved === "none" || saved === "view" || saved === "manage"
       ? saved

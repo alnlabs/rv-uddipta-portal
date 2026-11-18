@@ -12,14 +12,17 @@ import {
   FormAlert,
   TextField,
 } from "@/components/form-ui";
+import { t, type SocietyLabels } from "@/lib/labelDefaults";
 import { roleNeedsHome } from "@/lib/roleLabels";
 
 export function RoleCreateOfficeForm({
   defaultRole = "security",
   allowAdmin = false,
+  labels = {},
 }: {
   readonly defaultRole?: string
   readonly allowAdmin?: boolean
+  readonly labels?: SocietyLabels
 }) {
   const router = useRouter();
   const titleId = useId();
@@ -53,9 +56,9 @@ export function RoleCreateOfficeForm({
     <>
       <div className="mt-5 flex flex-wrap items-center gap-2">
         <button type="button" className="btn-slate" onClick={() => setOpen(true)}>
-          Create staff
+          {t(labels, "create_staff")}
         </button>
-        <PeopleRolesHelp />
+        <PeopleRolesHelp labels={labels} />
       </div>
 
       {open ? (
@@ -74,14 +77,14 @@ export function RoleCreateOfficeForm({
             <div className="mb-4 flex items-start justify-between gap-3 border-b border-[rgba(15,23,42,0.08)] pb-3">
               <div>
                 <h2 id={titleId} className="text-xl font-semibold tracking-tight text-[#0f172a]">
-                  Create staff
+                  {t(labels, "create_staff")}
                 </h2>
                 <p className="mt-1 text-sm text-[#475569]">
-                  Phone + PIN for Security, Facility, Staff, and other society roles. Email is optional.
+                  {t(labels, "create_staff_help")}
                 </p>
               </div>
               <button type="button" className="btn-line shrink-0" onClick={close}>
-                Close
+                {t(labels, "close")}
               </button>
             </div>
 

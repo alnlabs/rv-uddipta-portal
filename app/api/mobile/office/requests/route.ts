@@ -3,7 +3,8 @@ import { writeAudit } from "@/lib/audit";
 import { desk, isMember, mobileJson, readMobileMember } from "@/lib/mobileSession";
 import { pushUsers } from "@/lib/push";
 import { loadNoteThreads } from "@/lib/requestThread";
-import { canManageAdmin, canRunFacility } from "@/lib/roles";
+import { canRunJobs } from "@/lib/areaOwners";
+import { canManageAdmin } from "@/lib/roles";
 import { relativeTime } from "@/lib/indiaDay";
 import { createAdminClient } from "@/utils/supabase/admin";
 
@@ -74,7 +75,7 @@ export async function GET(request: Request) {
 
   return mobileJson({
     canManage: access === "manage",
-    canOpenJob: canRunFacility(member.profile.role, member.user),
+    canOpenJob: await canRunJobs(member.profile.role, member.user),
     kind,
     people: (staff ?? []).map((person) => ({
       id: person.user_id as string,
@@ -242,8 +243,8 @@ export async function POST(request: Request) {
   }
 
   if (action === "job") {
-    if (!canRunFacility(member.profile.role, member.user)) {
-      return mobileJson({ message: "Only the facility manager can open a job." }, 403);
+    if (!(await canRunJobs(member.profile.role, member.user))) {
+      return mobileJson({ message: "Only the repairs desk can open a job." }, 403);
     }
     const maintenance = await desk(member, "maintenance");
     if (maintenance !== "manage") return mobileJson({ message: "Jobs are turned off." }, 403);

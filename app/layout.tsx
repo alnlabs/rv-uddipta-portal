@@ -5,6 +5,7 @@ import { OwnersShell } from "@/components/OwnersShell";
 import { SiteHeader } from "@/components/SiteHeader";
 import { isSuperAdmin } from "@/lib/admin";
 import { MESSAGE_KINDS } from "@/lib/inbox";
+import { canRunJobs as roleCanRunJobs } from "@/lib/areaOwners";
 import {
   canEditBuilder,
   canManageAdmin,
@@ -12,6 +13,7 @@ import {
 } from "@/lib/roles";
 import { visibleDeskKeys } from "@/lib/deskAccess";
 import { loadHeldRoles, type HeldRole } from "@/lib/heldRoles";
+import { loadSocietyLabels } from "@/lib/labels";
 import { getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
 import "./globals.css";
@@ -57,11 +59,14 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   let unreadNotifications = 0;
   let pendingApprovals = 0;
   let heldRoles: HeldRole[] = [];
+  let societyLabels: Record<string, string> | null = null;
+  let canJobs = false;
   const enabledFeatures = user && profile ? await visibleDeskKeys(profile.role, user) : null;
 
   if (user && profile) {
     const superAdmin = isSuperAdmin(user);
     builderEdit = canEditBuilder(profile.role, user);
+    canJobs = await roleCanRunJobs(profile.role, user);
 
     const [{ data: ownFlat }, { count }] = await Promise.all([
       superAdmin
@@ -87,6 +92,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       canManageAdmin(profile.role, user)
       || heldRoles.some((item) => item.role === "admin");
     unreadNotifications = count ?? 0;
+
+    if (isAdmin || superAdmin) {
+      societyLabels = await loadSocietyLabels();
+    }
 
     if (isAdmin) {
       const admin = createAdminClient();
@@ -128,6 +137,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             isAdmin={isAdmin}
             isSuperAdmin={Boolean(user && isSuperAdmin(user))}
             canEditBuilder={builderEdit}
+            canRunJobs={canJobs}
             flatNumber={flatNumber}
             pendingApproval={pendingApproval}
             unreadNotifications={unreadNotifications}
@@ -136,6 +146,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             role={profile.role}
             heldRoles={heldRoles}
             enabledFeatures={enabledFeatures}
+            societyLabels={societyLabels}
             showPrivateCommunity={
               !isSuperAdmin(user)
               && (

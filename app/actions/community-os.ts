@@ -11,10 +11,10 @@ import { requireDeskManage } from "@/lib/deskAccess";
 import { homeForRole } from "@/lib/heldRoles";
 import { isSuperAdmin } from "@/lib/admin";
 import { FEATURE_CATALOG } from "@/lib/features";
+import { canRunJobs } from "@/lib/areaOwners";
 import {
   canDoStaffWork,
   canManageAdmin,
-  canRunFacility,
   canRunGate,
   canSitCommittee,
   ensureProfile,
@@ -533,12 +533,50 @@ export async function assignRequest(formData: FormData) {
 export async function createWorkOrder(formData: FormData) {
   const { user, profile, admin, name } = await session();
   await requireDeskManage(profile.role, user, "maintenance");
-  if (!canRunFacility(profile.role, user)) throw new Error("Only the facility manager can open a job.");
-  const title = String(formData.get("title") || "").trim();
+  if (!(await canRunJobs(profile.role, user))) {
+    throw new Error("Only the repairs desk can open a job.");
+  }
+  const taskKey = String(formData.get("task_key") || "").trim();
+  let title = String(formData.get("title") || "").trim();
   const place = String(formData.get("place") || "").trim();
   const body = String(formData.get("body") || "").trim();
+  let assigneeRole = String(formData.get("assignee_role") || "").trim().toLowerCase();
+  const frequencyRaw = String(formData.get("frequency") || "once").trim().toLowerCase();
+  const frequency = ["once", "daily", "weekly", "monthly"].includes(frequencyRaw)
+    ? frequencyRaw
+    : "once";
   const noteId = Number(formData.get("noteId") || 0);
+  let societyTaskId: number | null = null;
+  if (taskKey) {
+    const { data: work } = await admin
+      .from("society_tasks")
+      .select("id, label")
+      .eq("key", taskKey)
+      .eq("enabled", true)
+      .maybeSingle();
+    if (!work) throw new Error("That work was not found.");
+    societyTaskId = Number(work.id);
+    if (!title) title = String(work.label || "").trim();
+    if (!assigneeRole) {
+      const { data: suggested } = await admin.rpc("suggested_job_role_for_task", {
+        p_task_id: societyTaskId,
+      });
+      if (typeof suggested === "string" && suggested) assigneeRole = suggested;
+    }
+  }
+  if (assigneeRole && !["staff", "facility", "security"].includes(assigneeRole)) {
+    throw new Error("Choose Staff, Facility, or Security.");
+  }
   if (title.length < 2) throw new Error("Name the job.");
+  const row = {
+    title,
+    place,
+    body,
+    status: "open" as const,
+    frequency,
+    ...(assigneeRole ? { assignee_role: assigneeRole } : {}),
+    ...(societyTaskId ? { society_task_id: societyTaskId } : {}),
+  };
   if (noteId) {
     const { data: existing } = await admin
       .from("work_orders")
@@ -548,20 +586,22 @@ export async function createWorkOrder(formData: FormData) {
       .limit(1)
       .maybeSingle();
     if (existing) {
-      await admin.from("work_orders").update({ title, place, body }).eq("id", existing.id);
+      await admin.from("work_orders").update(row).eq("id", existing.id);
     } else {
       await admin.from("work_orders").insert({
-        title,
-        place,
-        body,
+        ...row,
         source_note_id: noteId,
-        status: "open",
       });
     }
     await admin.from("member_notes").update({ status: "in_progress" }).eq("id", noteId);
   } else {
-    await admin.from("work_orders").insert({ title, place, body, status: "open" });
+    await admin.from("work_orders").insert(row);
   }
+  const { notifyJobWatchers } = await import("@/lib/jobNotify");
+  await notifyJobWatchers(admin, {
+    title: "Job opened",
+    body: place ? `${title} · ${place}` : title,
+  });
   await writeAudit({ actorUserId: user.id, actorName: name, action: "Opened a job", subject: title, detail: place });
   revalidatePath("/account/jobs");
   revalidatePath("/work");
@@ -571,7 +611,9 @@ export async function createWorkOrder(formData: FormData) {
 export async function assignWorkOrder(formData: FormData) {
   const { user, profile, admin, name } = await session();
   await requireDeskManage(profile.role, user, "maintenance");
-  if (!canRunFacility(profile.role, user)) throw new Error("Only the facility manager can assign a job.");
+  if (!(await canRunJobs(profile.role, user))) {
+    throw new Error("Only the repairs desk can assign a job.");
+  }
   const id = Number(formData.get("jobId"));
   const assignee = String(formData.get("assignee") || "");
   const status = String(formData.get("status") || "");
@@ -579,6 +621,7 @@ export async function assignWorkOrder(formData: FormData) {
   const patch: { assignee_user_id?: string | null; status?: string } = {};
   if (assignee) patch.assignee_user_id = assignee;
   if (["open", "in_progress", "done"].includes(status)) patch.status = status;
+  const { data: before } = await admin.from("work_orders").select("title").eq("id", id).maybeSingle();
   await admin.from("work_orders").update(patch).eq("id", id);
   if (status === "done") {
     const { data: linked } = await admin.from("work_orders").select("source_note_id").eq("id", id).maybeSingle();
@@ -586,6 +629,12 @@ export async function assignWorkOrder(formData: FormData) {
       await admin.from("member_notes").update({ status: "done" }).eq("id", linked.source_note_id);
     }
   }
+  const { notifyJobWatchers } = await import("@/lib/jobNotify");
+  await notifyJobWatchers(admin, {
+    title: "Job update",
+    body: `${before?.title || `Job #${id}`} · ${(status || "updated").replaceAll("_", " ")}`,
+    alsoUserIds: assignee ? [assignee] : [],
+  });
   await writeAudit({ actorUserId: user.id, actorName: name, action: "Updated a job", subject: String(id), detail: status });
   revalidatePath("/account/jobs");
   revalidatePath("/work");
@@ -607,6 +656,12 @@ export async function updateMyJob(formData: FormData) {
   if (status === "done" && job.source_note_id) {
     await admin.from("member_notes").update({ status: "done" }).eq("id", job.source_note_id);
   }
+  const { notifyJobWatchers } = await import("@/lib/jobNotify");
+  await notifyJobWatchers(admin, {
+    title: "Job update",
+    body: `${job.title} · ${status.replaceAll("_", " ")}`,
+    alsoUserIds: [user.id],
+  });
   await writeAudit({ actorUserId: user.id, actorName: name, action: "Updated a job", subject: job.title, detail: status });
   revalidatePath("/work");
   revalidatePath("/account/jobs");
@@ -654,7 +709,9 @@ export async function savePermission(formData: FormData) {
 export async function setOnDuty(formData: FormData) {
   const { user, profile, admin, name } = await session();
   await requireDeskManage(profile.role, user, "maintenance");
-  if (!canRunFacility(profile.role, user)) throw new Error("Only the facility manager can set who is on duty.");
+  if (!(await canRunJobs(profile.role, user))) {
+    throw new Error("Only the repairs desk can set who is on duty.");
+  }
   const personId = String(formData.get("personId") || "");
   const onDuty = String(formData.get("onDuty") || "") === "true";
   if (!personId) return;

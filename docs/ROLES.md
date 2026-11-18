@@ -6,6 +6,8 @@ This describes how access works across the **website** (`rv-uddipta-portal`) and
 2. **Feature switches** (`community_features`) — a feature turned off is closed for everyone
 3. **Per-role permissions** (`role_permissions`) — optional overrides set by super admin under **Account → Permissions**
 
+For **Work list / Roles / People / Areas / Reminders** (duties, extra duty, authorable labels, period owners), see [EMPLOYEES_ROLES_TASKS.md](./EMPLOYEES_ROLES_TASKS.md). The Work list can link to live **Jobs** (suggested For role + preferred assignees). **Areas** set who looks after repairs/gate/notices for a period — Jobs follow the current repairs owner (seeded to builder until handover). Gate screens stay security-only.
+
 If no override is saved for a feature, the **defaults** below apply.
 
 ```mermaid
@@ -77,7 +79,7 @@ flowchart TD
 | --- | --- | --- |
 | **Super admin** | Admin desk only | Platform control — not a society flat |
 | **Admin** (society) | `/account` / office on phone | Approvals, flats, billing, team |
-| **Builder** | Building details | Public project facts |
+| **Builder** | Building details (+ Jobs while repairs owner) | Public project facts; repairs desk until handover |
 | **Owner** | Home / feed | That flat’s resident |
 | **Family** (`co_owner`) | Home / feed | Same home as owner |
 | **Tenant** | Home / feed | Lives in a home; fewer home edits |
@@ -177,6 +179,7 @@ flowchart TB
 flowchart LR
   B[Builder]
   B --> BD[Building / project details]
+  B --> J[Jobs while repairs area owner]
   B --> CF[Community features if granted]
   B -.->|no| AP[Approve owners]
   B -.->|no| BL[Billing / flats / roles desks]
@@ -185,12 +188,14 @@ flowchart LR
 **Can**
 
 - Edit **building / project details** (brochure-style facts the public site shows)
+- Run the **Jobs** desk while Areas → Repairs names Builder as the period owner (default seed; change to Facility after handover)
 - Use community features that are enabled and granted (default: manage for catalog features, same community fallback as other society roles)
 
 **Cannot**
 
 - Approve owners or assign society admin
 - Run billing / flats / roles desks (those are admin)
+- Keep Jobs after repairs ownership moves to Facility (or another role)
 
 **Home:** `/account/builder`
 

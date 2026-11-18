@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import { t, type SocietyLabels } from "@/lib/labelDefaults";
 import { PEOPLE_ROLE_GUIDE } from "@/lib/roleLabels";
 
-export function PeopleRolesHelp() {
+export function PeopleRolesHelp({ labels = {} }: { readonly labels?: SocietyLabels }) {
   const [open, setOpen] = useState(false);
   const titleId = useId();
 
@@ -20,8 +21,8 @@ export function PeopleRolesHelp() {
     <>
       <button
         type="button"
-        aria-label="Who does what"
-        title="Who does what"
+        aria-label={t(labels, "who_does_what")}
+        title={t(labels, "who_does_what")}
         onClick={() => setOpen(true)}
         className="inline-flex size-9 items-center justify-center rounded-full text-sm font-bold text-[#0f172a] ring-1 ring-[rgba(15,23,42,0.16)] hover:bg-[rgba(15,23,42,0.04)]"
       >
@@ -43,13 +44,15 @@ export function PeopleRolesHelp() {
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 id={titleId} className="text-xl font-semibold text-[#0f172a]">Who does what</h2>
+                <h2 id={titleId} className="text-xl font-semibold text-[#0f172a]">
+                  {t(labels, "who_does_what")}
+                </h2>
                 <p className="mt-1 text-sm text-[#64748b]">
-                  Use Create for the building team. People who live in a home are added under Flats.
+                  {t(labels, "help_who_does_what")}
                 </p>
               </div>
               <button type="button" className="btn-line" onClick={() => setOpen(false)}>
-                Close
+                {t(labels, "close")}
               </button>
             </div>
             <ul className="mt-4 grid max-h-[min(60vh,28rem)] gap-2 overflow-y-auto overscroll-contain pr-1">

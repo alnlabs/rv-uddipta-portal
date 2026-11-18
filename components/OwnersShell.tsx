@@ -8,6 +8,7 @@ import { signOut } from "@/app/actions/auth";
 import { switchRole } from "@/app/actions/community-os";
 import { ApprovalWatcher } from "@/components/ApprovalWatcher";
 import { Mark } from "@/components/Mark";
+import { t } from "@/lib/labelDefaults";
 
 type NavItem = {
   href: string
@@ -226,6 +227,7 @@ export function OwnersShell({
   isAdmin = false,
   isSuperAdmin = false,
   canEditBuilder = false,
+  canRunJobs = false,
   showPrivateCommunity = false,
   flatNumber = null,
   pendingApproval = false,
@@ -235,11 +237,13 @@ export function OwnersShell({
   role = "visitor",
   heldRoles = [],
   enabledFeatures = null,
+  societyLabels = null,
 }: {
   children: React.ReactNode
   isAdmin?: boolean
   isSuperAdmin?: boolean
   canEditBuilder?: boolean
+  canRunJobs?: boolean
   showPrivateCommunity?: boolean
   flatNumber?: string | null
   pendingApproval?: boolean
@@ -249,10 +253,11 @@ export function OwnersShell({
   role?: string
   heldRoles?: { role: string; label: string }[]
   enabledFeatures?: string[] | null
+  societyLabels?: Record<string, string> | null
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const canSwitch = isSuperAdmin || isAdmin || canEditBuilder;
+  const canSwitch = isSuperAdmin || isAdmin || canEditBuilder || canRunJobs;
 
   // Super admin never uses resident/community UI — only data + platform controls.
   useEffect(() => {
@@ -288,7 +293,13 @@ export function OwnersShell({
   }, [isSuperAdmin, pathname, router]);
 
   const inAdmin = pathname.startsWith("/account");
-  const adminHref = isSuperAdmin || isAdmin ? "/account" : "/account/builder";
+  const adminHref = isSuperAdmin || isAdmin
+    ? "/account"
+    : canEditBuilder
+      ? "/account/builder"
+      : canRunJobs
+        ? "/account/jobs"
+        : "/account";
   const seeCommunity = showPrivateCommunity && !isSuperAdmin;
   const ownersHome = role === "security" ? "/gate" : seeCommunity ? "/feed" : "/";
 
@@ -465,8 +476,8 @@ export function OwnersShell({
   if (isSuperAdmin || isAdmin) {
     adminNav.push({
       href: "/account/roles",
-      label: "Roles",
-      short: "Roles",
+      label: t(societyLabels, "roles"),
+      short: t(societyLabels, "roles"),
       match: (p) => p.startsWith("/account/roles"),
       icon: "people",
     });
@@ -516,7 +527,7 @@ export function OwnersShell({
       icon: "model",
     });
   }
-  if ((office || role === "facility") && featureOn("maintenance")) {
+  if ((office || role === "facility" || canRunJobs) && featureOn("maintenance")) {
     adminNav.push({
       href: "/account/jobs",
       label: "Jobs",
@@ -548,6 +559,13 @@ export function OwnersShell({
           short: "Access",
           match: (p) => p.startsWith("/account/permissions"),
           icon: "admin",
+        },
+        {
+          href: "/account/labels",
+          label: t(societyLabels, "labels"),
+          short: t(societyLabels, "labels"),
+          match: (p) => p.startsWith("/account/labels"),
+          icon: "form",
         },
         {
           href: "/account/audit",

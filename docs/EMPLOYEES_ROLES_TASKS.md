@@ -1,72 +1,72 @@
-# Employees, Roles, and Tasks (separate + linked)
+# Work list, Roles, People, Reminders + Labels
 
-Status: **planned — do later** (not implemented yet)
-
-Overview: Introduce a community standards catalog of predefined roles and tasks, allow custom additions, and separate admin create flows for Employees, Roles, and Tasks with the dependency rules below.
+Status: **Phase 1–2c implemented** (catalog + reminders + job↔work + area ownership for Jobs).
 
 ## Model
 
 ```mermaid
 flowchart LR
-  Task[Task catalog]
-  Role[Role catalog]
-  Emp[Employee]
-  Task -.->|no required link| Alone[Standalone]
-  Role <-->|many-to-many| Task
-  Emp -->|must have one role| Role
-  Role <-->|people holding it| Emp
+  Work[Work_list]
+  Role[Roles]
+  Person[People]
+  Reminder[Reminders]
+  Work -.->|optional| Alone[Standalone_work]
+  Role <-->|many_to_many| Work
+  Person -->|one_or_more| Role
+  Person -->|optional| Extra[Extra_duty]
+  Reminder -->|on| Work
+  Reminder -->|to| Person
+  Reminder -->|also| Informed[Keep_informed]
 ```
 
-- **Task**: standalone catalog item (predefined + custom). No required dependency on role or person.
-- **Role**: catalog item (predefined + custom). Linked both ways to **tasks** (what this role does) and **employees** (who holds it).
-- **Employee**: person with phone/PIN (or Google). **Depends on a role** — create/assign always picks a role.
+- **Work**: regular or temporary duty. System or custom. No required role/person.
+- **Role**: lasting. Duties of this role can be changed anytime. Custom roles use `maps_to` for the phone shell.
+- **Person**: Add staff; give one or more roles; optional **extra duty** on that person only.
+- **Effective work** = duties from all held roles + extra duty.
+- **Reminder**: on a work item; notifies people who have that duty; optional Keep informed (admins).
+- **Labels**: super admin can rewrite display words and help sentences.
 
-Live repair/gate jobs (`work_orders`) stay as today for day-to-day work; they can optionally reference a catalog task later. Phase 1 focuses on the catalog + People wiring.
+## Data
 
-## Data (new migration under `rv-uddipta-portal/supabase/migrations/`)
+Migration: `supabase/migrations/20261117190000_society_work_roles_reminders.sql`
 
-- `society_roles` — `id`, `key`, `label`, `summary`, `system` (predefined), `enabled`, `created_at`
-- `society_tasks` — `id`, `key`, `label`, `summary`, `system`, `enabled`, `created_at` (no FKs)
-- `society_role_tasks` — `(role_id, task_id)` many-to-many
-- Seed **community-standard** roles: Security, Facility manager, Service staff, Committee, Builder (Admin stays special / super-assigned as today)
-- Seed **standard tasks** e.g. Gate check, Guest entry/exit, Mark staff present, Open repair job, Do assigned repair, Shared-space booking, Society notice/vote — with no role required on insert; seed links attach them to the matching predefined roles
-- Keep existing `person_roles` / `profiles.role` text keys in sync with `society_roles.key` for Security/Staff/Facility so gate/jobs RPCs keep working
-- Custom role/task get generated keys (`custom_…`); custom roles that need phone shells map to nearest desk type via `maps_to` (`security` | `staff` | `facility` | `committee` | `builder`) so the app knows which screens to open
+- `society_tasks`, `society_roles`, `society_role_tasks`, `society_person_tasks`, `society_reminders`, `society_labels`
+- Existing `person_roles` / `profiles.role` stay the login/active-role source of truth for gate/jobs RPCs
 
-## Admin create flows (separate)
+## Admin surfaces
 
-Three admin surfaces (phone People area + portal Roles):
+| Place | What |
+| --- | --- |
+| Portal `/account/roles` tabs | People · Work list · Roles · Areas · Reminders |
+| Portal `/account/labels` | Super admin — authorable words/sentences |
+| Phone People screen tabs | Same four areas + extra duty on a selected person |
 
-1. **Tasks** — list/create/edit/enable catalog tasks; no employee or role required
-2. **Roles** — list/create/edit predefined+custom roles; attach/detach tasks; see people count
-3. **People (employees)** — create/assign person **requires a role**; show role label + linked task summary
+## Rules
 
-Dependency rules in UI + RPCs:
+- Add staff without a role → blocked (existing create/assign flows)
+- Detach work from a role → allowed
+- Soft-disable linked work; do not remove a role while people still hold it
+- Temporary work past `ends_at` → inactive in lists
+- Reminder flush: admin “Send due reminders” or push cron (`/api/push/flush`)
 
-- Creating an employee without a role is blocked
-- Detaching a task from a role is allowed; deleting a task used by roles is soft-disable (or block hard delete if linked)
-- Removing a role is blocked while employees still hold it
-- Tasks never require a role to exist
+## Live jobs (Phase 2 / 2b)
 
-## App / API touchpoints
+- `work_orders.society_task_id` links a job to a Work list item
+- Portal Jobs + phone Tasks: pick from Work list when opening a job
+- **Phase 2b:** picking Work defaults **For role** to staff/facility/security from duties of that work; assignee pickers prefer duty holders (role duty ∪ extra duty); portal create form has For role + frequency; job cards show linked Work
+- Keep informed: society admins get notifications on open / assign / status
 
-- Extend `rv-uddipta-mobile/src/lib/rolesDesk.ts` + People UI (`RolesAssign.tsx`): tabs or entry points for Tasks / Roles / People; keep **?** help in plain language updated to this model
-- Portal: `RoleCreateOfficeForm` / roles page split into Tasks + Roles + People sections
-- RPCs (security definer): `list_society_catalog`, `save_society_task`, `save_society_role`, `set_role_tasks`, reuse create-employee with `role_key` validation against enabled `society_roles`
+## Areas (Phase 2c)
 
-## Docs follow-up (when implementing)
+Migration: `supabase/migrations/20261118120000_society_area_owners.sql`
 
-- Update `docs/ROLES.md` help diagram: Task (none) → Role ↔ Task and Role ↔ Employee; Employee → Role
-- Refresh People **?** copy to match (plain words)
+- `society_area_owners` — who looks after **repairs**, **gate**, **notices** for a period (`starts_at` / `ends_at`, open-ended allowed)
+- Seed: repairs → builder (handover later to facility); gate → security (locked); notices → committee
+- `can_manage_area` / `require_jobs_manager` — Jobs desk is admin + facility + current repairs owner (not blanket builder forever)
+- Portal `/account/roles?tab=areas` and phone People → Areas tab set the period owner
+- Portal Jobs nav + phone Admin Tasks open for the current repairs owner
 
-## Out of scope for this pass
+## Later
 
-- Razorpay / payments
-- Replacing every `work_orders` flow with catalog-only jobs (optional `task_id` on work orders can follow once catalog is live)
-
-## Implementation checklist
-
-- [ ] Migration: `society_roles`, `society_tasks`, `society_role_tasks` + community-standard seeds + `maps_to` for custom roles
-- [ ] RPCs to list/save tasks, roles, role-task links; validate employee create against enabled roles
-- [ ] Split admin UI into Tasks / Roles / People (mobile + portal) with dependency rules
-- [ ] Update `docs/ROLES.md` and People ? help to plain-language employee/role/task model
+- Gate linked to Work list duties
+- SMS / WhatsApp reminder channels

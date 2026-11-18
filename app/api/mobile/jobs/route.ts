@@ -1,7 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { writeAudit } from "@/lib/audit";
 import { desk, isMember, mobileJson, readMobileMember } from "@/lib/mobileSession";
-import { canRunFacility } from "@/lib/roles";
+import { canRunJobs } from "@/lib/areaOwners";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +9,9 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const member = await readMobileMember(request);
   if (!isMember(member)) return member;
-  if (!canRunFacility(member.profile.role, member.user)) return mobileJson({ message: "Jobs are for the facility manager." }, 403);
+  if (!(await canRunJobs(member.profile.role, member.user))) {
+    return mobileJson({ message: "Jobs are for the repairs desk." }, 403);
+  }
   const access = await desk(member, "maintenance");
   if (access === "none") return mobileJson({ message: "Jobs are turned off." }, 403);
 
@@ -43,7 +45,9 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const member = await readMobileMember(request);
   if (!isMember(member)) return member;
-  if (!canRunFacility(member.profile.role, member.user)) return mobileJson({ message: "Jobs are for the facility manager." }, 403);
+  if (!(await canRunJobs(member.profile.role, member.user))) {
+    return mobileJson({ message: "Jobs are for the repairs desk." }, 403);
+  }
   const access = await desk(member, "maintenance");
   if (access !== "manage") return mobileJson({ message: "You can see the jobs. You cannot change them." }, 403);
 
