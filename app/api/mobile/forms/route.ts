@@ -38,7 +38,7 @@ export async function GET(request: Request) {
   const member = await readMobileMember(request);
   if (!isMember(member)) return member;
   const access = await desk(member, "forms");
-  if (access === "none") return mobileJson({ message: "Queries are turned off." }, 403);
+  if (access === "none") return mobileJson({ message: "Enquiries are turned off." }, 403);
 
   const admin = createAdminClient();
   const isAdmin = canManageAdmin(member.profile.role, member.user);
@@ -127,14 +127,14 @@ export async function POST(request: Request) {
   const member = await readMobileMember(request);
   if (!isMember(member)) return member;
   if (!canManageAdmin(member.profile.role, member.user)) {
-    return mobileJson({ message: "Only an admin can create a query." }, 403);
+    return mobileJson({ message: "Only an admin can create an enquiry." }, 403);
   }
   const access = await desk(member, "forms");
-  if (access !== "manage") return mobileJson({ message: "Queries are turned off." }, 403);
+  if (access !== "manage") return mobileJson({ message: "Enquiries are turned off." }, 403);
 
   const body = await request.json().catch(() => null);
   const title = String(body?.title || "").trim().slice(0, 120);
-  if (title.length < 2) return mobileJson({ message: "Give the query a title." }, 400);
+  if (title.length < 2) return mobileJson({ message: "Give the enquiry a title." }, 400);
   const note = String(body?.note || "").trim().slice(0, 500);
   const visibility = body?.visibility === "private" ? "private" : "public";
   const results = resultsView(String(body?.resultsView || "community"));
@@ -186,7 +186,7 @@ export async function POST(request: Request) {
     })
     .select("id")
     .single();
-  if (error || !data) return mobileJson({ message: "Could not create that query." }, 500);
+  if (error || !data) return mobileJson({ message: "Could not create that enquiry." }, 500);
 
   const { error: fieldError } = await admin.from("enquiry_fields").insert(
     questions.map((question, index) => ({
@@ -200,11 +200,11 @@ export async function POST(request: Request) {
   );
   if (fieldError) {
     await admin.from("enquiries").delete().eq("id", data.id);
-    return mobileJson({ message: "Could not create that query." }, 500);
+    return mobileJson({ message: "Could not create that enquiry." }, 500);
   }
 
   revalidatePath("/account/forms");
   revalidatePath("/forms");
   revalidatePath(`/f/${slug}`);
-  return mobileJson({ ok: true, id: data.id as number, message: "Query created." });
+  return mobileJson({ ok: true, id: data.id as number, message: "Enquiry created." });
 }

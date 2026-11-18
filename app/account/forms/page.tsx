@@ -14,13 +14,13 @@ export default async function FormsAdminPage() {
   return (
     <section className="w-full">
       <WorkspaceHeader
-        title="Queries"
-        lede="Create a query, share the link, and read what people send back."
+        title="Enquiries"
+        lede="Create an enquiry, share the link, and read what people send back."
       />
       <div className="mt-6 grid gap-8">
         {forms.length ? (
           <div>
-            <h2 className="text-xl font-semibold tracking-tight text-[#0f172a]">Your queries</h2>
+            <h2 className="text-xl font-semibold tracking-tight text-[#0f172a]">Your enquiries</h2>
             <ul className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {forms.map((form) => (
                 <li key={form.id}>
