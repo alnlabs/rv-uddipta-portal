@@ -78,7 +78,7 @@ export function EnquiryFill({
   if (closed) {
     return (
       <p className="form-sheet mt-5 text-base leading-relaxed text-[#475569]">
-        This form is closed. Answers already sent are kept, and new ones are not accepted.
+        This enquiry is closed. Replies already sent are kept, and new ones are not accepted.
       </p>
     );
   }
@@ -86,34 +86,34 @@ export function EnquiryFill({
   if (fields.length === 0) {
     return (
       <p className="form-sheet mt-5 text-base leading-relaxed text-[#475569]">
-        This form does not have any questions yet.
+        This enquiry does not have any questions yet.
       </p>
     );
   }
 
   return (
-    <Form handled action={action} className="mt-5 grid items-start gap-4 lg:grid-cols-2">
+    <Form handled action={action} className="form-sheet mt-5 grid gap-6">
       <input type="hidden" name="slug" value={slug} />
       {askName ? null : <input type="hidden" name="name" value={identity.name} />}
       {askPhone ? null : <input type="hidden" name="phone" value={identity.phone} />}
       {askFlat ? null : <input type="hidden" name="flatNumber" value={identity.flatNumber} />}
 
       {who ? (
-        <div className="rounded-[1.5rem] bg-[#0f172a] px-5 py-4 text-[#f8fafc] md:px-6 lg:col-span-2">
-          <p className="text-xs font-semibold tracking-[0.14em] text-[#f8fafc] uppercase">
-            Answering as
-          </p>
-          <p className="mt-1 text-lg font-semibold">{who}</p>
-        </div>
+        <p className="text-sm text-[#475569]">
+          Sending as <span className="font-semibold text-[#0f172a]">{who}</span>
+          {updating ? " · already sent — you can update it" : null}
+        </p>
       ) : null}
 
       {askName || askPhone || askFlat ? (
-        <section className="form-sheet lg:col-span-2">
-          <h2 className="text-xl font-semibold tracking-tight text-[#0f172a]">Your details</h2>
-          <p className="mt-1 text-sm leading-relaxed text-[#475569]">
-            So the answer is tied to the right flat. One answer is kept per flat.
-          </p>
-          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <section className="grid gap-4 border-b border-[rgba(15,23,42,0.08)] pb-6">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight text-[#0f172a]">Your details</h2>
+            <p className="mt-1 text-sm leading-relaxed text-[#475569]">
+              So the reply is tied to the right flat. One reply is kept per flat.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {askName ? (
               <TextField
                 label="Your name"
@@ -151,34 +151,24 @@ export function EnquiryFill({
         </section>
       ) : null}
 
-      {fields.map((field, index) => (
-        <section
-          key={field.id}
-          className={`form-sheet${field.kind === "long" ? " lg:col-span-2" : ""}`}
-        >
-          <p className="text-sm font-semibold text-[#b45309]">
-            Question {index + 1} of {fields.length}
-          </p>
-          <div className="mt-3">
+      <ol className="grid gap-6">
+        {fields.map((field) => (
+          <li key={field.id} className="list-none">
             <QuestionField field={field} value={defaults[field.id] ?? ""} />
-          </div>
-        </section>
-      ))}
+          </li>
+        ))}
+      </ol>
 
-      {state.message ? (
-        <div className="lg:col-span-2">
-          <FormAlert tone={state.ok ? "ok" : "error"}>{state.message}</FormAlert>
-        </div>
-      ) : null}
+      {state.message ? <FormAlert tone={state.ok ? "ok" : "error"}>{state.message}</FormAlert> : null}
 
-      <div className="form-sheet flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between lg:col-span-2">
+      <div className="flex flex-col gap-3 border-t border-[rgba(15,23,42,0.08)] pt-5 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm leading-relaxed text-[#475569]">
           {updating
-            ? "This flat already has an answer. Sending again replaces it."
-            : "Each flat keeps one answer. You can send it again later to update it."}
+            ? "This flat already replied. Sending again replaces it."
+            : "Each flat keeps one reply. You can send again later to update it."}
         </p>
-        <button type="submit" disabled={pending} className="btn btn-gold w-full shrink-0 sm:w-auto">
-          {pending ? "Sending…" : updating ? "Update answer" : "Send answer"}
+        <button type="submit" disabled={pending} className="btn-slate w-full shrink-0 sm:w-auto">
+          {pending ? "Sending…" : updating ? "Update reply" : "Send reply"}
         </button>
       </div>
     </Form>

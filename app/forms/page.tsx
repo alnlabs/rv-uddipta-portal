@@ -49,9 +49,9 @@ export default async function OpenFormsPage() {
       </header>
       {visible.length ? (
         <>
-          <FormGroup title="Open for you" forms={waiting} action="Open" />
-          <FormGroup title="Sent" forms={answered} action="View or update" />
-          <FormGroup
+          <EnquiryGroup title="Open for you" forms={waiting} action="Open" />
+          <ReplyList title="Your replies" forms={answered} />
+          <EnquiryGroup
             title="Closed"
             forms={closed}
             action="Read"
@@ -67,14 +67,23 @@ export default async function OpenFormsPage() {
   );
 }
 
-function FormGroup({
+type EnquiryCard = {
+  id: number
+  slug: string
+  title: string
+  note: string
+  visibility: string
+  closedAt: string | null
+};
+
+function EnquiryGroup({
   title,
   forms,
   action,
   answeredIds,
 }: {
   title: string
-  forms: { id: number; slug: string; title: string; note: string; visibility: string; closedAt: string | null }[]
+  forms: EnquiryCard[]
   action: string
   answeredIds?: Set<number>
 }) {
@@ -89,19 +98,51 @@ function FormGroup({
             <li key={form.id}>
               <Link href={`/f/${form.slug}`} className="form-sheet block transition hover:-translate-y-0.5">
                 <p className="text-sm text-[#64748b]">
-                  {form.closedAt ? (yours ? "Closed · sent" : "Closed") : form.visibility === "private" ? "Residents only" : "Open"}
+                  {form.closedAt
+                    ? yours
+                      ? "Closed · you replied"
+                      : "Closed"
+                    : form.visibility === "private"
+                      ? "Residents only"
+                      : "Open"}
                 </p>
                 <span className="mt-2 block text-xl font-semibold text-[#0f172a]">{form.title}</span>
                 <span className="mt-2 block text-sm leading-relaxed text-[#475569]">
                   {form.note || "Tap to read the questions."}
                 </span>
-                <span className="mt-4 inline-flex text-sm text-[#475569]">
-                  {yours ? "View or update" : action}
-                </span>
+                <span className="mt-4 inline-flex text-sm text-[#475569]">{action} →</span>
               </Link>
             </li>
           );
         })}
+      </ul>
+    </section>
+  );
+}
+
+/** Your replies: simple rows, not the same card grid as open enquiries. */
+function ReplyList({ title, forms }: { title: string; forms: EnquiryCard[] }) {
+  if (!forms.length) return null;
+  return (
+    <section className="mt-10">
+      <h2 className="text-sm font-semibold tracking-[0.08em] text-[#64748b] uppercase">{title}</h2>
+      <ul className="mt-3 divide-y divide-[rgba(15,23,42,0.08)] border-y border-[rgba(15,23,42,0.08)]">
+        {forms.map((form) => (
+          <li key={form.id}>
+            <Link
+              href={`/f/${form.slug}`}
+              className="flex flex-wrap items-baseline justify-between gap-2 py-4 transition hover:bg-[#f8fafc]"
+            >
+              <span>
+                <span className="block font-semibold text-[#0f172a]">{form.title}</span>
+                <span className="mt-0.5 block text-sm text-[#64748b]">
+                  {form.note ? form.note.replace(/<[^>]+>/g, "").slice(0, 80) : "Update your reply"}
+                </span>
+              </span>
+              <span className="text-sm text-[#475569]">View or update →</span>
+            </Link>
+          </li>
+        ))}
       </ul>
     </section>
   );
