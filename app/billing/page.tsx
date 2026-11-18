@@ -55,34 +55,32 @@ export default async function ResidentBillingPage() {
             <p className="text-sm text-[#475569]">
               {rupees(Number(row.amountPaise || 0))} · balance {rupees(Number(row.balancePaise || 0))}
             </p>
-            {access !== "none" ? (
-              <form action={submitResidentPaymentProof} className="mt-4 grid gap-2">
-                <input type="hidden" name="invoiceId" value={String(row.id)} />
+            <form action={submitResidentPaymentProof} className="mt-4 grid gap-2">
+              <input type="hidden" name="invoiceId" value={String(row.id)} />
+              <input
+                name="amount"
+                defaultValue={String(Number(row.balancePaise || 0) / 100)}
+                placeholder="₹ paid"
+                className="field-control"
+                required
+              />
+              <select name="method" defaultValue="upi" className="field-control">
+                <option value="upi">UPI</option>
+                <option value="offline">Cash / office</option>
+              </select>
+              <input name="reference" placeholder="UTR / receipt note (optional)" className="field-control" />
+              <label className="text-sm text-[#475569]">
+                Proof (screenshot or PDF)
                 <input
-                  name="amount"
-                  defaultValue={String(Number(row.balancePaise || 0) / 100)}
-                  placeholder="₹ paid"
-                  className="field-control"
+                  name="proof"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  className="mt-1 block w-full text-sm"
                   required
                 />
-                <select name="method" defaultValue="upi" className="field-control">
-                  <option value="upi">UPI</option>
-                  <option value="offline">Cash / office</option>
-                </select>
-                <input name="reference" placeholder="UTR / receipt note (optional)" className="field-control" />
-                <label className="text-sm text-[#475569]">
-                  Proof (screenshot or PDF)
-                  <input
-                    name="proof"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,application/pdf"
-                    className="mt-1 block w-full text-sm"
-                    required
-                  />
-                </label>
-                <button type="submit" className="btn-slate w-fit">Submit proof</button>
-              </form>
-            ) : null}
+              </label>
+              <button type="submit" className="btn-slate w-fit">Submit proof</button>
+            </form>
           </li>
         ))}
         {!open.length ? <li className="text-sm text-[#475569]">No open invoices.</li> : null}

@@ -782,7 +782,7 @@ export function OwnersShell({
             <Mark size={40} />
             <span className="leading-tight">
               <strong className="block text-[0.95rem] tracking-[0.04em]">
-                UDDIIPTA
+                RV Uddiipta
               </strong>
               <span className="text-[0.68rem] font-medium tracking-[0.14em] text-[#94a3b8] uppercase">
                 Community
@@ -868,7 +868,7 @@ export function OwnersShell({
               <Link href={brandHref} className="flex items-center gap-2">
                 <Mark size={32} />
                 <span className="text-sm font-semibold text-[#0f172a]">
-                  {flatNumber || "UDDIIPTA"}
+                  {flatNumber || "RV Uddiipta"}
                 </span>
               </Link>
               <NotificationBell count={notificationBadge} tone="light" />
