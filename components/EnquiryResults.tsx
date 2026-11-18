@@ -48,24 +48,18 @@ export function EnquiryResults({
 
   return (
     <section className="mt-10">
-      <p className="eyebrow">Answers</p>
+      <p className="eyebrow">Replies</p>
       <h2 className="mt-1 text-2xl font-semibold tracking-tight text-[#0f172a]">
         {people.length === 0
-          ? "No answers yet"
+          ? "No replies yet"
           : people.length === 1
-            ? "1 home has answered"
-            : `${people.length} homes have answered`}
+            ? "1 home has replied"
+            : `${people.length} homes have replied`}
       </h2>
       {people.length === 0 ? (
         <p className="mt-2 max-w-2xl text-base leading-relaxed text-[#475569]">
-          When a home sends answers, they will show up here, question by question.
+          When a home sends a reply, it will show up here, question by question.
         </p>
-      ) : null}
-
-      {yours && people.length > 1 ? (
-        <div className="mt-5">
-          <AnswerSheet answer={yours} fields={fields} title="Your home" />
-        </div>
       ) : null}
 
       {people.length === 1 ? (
@@ -76,7 +70,12 @@ export function EnquiryResults({
 
       {people.length > 1
         ? fields.map((field) => (
-            <QuestionPicture key={field.id} field={field} answers={people} />
+            <QuestionPicture
+              key={field.id}
+              field={field}
+              answers={people}
+              highlightFlat={highlightFlat}
+            />
           ))
         : null}
 
@@ -114,8 +113,8 @@ function AnswerSheet({
 
   return (
     <article className="form-sheet">
-      <p className="text-xs font-semibold tracking-[0.14em] text-[#b45309] uppercase">
-        {title || answer.flatNumber || "Answer"}
+      <p className="text-sm text-[#64748b]">
+        {title || answer.flatNumber || "Reply"}
       </p>
       <h3 className="mt-1 text-xl font-semibold text-[#0f172a]">
         {title ? answer.flatNumber : answer.name || "Name not given"}
@@ -130,14 +129,14 @@ function AnswerSheet({
           {rows.map((row) => (
             <div key={row.field.id}>
               <dt className="text-sm text-[#475569]">{row.field.label}</dt>
-              <dd className="mt-0.5 whitespace-pre-wrap text-base font-semibold leading-relaxed text-[#0f172a]">
+              <dd className="mt-0.5 whitespace-pre-wrap text-base leading-relaxed text-[#0f172a]">
                 {row.value}
               </dd>
             </div>
           ))}
         </dl>
       ) : (
-        <p className="mt-4 text-sm text-[#475569]">This answer is blank.</p>
+        <p className="mt-4 text-sm text-[#475569]">This reply is blank.</p>
       )}
     </article>
   );
@@ -146,32 +145,40 @@ function AnswerSheet({
 function QuestionPicture({
   field,
   answers,
+  highlightFlat,
 }: {
   field: EnquiryField
   answers: StoredAnswer[]
+  highlightFlat?: string
 }) {
   const rows = filled(field, answers);
   if (field.kind === "choice" || field.kind === "date") {
-    return <CountedQuestion field={field} rows={rows} total={answers.length} />;
+    return <CountedQuestion field={field} rows={rows} total={answers.length} highlightFlat={highlightFlat} />;
   }
   if (!rows.length) return null;
   if (field.kind === "text" && groupShortText(rows)) {
-    return <CountedQuestion field={field} rows={rows} total={answers.length} />;
+    return <CountedQuestion field={field} rows={rows} total={answers.length} highlightFlat={highlightFlat} />;
   }
   return (
     <section className="form-sheet mt-4">
       <h3 className="text-lg font-semibold text-[#0f172a]">{field.label}</h3>
-      <p className="mt-1 text-sm text-[#475569]">{homes(rows.length)} wrote an answer.</p>
+      <p className="mt-1 text-sm text-[#475569]">{homes(rows.length)} wrote a reply.</p>
       <ul className="mt-4 grid gap-4">
         {rows
           .slice()
           .sort((a, b) => byFlat(a.flat, b.flat))
-          .map((row) => (
-            <li key={row.flat}>
-              <p className="text-xs font-semibold tracking-[0.08em] text-[#64748b] uppercase">{row.flat}</p>
-              <p className="mt-1 whitespace-pre-wrap text-base leading-relaxed text-[#0f172a]">{row.value}</p>
-            </li>
-          ))}
+          .map((row) => {
+            const yours = highlightFlat && row.flat === highlightFlat;
+            return (
+              <li key={row.flat}>
+                <p className="text-sm text-[#64748b]">
+                  {row.flat}
+                  {yours ? " · yours" : ""}
+                </p>
+                <p className="mt-1 whitespace-pre-wrap text-base leading-relaxed text-[#0f172a]">{row.value}</p>
+              </li>
+            );
+          })}
       </ul>
     </section>
   );
@@ -181,10 +188,12 @@ function CountedQuestion({
   field,
   rows,
   total,
+  highlightFlat,
 }: {
   field: EnquiryField
   rows: { flat: string; value: string }[]
   total: number
+  highlightFlat?: string
 }) {
   const choiceOf = (value: string) =>
     field.choices.find((choice) => choice.toLowerCase() === value.toLowerCase()) ?? value;
@@ -216,46 +225,42 @@ function CountedQuestion({
     <section className="form-sheet mt-4">
       <h3 className="text-lg font-semibold text-[#0f172a]">{field.label}</h3>
       <p className="mt-1 text-sm text-[#475569]">
-        {answered === 0 ? "Nobody has answered this yet." : `${homes(answered)} answered.`}
+        {answered === 0 ? "Nobody has replied to this yet." : `${homes(answered)} replied.`}
       </p>
       <ul className="mt-4 grid gap-3">
         {ordered.map((value) => {
           const flats = (groups.get(value) ?? []).slice().sort(byFlat);
           const count = flats.length;
           const share = answered ? Math.round((count / answered) * 100) : 0;
+          const yoursHere = Boolean(highlightFlat && flats.includes(highlightFlat));
           return (
             <li key={value}>
               <div className="flex items-baseline justify-between gap-3">
-                <p className={count ? "font-semibold text-[#0f172a]" : "text-[#64748b]"}>
+                <p className={count ? "text-[#0f172a]" : "text-[#64748b]"}>
                   {showValue(field.kind, value)}
+                  {yoursHere ? (
+                    <span className="ml-1.5 text-sm text-[#64748b]">· yours</span>
+                  ) : null}
                 </p>
                 <p className="shrink-0 text-sm tabular-nums text-[#475569]">
                   {count === 0 ? "0" : `${count} · ${share}%`}
                 </p>
               </div>
-              <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-[#e2e8f0]">
-                <div className="h-full rounded-full bg-[#059669]" style={{ width: `${share}%` }} />
+              <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-[#e2e8f0]">
+                <div className="h-full rounded-full bg-[#94a3b8]" style={{ width: `${share}%` }} />
               </div>
               {count > 0 && count <= 8 ? (
-                <p className="mt-1.5 flex flex-wrap gap-1.5">
-                  {flats.map((flat) => (
-                    <span key={flat} className="rounded-full bg-[#f1f5f9] px-2 py-0.5 text-xs font-semibold text-[#334155]">
-                      {flat}
-                    </span>
-                  ))}
+                <p className="mt-1.5 text-sm text-[#64748b]">
+                  {flats.map((flat) => (flat === highlightFlat ? `${flat} (yours)` : flat)).join(" · ")}
                 </p>
               ) : null}
               {count > 8 ? (
                 <details className="mt-1.5">
-                  <summary className="cursor-pointer text-sm font-semibold text-[#1e293b]">
+                  <summary className="cursor-pointer text-sm text-[#475569]">
                     {homes(count)}
                   </summary>
-                  <p className="mt-2 flex flex-wrap gap-1.5">
-                    {flats.map((flat) => (
-                      <span key={flat} className="rounded-full bg-[#f1f5f9] px-2 py-0.5 text-xs font-semibold text-[#334155]">
-                        {flat}
-                      </span>
-                    ))}
+                  <p className="mt-2 text-sm text-[#64748b]">
+                    {flats.map((flat) => (flat === highlightFlat ? `${flat} (yours)` : flat)).join(" · ")}
                   </p>
                 </details>
               ) : null}

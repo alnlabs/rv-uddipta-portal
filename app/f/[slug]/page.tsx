@@ -71,7 +71,7 @@ export default async function EnquiryPage({
   return (
     <div className="page-gutter w-full py-8 md:py-14">
       <header className="form-sheet">
-        <p className="eyebrow">Form</p>
+        <p className="eyebrow">Enquiry</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#0f172a] md:text-4xl">
           {enquiry.title}
         </h1>
@@ -79,7 +79,7 @@ export default async function EnquiryPage({
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-[#475569]">{enquiry.note}</p>
         ) : (
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-[#475569]">
-            Answer each question below. Required questions are marked.
+            Fill each question below. Required questions are marked.
           </p>
         )}
         {enquiry.askSignin && !user ? (

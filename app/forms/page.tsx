@@ -44,13 +44,13 @@ export default async function OpenFormsPage() {
           Enquiries
         </h1>
         <p className="mt-3 max-w-2xl text-base leading-relaxed text-[#475569]">
-          Enquiries still waiting for your home, answers you already sent, and enquiries that are closed.
+          Open ones for your home, ones you already sent, and closed enquiries.
         </p>
       </header>
       {visible.length ? (
         <>
-          <FormGroup title="To answer" forms={waiting} action="Answer this enquiry" />
-          <FormGroup title="Your answers" forms={answered} action="Change your answer" />
+          <FormGroup title="Open for you" forms={waiting} action="Open" />
+          <FormGroup title="Sent" forms={answered} action="View or update" />
           <FormGroup
             title="Closed"
             forms={closed}
@@ -88,15 +88,15 @@ function FormGroup({
           return (
             <li key={form.id}>
               <Link href={`/f/${form.slug}`} className="form-sheet block transition hover:-translate-y-0.5">
-                <p className="text-xs font-semibold tracking-[0.14em] text-[#b45309] uppercase">
-                  {form.closedAt ? (yours ? "Closed · your answer" : "Closed") : form.visibility === "private" ? "Residents only" : "Open enquiry"}
+                <p className="text-sm text-[#64748b]">
+                  {form.closedAt ? (yours ? "Closed · sent" : "Closed") : form.visibility === "private" ? "Residents only" : "Open"}
                 </p>
                 <span className="mt-2 block text-xl font-semibold text-[#0f172a]">{form.title}</span>
                 <span className="mt-2 block text-sm leading-relaxed text-[#475569]">
                   {form.note || "Tap to read the questions."}
                 </span>
-                <span className="mt-4 inline-flex text-sm font-semibold text-[#1e293b]">
-                  {yours ? "Your answer" : action}
+                <span className="mt-4 inline-flex text-sm text-[#475569]">
+                  {yours ? "View or update" : action}
                 </span>
               </Link>
             </li>
