@@ -131,7 +131,8 @@ export function EnquiryFill({
   const askName = !identity.name;
   const askPhone = !identity.phone;
   const askFlat = !identity.flatNumber;
-  const who = [identity.name, identity.flatNumber].filter(Boolean).join(" · ");
+  const needDetails = askName || askPhone || askFlat;
+  const who = [identity.name, identity.flatNumber, identity.phone].filter(Boolean).join(" · ");
 
   if (closed) {
     return (
@@ -156,14 +157,14 @@ export function EnquiryFill({
       {askPhone ? null : <input type="hidden" name="phone" value={identity.phone} />}
       {askFlat ? null : <input type="hidden" name="flatNumber" value={identity.flatNumber} />}
 
-      {who ? (
+      {!needDetails && who ? (
         <p className="mb-4 text-sm text-[#64748b]">
           {updating ? "Updating reply for" : "Replying as"}{" "}
           <span className="font-medium text-[#0f172a]">{who}</span>
         </p>
       ) : null}
 
-      {askName || askPhone || askFlat ? (
+      {needDetails ? (
         <div className="mb-6 grid gap-3 border-b border-[rgba(15,23,42,0.08)] pb-6 sm:grid-cols-3">
           {askName ? (
             <label className="grid gap-1 text-sm">

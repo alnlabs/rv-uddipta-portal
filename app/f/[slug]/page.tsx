@@ -64,9 +64,21 @@ export default async function EnquiryPage({
       ? answers.find((answer) => answer.userId === user.id)
       : undefined;
   const defaults: Record<number, string> = mine?.values ?? {};
+  const priorName = (mine?.name ?? "").trim();
+  const identityName = knownName || (priorName.length >= 2 ? priorName : "");
+  const identityPhone = knownPhone || normalizePhone(mine?.phone ?? "") || "";
+  const identityFlat =
+    knownFlat || findInventoryFlat(mine?.flatNumber ?? "")?.flatNumber || "";
   const admin = Boolean(user && profile && canManageAdmin(profile.role, user));
   const community = Boolean(user && profile && isCommunityRole(profile.role));
-  const visible = visibleAnswers(enquiry.resultsView, admin, community, user?.id ?? null, knownFlat, answers);
+  const visible = visibleAnswers(
+    enquiry.resultsView,
+    admin,
+    community,
+    user?.id ?? null,
+    knownFlat || identityFlat,
+    answers,
+  );
 
   return (
     <div className="page-gutter w-full py-8 md:py-14">
@@ -99,7 +111,7 @@ export default async function EnquiryPage({
         defaults={defaults}
         closed={Boolean(enquiry.closedAt)}
         updating={Boolean(mine)}
-        identity={{ name: knownName, phone: knownPhone, flatNumber: knownFlat }}
+        identity={{ name: identityName, phone: identityPhone, flatNumber: identityFlat }}
       />
       {visible ? (
         <EnquiryResults fields={fields} answers={visible} highlightFlat={knownFlat || undefined} />
