@@ -313,44 +313,22 @@ button:not(:disabled) {
   padding: 0.55rem 0;
   font: inherit;
   font-size: 1rem;
-  font-weight: 600;
-  color: #047857;
+  color: #0f172a;
 }
 
 .enquiry-input::placeholder {
   color: #94a3b8;
-  font-weight: 400;
 }
 
 .enquiry-input:focus {
   outline: none;
-  border-bottom-color: #059669;
-}
-
-.enquiry-input:not(:placeholder-shown),
-.enquiry-input[type="date"]:valid {
-  border-bottom-color: rgba(5, 150, 105, 0.45);
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    transparent 70%,
-    rgba(5, 150, 105, 0.08) 70%,
-    rgba(5, 150, 105, 0.08) 100%
-  );
+  border-bottom-color: #1e293b;
 }
 
 .enquiry-input-long {
   min-height: 5.5rem;
   resize: vertical;
   line-height: 1.45;
-}
-
-.enquiry-input-long:not(:placeholder-shown) {
-  background: rgba(5, 150, 105, 0.06);
-  border-radius: 0.5rem;
-  border-bottom-color: rgba(5, 150, 105, 0.35);
-  padding-left: 0.65rem;
-  padding-right: 0.65rem;
 }
 
 .enquiry-options {
