@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { submitEnquiry, type EnquiryState } from "@/app/actions/enquiries";
 import {
   ChoiceField,
@@ -10,9 +10,17 @@ import {
   TextAreaField,
   TextField,
 } from "@/components/form-ui";
+import { formatShortDate } from "@/lib/homeDisplay";
 import type { EnquiryField } from "@/lib/enquiries";
 
 const initial: EnquiryState = { ok: false, message: "" };
+
+function displayValue(field: EnquiryField, value: string) {
+  const text = value.trim();
+  if (!text) return "—";
+  if (field.kind === "date") return formatShortDate(text) ?? text;
+  return text;
+}
 
 function QuestionField({
   field,
@@ -50,6 +58,45 @@ function QuestionField({
   return <TextField {...shared} defaultValue={value} />;
 }
 
+function YourReply({
+  fields,
+  defaults,
+  who,
+  closed,
+  onChange,
+}: {
+  readonly fields: EnquiryField[]
+  readonly defaults: Record<number, string>
+  readonly who: string
+  readonly closed: boolean
+  readonly onChange?: () => void
+}) {
+  return (
+    <section className="mt-5">
+      <p className="text-sm text-[#64748b]">
+        Your reply
+        {who ? <span className="text-[#475569]"> · {who}</span> : null}
+        {closed ? <span> · closed</span> : null}
+      </p>
+      <dl className="mt-4 grid gap-4">
+        {fields.map((field) => (
+          <div key={field.id} className="grid gap-1 sm:grid-cols-[minmax(8rem,16rem)_1fr] sm:gap-6">
+            <dt className="text-sm text-[#64748b]">{field.label}</dt>
+            <dd className="whitespace-pre-wrap text-base leading-relaxed text-[#0f172a]">
+              {displayValue(field, defaults[field.id] ?? "")}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      {!closed && onChange ? (
+        <button type="button" onClick={onChange} className="btn-line mt-6">
+          Change reply
+        </button>
+      ) : null}
+    </section>
+  );
+}
+
 export function EnquiryFill({
   slug,
   fields,
@@ -70,24 +117,45 @@ export function EnquiryFill({
   readonly updating: boolean
 }) {
   const [state, action, pending] = useActionState(submitEnquiry, initial);
+  const [editing, setEditing] = useState(!updating);
+  useEffect(() => {
+    if (state.ok) setEditing(false);
+  }, [state]);
   const askName = !identity.name;
   const askPhone = !identity.phone;
   const askFlat = !identity.flatNumber;
   const who = [identity.name, identity.flatNumber].filter(Boolean).join(" · ");
-
-  if (closed) {
-    return (
-      <p className="form-sheet mt-5 text-base leading-relaxed text-[#475569]">
-        This enquiry is closed. Replies already sent are kept, and new ones are not accepted.
-      </p>
-    );
-  }
 
   if (fields.length === 0) {
     return (
       <p className="form-sheet mt-5 text-base leading-relaxed text-[#475569]">
         This enquiry does not have any questions yet.
       </p>
+    );
+  }
+
+  if (closed) {
+    if (updating) {
+      return (
+        <YourReply fields={fields} defaults={defaults} who={who} closed />
+      );
+    }
+    return (
+      <p className="mt-5 text-base leading-relaxed text-[#475569]">
+        This enquiry is closed. New replies are not accepted.
+      </p>
+    );
+  }
+
+  if (updating && !editing) {
+    return (
+      <YourReply
+        fields={fields}
+        defaults={defaults}
+        who={who}
+        closed={false}
+        onChange={() => setEditing(true)}
+      />
     );
   }
 
@@ -99,10 +167,16 @@ export function EnquiryFill({
       {askFlat ? null : <input type="hidden" name="flatNumber" value={identity.flatNumber} />}
 
       {who ? (
-        <p className="text-sm text-[#475569]">
-          Sending as <span className="font-semibold text-[#0f172a]">{who}</span>
-          {updating ? " · already sent — you can update it" : null}
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-[#475569]">
+            Sending as <span className="font-semibold text-[#0f172a]">{who}</span>
+          </p>
+          {updating ? (
+            <button type="button" onClick={() => setEditing(false)} className="text-sm font-semibold text-[#475569]">
+              Cancel
+            </button>
+          ) : null}
+        </div>
       ) : null}
 
       {askName || askPhone || askFlat ? (
@@ -164,11 +238,11 @@ export function EnquiryFill({
       <div className="flex flex-col gap-3 border-t border-[rgba(15,23,42,0.08)] pt-5 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm leading-relaxed text-[#475569]">
           {updating
-            ? "This flat already replied. Sending again replaces it."
-            : "Each flat keeps one reply. You can send again later to update it."}
+            ? "Sending again replaces your earlier reply."
+            : "Each flat keeps one reply. You can change it later."}
         </p>
         <button type="submit" disabled={pending} className="btn-slate w-full shrink-0 sm:w-auto">
-          {pending ? "Sending…" : updating ? "Update reply" : "Send reply"}
+          {pending ? "Sending…" : updating ? "Save reply" : "Send reply"}
         </button>
       </div>
     </Form>
