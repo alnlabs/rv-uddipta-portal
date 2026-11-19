@@ -1,99 +1,110 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState } from "react";
 import { submitEnquiry, type EnquiryState } from "@/app/actions/enquiries";
-import {
-  ChoiceField,
-  DateField,
-  Form,
-  FormAlert,
-  TextAreaField,
-  TextField,
-} from "@/components/form-ui";
-import { formatShortDate } from "@/lib/homeDisplay";
+import { Form, FormAlert } from "@/components/form-ui";
 import type { EnquiryField } from "@/lib/enquiries";
 
 const initial: EnquiryState = { ok: false, message: "" };
 
-function displayValue(field: EnquiryField, value: string) {
-  const text = value.trim();
-  if (!text) return "—";
-  if (field.kind === "date") return formatShortDate(text) ?? text;
-  return text;
+function EnquiryChoice({
+  name,
+  options,
+  defaultValue,
+  required,
+}: {
+  readonly name: string
+  readonly options: string[]
+  readonly defaultValue: string
+  readonly required: boolean
+}) {
+  return (
+    <div className="enquiry-options" role="radiogroup">
+      {options.map((option) => (
+        <label key={option} className="enquiry-option">
+          <input
+            type="radio"
+            name={name}
+            value={option}
+            data-field={name}
+            required={required}
+            defaultChecked={defaultValue === option}
+            className="sr-only peer"
+          />
+          <span className="enquiry-option-face">{option}</span>
+        </label>
+      ))}
+    </div>
+  );
 }
 
-function QuestionField({
+function QuestionRow({
+  index,
+  total,
   field,
   value,
 }: {
+  readonly index: number
+  readonly total: number
   readonly field: EnquiryField
   readonly value: string
 }) {
   const name = `q_${field.id}`;
-  const shared = {
-    label: field.label,
-    name,
-    required: field.required,
-    tone: "question" as const,
-  };
-  if (field.kind === "long") {
-    return <TextAreaField {...shared} defaultValue={value} rows={5} />;
-  }
-  if (field.kind === "date") {
-    return <DateField {...shared} defaultValue={value} />;
-  }
-  if (field.kind === "choice") {
-    return (
-      <ChoiceField
-        legend={field.label}
-        name={name}
-        required={field.required}
-        tone="question"
-        layout="stack"
-        defaultValue={value}
-        options={field.choices.map((choice) => ({ value: choice, label: choice }))}
-      />
-    );
-  }
-  return <TextField {...shared} defaultValue={value} />;
-}
-
-function YourReply({
-  fields,
-  defaults,
-  who,
-  closed,
-  onChange,
-}: {
-  readonly fields: EnquiryField[]
-  readonly defaults: Record<number, string>
-  readonly who: string
-  readonly closed: boolean
-  readonly onChange?: () => void
-}) {
   return (
-    <section className="mt-5">
-      <p className="text-sm text-[#64748b]">
-        Your reply
-        {who ? <span className="text-[#475569]"> · {who}</span> : null}
-        {closed ? <span> · closed</span> : null}
-      </p>
-      <dl className="mt-4 grid gap-4">
-        {fields.map((field) => (
-          <div key={field.id} className="grid gap-1 sm:grid-cols-[minmax(8rem,16rem)_1fr] sm:gap-6">
-            <dt className="text-sm text-[#64748b]">{field.label}</dt>
-            <dd className="whitespace-pre-wrap text-base leading-relaxed text-[#0f172a]">
-              {displayValue(field, defaults[field.id] ?? "")}
-            </dd>
-          </div>
-        ))}
-      </dl>
-      {!closed && onChange ? (
-        <button type="button" onClick={onChange} className="btn-line mt-6">
-          Change reply
-        </button>
-      ) : null}
-    </section>
+    <li className="enquiry-row">
+      <div className="enquiry-ask">
+        <p className="enquiry-ask-num">
+          {index + 1}
+          <span className="text-[#94a3b8]"> / {total}</span>
+        </p>
+        <p className="enquiry-ask-label">
+          {field.label}
+          {field.required ? <span className="enquiry-ask-req"> required</span> : null}
+        </p>
+      </div>
+      <div className="enquiry-answer">
+        {field.kind === "choice" ? (
+          <EnquiryChoice
+            name={name}
+            options={field.choices}
+            defaultValue={value}
+            required={field.required}
+          />
+        ) : null}
+        {field.kind === "date" ? (
+          <input
+            type="date"
+            name={name}
+            data-field={name}
+            required={field.required}
+            defaultValue={value}
+            className="enquiry-input"
+          />
+        ) : null}
+        {field.kind === "long" ? (
+          <textarea
+            name={name}
+            data-field={name}
+            required={field.required}
+            defaultValue={value}
+            rows={3}
+            className="enquiry-input enquiry-input-long"
+            placeholder="Your reply"
+          />
+        ) : null}
+        {field.kind === "text" ? (
+          <input
+            type="text"
+            name={name}
+            data-field={name}
+            required={field.required}
+            defaultValue={value}
+            className="enquiry-input"
+            placeholder="Your reply"
+          />
+        ) : null}
+      </div>
+    </li>
   );
 }
 
@@ -117,132 +128,110 @@ export function EnquiryFill({
   readonly updating: boolean
 }) {
   const [state, action, pending] = useActionState(submitEnquiry, initial);
-  const [editing, setEditing] = useState(!updating);
-  useEffect(() => {
-    if (state.ok) setEditing(false);
-  }, [state]);
   const askName = !identity.name;
   const askPhone = !identity.phone;
   const askFlat = !identity.flatNumber;
   const who = [identity.name, identity.flatNumber].filter(Boolean).join(" · ");
 
+  if (closed) {
+    return (
+      <p className="mt-6 text-base leading-relaxed text-[#475569]">
+        This enquiry is closed. Replies already sent are kept, and new ones are not accepted.
+      </p>
+    );
+  }
+
   if (fields.length === 0) {
     return (
-      <p className="form-sheet mt-5 text-base leading-relaxed text-[#475569]">
+      <p className="mt-6 text-base leading-relaxed text-[#475569]">
         This enquiry does not have any questions yet.
       </p>
     );
   }
 
-  if (closed) {
-    if (updating) {
-      return (
-        <YourReply fields={fields} defaults={defaults} who={who} closed />
-      );
-    }
-    return (
-      <p className="mt-5 text-base leading-relaxed text-[#475569]">
-        This enquiry is closed. New replies are not accepted.
-      </p>
-    );
-  }
-
-  if (updating && !editing) {
-    return (
-      <YourReply
-        fields={fields}
-        defaults={defaults}
-        who={who}
-        closed={false}
-        onChange={() => setEditing(true)}
-      />
-    );
-  }
-
   return (
-    <Form handled action={action} className="form-sheet mt-5 grid gap-6">
+    <Form handled action={action} className="mt-6">
       <input type="hidden" name="slug" value={slug} />
       {askName ? null : <input type="hidden" name="name" value={identity.name} />}
       {askPhone ? null : <input type="hidden" name="phone" value={identity.phone} />}
       {askFlat ? null : <input type="hidden" name="flatNumber" value={identity.flatNumber} />}
 
       {who ? (
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm text-[#475569]">
-            Sending as <span className="font-semibold text-[#0f172a]">{who}</span>
-          </p>
-          {updating ? (
-            <button type="button" onClick={() => setEditing(false)} className="text-sm font-semibold text-[#475569]">
-              Cancel
-            </button>
-          ) : null}
-        </div>
+        <p className="mb-4 text-sm text-[#64748b]">
+          {updating ? "Updating reply for" : "Replying as"}{" "}
+          <span className="font-medium text-[#0f172a]">{who}</span>
+        </p>
       ) : null}
 
       {askName || askPhone || askFlat ? (
-        <section className="grid gap-4 border-b border-[rgba(15,23,42,0.08)] pb-6">
-          <div>
-            <h2 className="text-lg font-semibold tracking-tight text-[#0f172a]">Your details</h2>
-            <p className="mt-1 text-sm leading-relaxed text-[#475569]">
-              So the reply is tied to the right flat. One reply is kept per flat.
-            </p>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {askName ? (
-              <TextField
-                label="Your name"
+        <div className="mb-6 grid gap-3 border-b border-[rgba(15,23,42,0.08)] pb-6 sm:grid-cols-3">
+          {askName ? (
+            <label className="grid gap-1 text-sm">
+              <span className="text-[#64748b]">Your name</span>
+              <input
                 name="name"
                 required
                 minLength={2}
                 autoComplete="name"
-                tone="question"
+                className="enquiry-input"
               />
-            ) : null}
-            {askPhone ? (
-              <TextField
-                label="Phone"
+            </label>
+          ) : null}
+          {askPhone ? (
+            <label className="grid gap-1 text-sm">
+              <span className="text-[#64748b]">Phone</span>
+              <input
                 name="phone"
                 type="tel"
                 inputMode="numeric"
                 required
                 autoComplete="tel"
                 placeholder="10-digit mobile"
-                tone="question"
+                className="enquiry-input"
               />
-            ) : null}
-            {askFlat ? (
-              <TextField
-                label="Flat"
+            </label>
+          ) : null}
+          {askFlat ? (
+            <label className="grid gap-1 text-sm">
+              <span className="text-[#64748b]">Flat</span>
+              <input
                 name="flatNumber"
                 required
                 placeholder="A101"
                 autoCapitalize="characters"
-                tone="question"
-                hint="Wing and number, such as A101 or B1004."
+                className="enquiry-input"
               />
-            ) : null}
-          </div>
-        </section>
+            </label>
+          ) : null}
+        </div>
       ) : null}
 
-      <ol className="grid gap-6">
-        {fields.map((field) => (
-          <li key={field.id} className="list-none">
-            <QuestionField field={field} value={defaults[field.id] ?? ""} />
-          </li>
+      <ol className="enquiry-sheet">
+        {fields.map((field, index) => (
+          <QuestionRow
+            key={field.id}
+            index={index}
+            total={fields.length}
+            field={field}
+            value={defaults[field.id] ?? ""}
+          />
         ))}
       </ol>
 
-      {state.message ? <FormAlert tone={state.ok ? "ok" : "error"}>{state.message}</FormAlert> : null}
+      {state.message ? (
+        <div className="mt-4">
+          <FormAlert tone={state.ok ? "ok" : "error"}>{state.message}</FormAlert>
+        </div>
+      ) : null}
 
-      <div className="flex flex-col gap-3 border-t border-[rgba(15,23,42,0.08)] pt-5 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm leading-relaxed text-[#475569]">
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-[#64748b]">
           {updating
-            ? "Sending again replaces your earlier reply."
-            : "Each flat keeps one reply. You can change it later."}
+            ? "Save to replace your earlier reply."
+            : "One reply per flat. You can change it later."}
         </p>
         <button type="submit" disabled={pending} className="btn-slate w-full shrink-0 sm:w-auto">
-          {pending ? "Sending…" : updating ? "Save reply" : "Send reply"}
+          {pending ? "Saving…" : updating ? "Save reply" : "Send reply"}
         </button>
       </div>
     </Form>

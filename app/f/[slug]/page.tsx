@@ -77,13 +77,11 @@ export default async function EnquiryPage({
         </h1>
         {enquiry.note ? (
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-[#475569]">{enquiry.note}</p>
-        ) : mine ? (
-          <p className="mt-3 max-w-2xl text-base leading-relaxed text-[#475569]">
-            Your reply is below. You can change it while this enquiry is open.
-          </p>
         ) : (
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-[#475569]">
-            Fill each question below. Required questions are marked.
+            {mine
+              ? "Your replies are filled in. Change any line and save."
+              : "Answer each question. Required ones are marked."}
           </p>
         )}
         {enquiry.askSignin && !user ? (
