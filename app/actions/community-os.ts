@@ -12,6 +12,7 @@ import { homeForRole } from "@/lib/heldRoles";
 import { isSuperAdmin } from "@/lib/admin";
 import { FEATURE_CATALOG } from "@/lib/features";
 import { canRunJobs } from "@/lib/areaOwners";
+import { resolveLinkedHome } from "@/lib/linkedHome";
 import {
   canDoStaffWork,
   canManageAdmin,
@@ -33,8 +34,17 @@ async function session() {
   if (!user) throw new Error("Sign in first.");
   const profile = await ensureProfile(user, supabase);
   const admin = createAdminClient();
-  const name = profile.displayName || user.email || "A member";
-  return { user, profile, admin, name };
+  const home = await resolveLinkedHome({
+    userId: user.id,
+    flatId: profile.flatId,
+    healProfile: true,
+  });
+  const linkedProfile =
+    home.flatId && home.flatId !== profile.flatId
+      ? { ...profile, flatId: home.flatId }
+      : profile;
+  const name = linkedProfile.displayName || user.email || "A member";
+  return { user, profile: linkedProfile, admin, name, flatNumber: home.flatNumber };
 }
 
 export async function switchRole(formData: FormData) {

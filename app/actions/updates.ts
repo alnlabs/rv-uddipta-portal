@@ -17,6 +17,7 @@ import {
 import { pushUsers } from "@/lib/push";
 import { visibleText } from "@/lib/richText";
 import { reachCommunity } from "@/lib/reach";
+import { resolveLinkedHome } from "@/lib/linkedHome";
 import { canManageAdmin, ensureProfile, isCommunityRole } from "@/lib/roles";
 import { societyAdminUserIds } from "@/lib/societyAdmins";
 import { createAdminClient } from "@/utils/supabase/admin";
@@ -36,17 +37,17 @@ async function memberContext() {
     throw new Error("You can do this after your flat is approved.");
   }
   const admin = createAdminClient();
-  let flatNumber: string | null = null;
-  if (profile.flatId) {
-    const { data: flat } = await admin
-      .from("flats")
-      .select("flat_number")
-      .eq("id", profile.flatId)
-      .maybeSingle();
-    flatNumber = flat?.flat_number ?? null;
-  }
-  const name = profile.displayName || user.email || "A member";
-  return { user, profile, admin, flatNumber, name };
+  const home = await resolveLinkedHome({
+    userId: user.id,
+    flatId: profile.flatId,
+    healProfile: true,
+  });
+  const linkedProfile =
+    home.flatId && home.flatId !== profile.flatId
+      ? { ...profile, flatId: home.flatId }
+      : profile;
+  const name = linkedProfile.displayName || user.email || "A member";
+  return { user, profile: linkedProfile, admin, flatNumber: home.flatNumber, name };
 }
 
 export async function postFeedItem(

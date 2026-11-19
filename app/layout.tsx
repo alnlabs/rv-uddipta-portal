@@ -14,6 +14,7 @@ import {
 import { visibleDeskKeys } from "@/lib/deskAccess";
 import { loadHeldRoles, type HeldRole } from "@/lib/heldRoles";
 import { loadSocietyLabels } from "@/lib/labels";
+import { resolveLinkedHome } from "@/lib/linkedHome";
 import { getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
 import "./globals.css";
@@ -68,14 +69,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     builderEdit = canEditBuilder(profile.role, user);
     canJobs = await roleCanRunJobs(profile.role, user);
 
-    const [{ data: ownFlat }, { count }] = await Promise.all([
+    const [home, { count }] = await Promise.all([
       superAdmin
-        ? Promise.resolve({ data: null as { flat_number: string } | null })
-        : supabase
-            .from("flats")
-            .select("flat_number")
-            .eq(profile.flatId ? "id" : "user_id", profile.flatId ?? user.id)
-            .maybeSingle(),
+        ? Promise.resolve({ flatNumber: null as string | null })
+        : resolveLinkedHome({ userId: user.id, flatId: profile.flatId }),
       supabase
         .from("notifications")
         .select("id", { count: "exact", head: true })
@@ -84,7 +81,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         .not("kind", "in", `(${MESSAGE_KINDS.map((kind) => `"${kind}"`).join(",")})`),
     ]);
     if (!superAdmin) {
-      flatNumber = ownFlat?.flat_number ?? null;
+      flatNumber = home.flatNumber ?? null;
       heldRoles = await loadHeldRoles(user.id);
     }
     // Apartment admins keep Manage even when switched to a home role.

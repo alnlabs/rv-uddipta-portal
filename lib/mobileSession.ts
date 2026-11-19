@@ -2,6 +2,7 @@ import "server-only";
 
 import { createClient, type User } from "@supabase/supabase-js";
 import { resolveDeskAccess, type DeskAccess } from "@/lib/deskAccess";
+import { resolveLinkedHome } from "@/lib/linkedHome";
 import { ensureProfile, isCommunityRole, type Profile } from "@/lib/roles";
 import { createAdminClient } from "@/utils/supabase/admin";
 
@@ -40,21 +41,19 @@ export async function readMobileAuth(request: Request): Promise<{ user: User; pr
 
   const admin = createAdminClient();
   const profile = await ensureProfile(user, admin as never);
-  let flatNumber: string | null = null;
-  if (profile.flatId) {
-    const { data: flat } = await admin
-      .from("flats")
-      .select("flat_number")
-      .eq("id", profile.flatId)
-      .maybeSingle();
-    flatNumber = flat?.flat_number ?? null;
-  }
+  const home = await resolveLinkedHome({
+    userId: user.id,
+    flatId: profile.flatId,
+    healProfile: true,
+  });
 
   return {
     user,
-    profile,
+    profile: home.flatId && home.flatId !== profile.flatId
+      ? { ...profile, flatId: home.flatId }
+      : profile,
     name: profile.displayName || user.email || "A member",
-    flatNumber,
+    flatNumber: home.flatNumber,
   };
 }
 

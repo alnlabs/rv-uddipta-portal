@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { FeatureOff } from "@/components/FeatureOff";
 import { resolveDeskAccess } from "@/lib/deskAccess";
 import { listEnquiries } from "@/lib/enquiryData";
+import { resolveLinkedHome } from "@/lib/linkedHome";
 import { isCommunityRole } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
@@ -17,20 +18,18 @@ export default async function OpenFormsPage() {
   const forms = await listEnquiries();
   const visible = forms.filter((form) => form.visibility === "public" || community);
   const admin = createAdminClient();
+  const home = await resolveLinkedHome({ userId: user.id, flatId: profile.flatId });
   const { data: answers } = await admin
     .from("enquiry_responses")
     .select("enquiry_id")
     .eq("user_id", user.id);
   let mineIds = new Set((answers ?? []).map((row) => row.enquiry_id as number));
-  if (profile.flatId) {
-    const { data: flat } = await admin.from("flats").select("flat_number").eq("id", profile.flatId).maybeSingle();
-    if (flat?.flat_number) {
-      const { data: byFlat } = await admin
-        .from("enquiry_responses")
-        .select("enquiry_id")
-        .eq("flat_number", flat.flat_number);
-      mineIds = new Set([...mineIds, ...(byFlat ?? []).map((row) => row.enquiry_id as number)]);
-    }
+  if (home.flatNumber) {
+    const { data: byFlat } = await admin
+      .from("enquiry_responses")
+      .select("enquiry_id")
+      .eq("flat_number", home.flatNumber);
+    mineIds = new Set([...mineIds, ...(byFlat ?? []).map((row) => row.enquiry_id as number)]);
   }
   const waiting = visible.filter((form) => !form.closedAt && !mineIds.has(form.id));
   const answered = visible.filter((form) => !form.closedAt && mineIds.has(form.id));

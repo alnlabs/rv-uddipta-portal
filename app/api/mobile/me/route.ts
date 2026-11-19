@@ -28,6 +28,8 @@ export async function GET(request: Request) {
   const place = phonePlace(auth.profile.role, superAdmin);
   const roles = superAdmin ? [] : await loadHeldRoles(auth.user.id);
 
+  const linked = Boolean(auth.profile.flatId && auth.flatNumber);
+
   return mobileJson({
     greeting: greeting(auth.name),
     name: auth.name,
@@ -40,7 +42,8 @@ export async function GET(request: Request) {
     canSwitch: !superAdmin && roles.length > 1,
     superAdmin,
     locked: superAdmin,
-    flatNumber: place === "home" ? auth.flatNumber : null,
-    home: place === "home" && !auth.flatNumber ? "No home is linked to this account yet." : null,
+    hasFlat: place === "home" ? linked : false,
+    flatNumber: place === "home" && linked ? auth.flatNumber : null,
+    home: place === "home" && !linked ? "No home is linked to this account yet." : null,
   });
 }

@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import type { User } from "@supabase/supabase-js";
 import { isSuperAdmin } from "@/lib/admin";
 import { loadHeldRoles } from "@/lib/heldRoles";
+import { resolveLinkedHome } from "@/lib/linkedHome";
 import { canEditBuilder, canManageAdmin, ensureProfile, type Profile } from "@/lib/roles";
 import { createClient } from "@/utils/supabase/server";
 
@@ -22,6 +23,16 @@ export const getAuthState = cache(async (): Promise<AuthState> => {
   } = await supabase.auth.getUser();
   if (!user) return { user: null, profile: null, supabase };
   const profile = await ensureProfile(user, supabase);
+  if (isSuperAdmin(user)) return { user, profile, supabase };
+
+  const home = await resolveLinkedHome({
+    userId: user.id,
+    flatId: profile.flatId,
+    healProfile: true,
+  });
+  if (home.flatId && home.flatId !== profile.flatId) {
+    return { user, profile: { ...profile, flatId: home.flatId }, supabase };
+  }
   return { user, profile, supabase };
 });
 

@@ -5,6 +5,7 @@ import { EnquiryResults } from "@/components/EnquiryResults";
 import { loadAnswers, loadEnquiryBySlug, type StoredAnswer } from "@/lib/enquiryData";
 import { safeNextPath } from "@/lib/enquiries";
 import { findInventoryFlat } from "@/lib/inventory";
+import { resolveLinkedHome } from "@/lib/linkedHome";
 import { normalizePhone } from "@/lib/phone";
 import { isCommunityRole, canManageAdmin } from "@/lib/roles";
 import { getAuthState } from "@/lib/session";
@@ -44,14 +45,17 @@ export default async function EnquiryPage({
   let phone = "";
   let flatNumber = "";
   if (user && profile) {
-    const { data: own } = await supabase
-      .from("flats")
-      .select("flat_number, phone, owner_name")
-      .eq(profile.flatId ? "id" : "user_id", profile.flatId ?? user.id)
-      .maybeSingle();
-    flatNumber = String(own?.flat_number ?? "");
-    phone = String(own?.phone ?? "");
-    if (!name) name = String(own?.owner_name ?? "");
+    const home = await resolveLinkedHome({ userId: user.id, flatId: profile.flatId });
+    flatNumber = home.flatNumber ?? "";
+    if (home.flatId) {
+      const { data: own } = await supabase
+        .from("flats")
+        .select("phone, owner_name")
+        .eq("id", home.flatId)
+        .maybeSingle();
+      phone = String(own?.phone ?? "");
+      if (!name) name = String(own?.owner_name ?? "");
+    }
   }
   const knownName = name.length >= 2 ? name : "";
   const knownPhone = normalizePhone(phone) ?? "";
