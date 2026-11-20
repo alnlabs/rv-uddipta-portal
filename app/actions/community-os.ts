@@ -58,17 +58,32 @@ export async function switchRole(formData: FormData) {
     .eq("role", role)
     .maybeSingle();
   if (!row) throw new Error("That role is not on this account.");
+
+  const { data: heldHomes } = await admin
+    .from("person_roles")
+    .select("role, flat_id")
+    .eq("user_id", user.id)
+    .in("role", ["owner", "co_owner", "tenant"]);
+  const homeHeld = (heldHomes ?? []).find((item) => item.flat_id) ?? null;
+  const hasHome = Boolean(homeHeld?.flat_id);
+  // Keep the linked flat on the profile when acting as admin so shell/home stay stable.
+  const nextFlatId =
+    row.flat_id
+    ?? (row.role === "admin" || row.role === "committee" || row.role === "builder"
+      ? homeHeld?.flat_id ?? null
+      : null);
+
   const { error } = await admin
     .from("profiles")
-    .update({ role: row.role, flat_id: row.flat_id })
+    .update({ role: row.role, flat_id: nextFlatId })
     .eq("user_id", user.id);
   if (error) throw new Error(error.message);
   await admin.from("flats").update({ user_id: null }).eq("user_id", user.id);
-  if (row.role === "owner" && row.flat_id) {
-    await admin.from("flats").update({ user_id: user.id }).eq("id", row.flat_id);
+  if (row.role === "owner" && nextFlatId) {
+    await admin.from("flats").update({ user_id: user.id }).eq("id", nextFlatId);
   }
   revalidatePath("/", "layout");
-  redirect(homeForRole(String(row.role)));
+  redirect(homeForRole(String(row.role), { hasHome }));
 }
 
 function code() {

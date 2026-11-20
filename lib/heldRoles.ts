@@ -40,8 +40,9 @@ export async function loadHeldRoles(userId: string): Promise<HeldRole[]> {
   }
 }
 
-export function homeForRole(role: string) {
-  if (role === "admin") return "/account";
+export function homeForRole(role: string, options?: { readonly hasHome?: boolean }) {
+  // Admin who also holds a flat keeps the same shell home — sidemenu must not jump.
+  if (role === "admin") return options?.hasHome ? "/" : "/account";
   if (role === "builder") return "/account/builder";
   if (role === "security") return "/gate";
   if (role === "facility") return "/account/jobs";

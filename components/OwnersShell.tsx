@@ -300,9 +300,13 @@ export function OwnersShell({
       : canRunJobs
         ? "/account/jobs"
         : "/account";
-  // Home persona gets resident menus. Gate/staff/facility stay desk-scoped.
-  const homePersona = ["owner", "co_owner", "tenant", "visitor", "committee", "builder", "admin"].includes(role);
-  const seeCommunity = showPrivateCommunity && !isSuperAdmin && homePersona;
+  // Gate/staff/facility stay desk-scoped. Admin ↔ flat keeps one stable sidemenu:
+  // community + Manage always, role chooser only changes who you act as.
+  const deskOnly = role === "security" || role === "staff" || role === "facility";
+  const holdsHomeRole = heldRoles.some((item) =>
+    item.role === "owner" || item.role === "co_owner" || item.role === "tenant",
+  );
+  const seeCommunity = showPrivateCommunity && !isSuperAdmin && !deskOnly;
   const ownersHome = role === "security"
     ? "/gate"
     : role === "staff" || role === "facility"
@@ -312,18 +316,19 @@ export function OwnersShell({
         : "/";
 
   const featureOn = (key: string) => !enabledFeatures || enabledFeatures.includes(key);
-  // holdsAdmin (prop) keeps Manage available after switching home.
-  // Active role alone decides which community / desk menus appear — never both
-  // "role chooser" and a union of every desk menu at once.
   const holdsAdmin = isSuperAdmin || isAdmin;
   const activeAdmin = isSuperAdmin || role === "admin";
   const canGate = role === "security";
   const canStaff = role === "staff" || role === "facility";
-  // Committee board is society work — active admin may open it; other desks stay role-scoped.
   const canCommittee = role === "committee" || activeAdmin;
+  // Role dropdown only when a desk role changes the shell (gate/work).
+  // Admin ↔ flat shares one sidemenu — no chooser needed.
+  const showRoleSwitcher = heldRoles.some((item) =>
+    item.role === "security" || item.role === "staff" || item.role === "facility",
+  ) && heldRoles.length > 1;
 
   const ownerNav: NavItem[] = [];
-  if (!isSuperAdmin && homePersona && role !== "admin") {
+  if (!isSuperAdmin && !deskOnly && (flatNumber || holdsHomeRole || role === "owner" || role === "co_owner" || role === "tenant")) {
     ownerNav.push({ href: "/", label: "My flat", short: "Home", match: (p) => p === "/", icon: "flat" });
   }
   if (
@@ -837,7 +842,7 @@ export function OwnersShell({
           pendingApproval={pendingApproval}
         />
 
-        {heldRoles.length > 1 ? (
+        {showRoleSwitcher ? (
           <form action={switchRole} className="relative mb-4 px-1">
             <label className="text-[0.65rem] font-semibold tracking-[0.14em] text-[#64748b] uppercase">
               Role
@@ -911,7 +916,7 @@ export function OwnersShell({
               <NotificationBell count={notificationBadge} tone="light" />
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
-              {heldRoles.length > 1 ? (
+              {showRoleSwitcher ? (
                 <form action={switchRole}>
                   <select
                     name="role"
