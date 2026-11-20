@@ -2,15 +2,15 @@ import { redirect } from "next/navigation";
 import { setWorkforceBlacklist } from "@/app/actions/business-pack";
 import { DeskError, FeatureOff } from "@/components/FeatureOff";
 import { resolveDeskAccess } from "@/lib/deskAccess";
-import { canManageAdmin } from "@/lib/roles";
-import { getAuthState } from "@/lib/session";
+import { canAccessAdminDesk, getAuthState, manageDeskRole } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 export default async function OfficeWorkforcePage() {
-  const { user, profile } = await getAuthState();
+  const { user } = await getAuthState();
   if (!user) redirect("/login");
-  if (!canManageAdmin(profile.role, user)) redirect("/");
-  const access = await resolveDeskAccess(profile.role, user, "workforce");
+  if (!(await canAccessAdminDesk())) redirect("/");
+  const deskRole = (await manageDeskRole()) || "admin";
+  const access = await resolveDeskAccess(deskRole, user, "workforce");
   if (access === "none") return <FeatureOff label="Helpers and vendors" />;
 
   const admin = createAdminClient();

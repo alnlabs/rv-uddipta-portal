@@ -1,9 +1,10 @@
 import "server-only";
 
 import { createClient, type User } from "@supabase/supabase-js";
+import { isSuperAdmin } from "@/lib/admin";
 import { resolveDeskAccess, type DeskAccess } from "@/lib/deskAccess";
 import { resolveLinkedHome } from "@/lib/linkedHome";
-import { ensureProfile, isCommunityRole, type Profile } from "@/lib/roles";
+import { canManageAdmin, ensureProfile, isCommunityRole, type Profile } from "@/lib/roles";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 export type MobileMember = {
@@ -70,9 +71,25 @@ export function isMember(value: MobileMember | Response): value is MobileMember 
   return !(value instanceof Response);
 }
 
+/** Held society admin — Manage works without forcing a role switch. */
+export async function holdsSocietyAdmin(member: MobileMember): Promise<boolean> {
+  if (isSuperAdmin(member.user) || canManageAdmin(member.profile.role, member.user)) return true;
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("person_roles")
+    .select("role")
+    .eq("user_id", member.user.id)
+    .eq("role", "admin")
+    .maybeSingle();
+  return Boolean(data);
+}
+
 export async function desk(
   member: MobileMember,
   key: string,
 ): Promise<DeskAccess> {
+  if (await holdsSocietyAdmin(member)) {
+    return resolveDeskAccess("admin", member.user, key);
+  }
   return resolveDeskAccess(member.profile.role, member.user, key);
 }

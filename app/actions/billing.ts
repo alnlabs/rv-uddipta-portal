@@ -108,7 +108,13 @@ export async function submitResidentPaymentProof(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Sign in first.");
   const profile = await ensureProfile(user, supabase);
-  if (!profile.flatId) throw new Error("Link a home first.");
+  const { resolveLinkedHome } = await import("@/lib/linkedHome");
+  const linked = await resolveLinkedHome({
+    userId: user.id,
+    flatId: profile.flatId,
+    healProfile: true,
+  });
+  if (!linked.flatId) throw new Error("Link a home first.");
 
   const invoiceId = Number(formData.get("invoiceId") || 0);
   const rupees = Number(String(formData.get("amount") || "").replace(/,/g, ""));
@@ -121,7 +127,7 @@ export async function submitResidentPaymentProof(formData: FormData) {
     throw new Error("Attach a screenshot or PDF proof.");
   }
 
-  const proofPath = await savePaymentProof(profile.flatId, file);
+  const proofPath = await savePaymentProof(linked.flatId, file);
   const { error } = await supabase.rpc("submit_my_payment_proof", {
     invoice_id: invoiceId,
     amount_paise: Math.round(rupees * 100),

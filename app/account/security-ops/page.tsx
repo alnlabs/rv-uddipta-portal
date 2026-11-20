@@ -9,18 +9,22 @@ import {
 } from "@/app/actions/business-pack";
 import { DeskError, FeatureOff } from "@/components/FeatureOff";
 import { resolveDeskAccess } from "@/lib/deskAccess";
-import { canManageAdmin, canRunGate } from "@/lib/roles";
-import { getAuthState } from "@/lib/session";
+import { canRunGate } from "@/lib/roles";
+import { canAccessAdminDesk, getAuthState, manageDeskRole } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 export default async function SecurityOpsPage() {
   const { user, profile } = await getAuthState();
   if (!user) redirect("/login");
-  const canDesk = canManageAdmin(profile.role, user) || canRunGate(profile.role, user);
+  const holdsAdmin = await canAccessAdminDesk();
+  const canDesk = holdsAdmin || canRunGate(profile.role, user);
   if (!canDesk) redirect("/");
-  const access = await resolveDeskAccess(profile.role, user, "security_ops");
+  const deskRole = canRunGate(profile.role, user)
+    ? profile.role
+    : (await manageDeskRole()) || "admin";
+  const access = await resolveDeskAccess(deskRole, user, "security_ops");
   // Security role may not have security_ops grant yet — still allow gate staff.
-  if (access === "none" && !canRunGate(profile.role, user) && !canManageAdmin(profile.role, user)) {
+  if (access === "none" && !canRunGate(profile.role, user) && !holdsAdmin) {
     return <FeatureOff label="Security ops" />;
   }
 

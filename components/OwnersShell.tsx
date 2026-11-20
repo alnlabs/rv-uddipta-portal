@@ -300,18 +300,30 @@ export function OwnersShell({
       : canRunJobs
         ? "/account/jobs"
         : "/account";
-  const seeCommunity = showPrivateCommunity && !isSuperAdmin;
-  const ownersHome = role === "security" ? "/gate" : seeCommunity ? "/feed" : "/";
+  // Home persona gets resident menus. Gate/staff/facility stay desk-scoped.
+  const homePersona = ["owner", "co_owner", "tenant", "visitor", "committee", "builder", "admin"].includes(role);
+  const seeCommunity = showPrivateCommunity && !isSuperAdmin && homePersona;
+  const ownersHome = role === "security"
+    ? "/gate"
+    : role === "staff" || role === "facility"
+      ? (canRunJobs ? "/account/jobs" : adminHref)
+      : seeCommunity
+        ? "/feed"
+        : "/";
 
   const featureOn = (key: string) => !enabledFeatures || enabledFeatures.includes(key);
-  const office = isSuperAdmin || isAdmin;
+  // holdsAdmin (prop) keeps Manage available after switching home.
+  // Active role alone decides which community / desk menus appear — never both
+  // "role chooser" and a union of every desk menu at once.
+  const holdsAdmin = isSuperAdmin || isAdmin;
+  const activeAdmin = isSuperAdmin || role === "admin";
   const canGate = role === "security";
-  const canFacility = office || role === "facility";
-  const canStaff = office || canFacility || role === "staff";
-  const canCommittee = office || role === "committee";
+  const canStaff = role === "staff" || role === "facility";
+  // Committee board is society work — active admin may open it; other desks stay role-scoped.
+  const canCommittee = role === "committee" || activeAdmin;
 
   const ownerNav: NavItem[] = [];
-  if (!isSuperAdmin && role !== "security") {
+  if (!isSuperAdmin && homePersona && role !== "admin") {
     ownerNav.push({ href: "/", label: "My flat", short: "Home", match: (p) => p === "/", icon: "flat" });
   }
   if (
@@ -325,7 +337,7 @@ export function OwnersShell({
       icon: "feed",
     });
   }
-  if (featureOn("forms")) {
+  if (seeCommunity && featureOn("forms")) {
     ownerNav.push({
       href: "/forms",
       label: "Enquiries",
@@ -358,7 +370,7 @@ export function OwnersShell({
       icon: "mail",
     });
   }
-  if (featureOn("building")) {
+  if (seeCommunity && featureOn("building")) {
     ownerNav.push({
       href: "/community",
       label: "Building",
@@ -366,10 +378,10 @@ export function OwnersShell({
       icon: "floors",
     });
   }
-  if (seeCommunity && featureOn("visitor_passes")) {
+  if ((seeCommunity || canGate) && featureOn("visitor_passes")) {
     ownerNav.push({
       href: "/visitors",
-      label: "Visitor passes",
+      label: canGate ? "Visitor check" : "Visitor passes",
       short: "Visitors",
       match: (p) => p.startsWith("/visitors") || p.startsWith("/pass"),
       icon: "people",
@@ -391,7 +403,7 @@ export function OwnersShell({
       icon: "floors",
     });
   }
-  if (!isSuperAdmin && featureOn("documents")) {
+  if (seeCommunity && featureOn("documents")) {
     ownerNav.push({
       href: "/documents",
       label: "Home records",
@@ -504,15 +516,15 @@ export function OwnersShell({
     adminNav.push(
       {
         href: "/account/requests",
-        label: "Requests",
+        label: "Society requests",
         short: "Reqs",
         match: (p) => p.startsWith("/account/requests"),
         icon: "bell",
       },
       {
         href: "/account/forms",
-        label: "Enquiries",
-        short: "Enquiries",
+        label: "Manage enquiries",
+        short: "Manage",
         match: (p) => p.startsWith("/account/forms"),
         icon: "form",
       },
@@ -527,7 +539,7 @@ export function OwnersShell({
       icon: "model",
     });
   }
-  if ((office || role === "facility" || canRunJobs) && featureOn("maintenance")) {
+  if ((holdsAdmin || role === "facility" || canRunJobs) && featureOn("maintenance")) {
     adminNav.push({
       href: "/account/jobs",
       label: "Jobs",
@@ -536,7 +548,7 @@ export function OwnersShell({
       icon: "flat",
     });
   }
-  if (office) {
+  if (holdsAdmin) {
     adminNav.push({
       href: "/account/categories",
       label: "Categories",
@@ -597,7 +609,7 @@ export function OwnersShell({
         : []),
       {
         href: "/account/documents",
-        label: "Home records",
+        label: "Review home records",
         short: "Docs",
         match: (p) => p.startsWith("/account/documents"),
         icon: "form",
@@ -606,7 +618,7 @@ export function OwnersShell({
         ? [
             {
               href: "/account/nocs",
-              label: "NOC requests",
+              label: "Review NOCs",
               short: "NOC",
               match: (p: string) => p.startsWith("/account/nocs"),
               icon: "form" as const,
@@ -617,7 +629,7 @@ export function OwnersShell({
         ? [
             {
               href: "/account/workforce",
-              label: "Helpers and vendors",
+              label: "Society helpers",
               short: "Help",
               match: (p: string) => p.startsWith("/account/workforce"),
               icon: "people" as const,
@@ -628,7 +640,7 @@ export function OwnersShell({
         ? [
             {
               href: "/account/parking",
-              label: "Parking",
+              label: "Society parking",
               short: "Park",
               match: (p: string) => p.startsWith("/account/parking"),
               icon: "flat" as const,
@@ -639,7 +651,7 @@ export function OwnersShell({
         ? [
             {
               href: "/account/ops",
-              label: "Building ops",
+              label: "Society ops",
               short: "Ops",
               match: (p: string) => p.startsWith("/account/ops"),
               icon: "floors" as const,
@@ -661,7 +673,7 @@ export function OwnersShell({
         ? [
             {
               href: "/account/circulars",
-              label: "Circulars",
+              label: "Society circulars",
               short: "Circ",
               match: (p: string) => p.startsWith("/account/circulars"),
               icon: "bell" as const,
@@ -672,7 +684,7 @@ export function OwnersShell({
         ? [
             {
               href: "/account/security-ops",
-              label: "Security ops",
+              label: "Security desk",
               short: "Sec",
               match: (p: string) => p.startsWith("/account/security-ops"),
               icon: "admin" as const,
@@ -703,7 +715,32 @@ export function OwnersShell({
           ...adminNav,
         ]
       : role === "security"
-      ? [pick("/gate"), pick("/visitors"), pick("/feed"), pick("/inbox")]
+      ? [pick("/gate"), pick("/visitors"), pick("/inbox")]
+      : role === "staff" || role === "facility"
+      ? [
+          ...(canRunJobs
+            ? [
+                {
+                  href: "/account/jobs",
+                  label: "Jobs",
+                  match: (p: string) => p.startsWith("/account/jobs"),
+                  icon: "flat" as const,
+                },
+              ]
+            : []),
+          pick("/work"),
+          pick("/inbox"),
+          ...(canSwitch
+            ? [
+                {
+                  href: adminHref,
+                  label: "Manage",
+                  match: (p: string) => p.startsWith("/account"),
+                  icon: "admin" as const,
+                },
+              ]
+            : []),
+        ]
       : [
           pick("/"),
           pick("/feed"),

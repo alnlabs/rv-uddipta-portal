@@ -5,7 +5,7 @@ import { resolveDeskAccess } from "@/lib/deskAccess";
 import { t } from "@/lib/labelDefaults";
 import { loadSocietyLabels } from "@/lib/labels";
 import { canRunJobs } from "@/lib/areaOwners";
-import { getAuthState } from "@/lib/session";
+import { canAccessAdminDesk, getAuthState, manageDeskRole } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 const JOB_ROLES = [
@@ -24,9 +24,12 @@ const FREQUENCIES = [
 export default async function JobsPage() {
   const { user, profile } = await getAuthState();
   if (!user) redirect("/login");
-  if (!(await canRunJobs(profile.role, user))) redirect("/");
-  const access = await resolveDeskAccess(profile.role, user, "maintenance");
-  if (access === "none") return <FeatureOff label="Jobs" />;
+  const holdsAdmin = await canAccessAdminDesk();
+  const runsJobs = await canRunJobs(profile.role, user);
+  if (!(holdsAdmin || runsJobs)) redirect("/");
+  const deskRole = holdsAdmin ? (await manageDeskRole()) || "admin" : profile.role;
+  const access = await resolveDeskAccess(deskRole, user, "maintenance");
+  if (access === "none" && !runsJobs) return <FeatureOff label="Jobs" />;
 
   const admin = createAdminClient();
   const [{ data: jobs, error }, { data: staff }, { data: workRows }, { data: roleLinks }, { data: extras }, labels] =

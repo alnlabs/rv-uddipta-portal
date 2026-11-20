@@ -42,8 +42,8 @@ export async function GET(request: Request) {
     canSwitch: !superAdmin && roles.length > 1,
     superAdmin,
     locked: superAdmin,
-    hasFlat: place === "home" ? linked : false,
-    flatNumber: place === "home" && linked ? auth.flatNumber : null,
-    home: place === "home" && !linked ? "No home is linked to this account yet." : null,
+    hasFlat: linked,
+    flatNumber: linked ? auth.flatNumber : null,
+    home: !linked && place === "home" ? "No home is linked to this account yet." : null,
   });
 }

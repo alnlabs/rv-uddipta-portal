@@ -1,8 +1,7 @@
 import { revalidatePath } from "next/cache";
-import { desk, isMember, mobileJson, readMobileMember } from "@/lib/mobileSession";
+import { desk, holdsSocietyAdmin, isMember, mobileJson, readMobileMember } from "@/lib/mobileSession";
 import { loadAnswers, type StoredAnswer } from "@/lib/enquiryData";
 import { fieldKind, resultsView, slugifyTitle, type FieldKind } from "@/lib/enquiries";
-import { canManageAdmin } from "@/lib/roles";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +40,7 @@ export async function GET(request: Request) {
   if (access === "none") return mobileJson({ message: "Enquiries are turned off." }, 403);
 
   const admin = createAdminClient();
-  const isAdmin = canManageAdmin(member.profile.role, member.user);
+  const isAdmin = await holdsSocietyAdmin(member);
   const home = member.flatNumber;
 
   const { data: enquiries, error } = await admin
@@ -126,7 +125,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const member = await readMobileMember(request);
   if (!isMember(member)) return member;
-  if (!canManageAdmin(member.profile.role, member.user)) {
+  if (!(await holdsSocietyAdmin(member))) {
     return mobileJson({ message: "Only an admin can create an enquiry." }, 403);
   }
   const access = await desk(member, "forms");

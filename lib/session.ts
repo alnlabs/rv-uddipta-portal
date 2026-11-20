@@ -46,6 +46,20 @@ export const canAccessAdminDesk = cache(async () => {
   return held.some((item) => item.role === "admin");
 });
 
+/**
+ * Role used for Manage desk feature grants.
+ * Holding admin keeps Manage while switched home — evaluate as admin, not owner.
+ */
+export const manageDeskRole = cache(async (): Promise<string | null> => {
+  const auth = await getAuthState();
+  if (!auth.user) return null;
+  if (isSuperAdmin(auth.user) || canManageAdmin(auth.profile.role, auth.user)) {
+    return auth.profile.role;
+  }
+  if (await canAccessAdminDesk()) return "admin";
+  return auth.profile.role;
+});
+
 export async function requireAdminUser() {
   const auth = await getAuthState();
   if (!auth.user) throw new Error("Not allowed");

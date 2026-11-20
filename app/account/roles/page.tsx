@@ -14,8 +14,7 @@ import { ROLE_GUIDE, accessSummary, roleLabel, roleNeedsHome } from "@/lib/roleL
 import { isSuperAdmin } from "@/lib/admin";
 import { t } from "@/lib/labelDefaults";
 import { loadSocietyLabels } from "@/lib/labels";
-import { canManageAdmin } from "@/lib/roles";
-import { getAuthState } from "@/lib/session";
+import { canAccessAdminDesk, getAuthState } from "@/lib/session";
 import { loadSignInPeople } from "@/lib/signInPeople";
 import { loadSocietyCatalog } from "@/lib/societyCatalog";
 
@@ -30,10 +29,10 @@ export default async function AdminRolesPage({
     tab?: string
   }>
 }) {
-  const { user, profile } = await getAuthState();
+  const { user } = await getAuthState();
   if (!user) redirect("/login?next=/account/roles");
   const superAdmin = isSuperAdmin(user);
-  const societyAdmin = canManageAdmin(profile?.role, user);
+  const societyAdmin = await canAccessAdminDesk();
   if (!superAdmin && !societyAdmin) redirect("/account");
 
   const params = await searchParams;

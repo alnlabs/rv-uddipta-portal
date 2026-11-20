@@ -1,6 +1,5 @@
-import { isMember, mobileJson, readMobileMember } from "@/lib/mobileSession";
+import { holdsSocietyAdmin, isMember, mobileJson, readMobileMember } from "@/lib/mobileSession";
 import { approveRegistrationAs, rejectRegistrationAs } from "@/lib/registrationReview";
-import { canManageAdmin } from "@/lib/roles";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +13,7 @@ function kindLabel(value: string | null | undefined) {
 export async function GET(request: Request) {
   const member = await readMobileMember(request);
   if (!isMember(member)) return member;
-  if (!canManageAdmin(member.profile.role, member.user)) {
+  if (!(await holdsSocietyAdmin(member))) {
     return mobileJson({ message: "Approvals are for an admin." }, 403);
   }
 
@@ -43,7 +42,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const member = await readMobileMember(request);
   if (!isMember(member)) return member;
-  if (!canManageAdmin(member.profile.role, member.user)) {
+  if (!(await holdsSocietyAdmin(member))) {
     return mobileJson({ message: "Approvals are for an admin." }, 403);
   }
 

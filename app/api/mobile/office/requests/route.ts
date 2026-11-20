@@ -1,10 +1,9 @@
 import { revalidatePath } from "next/cache";
 import { writeAudit } from "@/lib/audit";
-import { desk, isMember, mobileJson, readMobileMember } from "@/lib/mobileSession";
+import { desk, holdsSocietyAdmin, isMember, mobileJson, readMobileMember } from "@/lib/mobileSession";
 import { pushUsers } from "@/lib/push";
 import { loadNoteThreads } from "@/lib/requestThread";
 import { canRunJobs } from "@/lib/areaOwners";
-import { canManageAdmin } from "@/lib/roles";
 import { relativeTime } from "@/lib/indiaDay";
 import { createAdminClient } from "@/utils/supabase/admin";
 
@@ -32,7 +31,7 @@ function when(value: string) {
 export async function GET(request: Request) {
   const member = await readMobileMember(request);
   if (!isMember(member)) return member;
-  if (!canManageAdmin(member.profile.role, member.user)) {
+  if (!(await holdsSocietyAdmin(member))) {
     return mobileJson({ message: "Requests are for an admin." }, 403);
   }
   const access = await desk(member, "requests");
@@ -122,7 +121,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const member = await readMobileMember(request);
   if (!isMember(member)) return member;
-  if (!canManageAdmin(member.profile.role, member.user)) {
+  if (!(await holdsSocietyAdmin(member))) {
     return mobileJson({ message: "Requests are for an admin." }, 403);
   }
   const access = await desk(member, "requests");

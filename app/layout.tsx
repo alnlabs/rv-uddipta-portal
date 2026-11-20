@@ -62,14 +62,13 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   let heldRoles: HeldRole[] = [];
   let societyLabels: Record<string, string> | null = null;
   let canJobs = false;
-  const enabledFeatures = user && profile ? await visibleDeskKeys(profile.role, user) : null;
+  let enabledFeatures: string[] | null = null;
 
   if (user && profile) {
     const superAdmin = isSuperAdmin(user);
     builderEdit = canEditBuilder(profile.role, user);
-    canJobs = await roleCanRunJobs(profile.role, user);
 
-    const [home, { count }] = await Promise.all([
+    const [home, { count }, activeKeys] = await Promise.all([
       superAdmin
         ? Promise.resolve({ flatNumber: null as string | null })
         : resolveLinkedHome({ userId: user.id, flatId: profile.flatId }),
@@ -79,6 +78,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         .eq("user_id", user.id)
         .is("seen_at", null)
         .not("kind", "in", `(${MESSAGE_KINDS.map((kind) => `"${kind}"`).join(",")})`),
+      visibleDeskKeys(profile.role, user),
     ]);
     if (!superAdmin) {
       flatNumber = home.flatNumber ?? null;
@@ -88,6 +88,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     isAdmin =
       canManageAdmin(profile.role, user)
       || heldRoles.some((item) => item.role === "admin");
+    canJobs = isAdmin || (await roleCanRunJobs(profile.role, user));
+    // Manage items use admin grants even when the chooser is on a home role.
+    enabledFeatures = isAdmin && profile.role !== "admin" && !superAdmin
+      ? [...new Set([...activeKeys, ...(await visibleDeskKeys("admin", user))])]
+      : activeKeys;
     unreadNotifications = count ?? 0;
 
     if (isAdmin || superAdmin) {

@@ -9,8 +9,7 @@ import {
 import { DeskError, FeatureOff } from "@/components/FeatureOff";
 import { resolveDeskAccess } from "@/lib/deskAccess";
 import { signedProofUrl } from "@/lib/paymentProof";
-import { canManageAdmin } from "@/lib/roles";
-import { getAuthState } from "@/lib/session";
+import { canAccessAdminDesk, getAuthState, manageDeskRole } from "@/lib/session";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 function rupees(paise: number) {
@@ -18,10 +17,11 @@ function rupees(paise: number) {
 }
 
 export default async function BillingPage() {
-  const { user, profile } = await getAuthState();
+  const { user } = await getAuthState();
   if (!user) redirect("/login");
-  if (!canManageAdmin(profile.role, user)) redirect("/");
-  const access = await resolveDeskAccess(profile.role, user, "billing");
+  if (!(await canAccessAdminDesk())) redirect("/");
+  const deskRole = (await manageDeskRole()) || "admin";
+  const access = await resolveDeskAccess(deskRole, user, "billing");
   if (access === "none") return <FeatureOff label="Billing" />;
 
   const admin = createAdminClient();
