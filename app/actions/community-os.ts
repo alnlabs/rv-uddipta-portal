@@ -99,11 +99,14 @@ export async function setFeatureEnabled(formData: FormData) {
   const key = String(formData.get("key") || "");
   const enabled = String(formData.get("enabled") || "") === "true";
   if (!FEATURE_CATALOG.some((item) => item.key === key)) return;
+  const catalog = FEATURE_CATALOG.find((item) => item.key === key);
+  const { loadSocietyLabels, t } = await import("@/lib/labels");
+  const societyLabels = await loadSocietyLabels();
   await admin.from("community_features").upsert({
     key,
-    label: FEATURE_CATALOG.find((item) => item.key === key)?.label || key,
-    feature_group: FEATURE_CATALOG.find((item) => item.key === key)?.group || "Community",
-    summary: FEATURE_CATALOG.find((item) => item.key === key)?.summary || "",
+    label: t(societyLabels, `feature_${key}`),
+    feature_group: catalog?.group || "Community",
+    summary: catalog?.summary || "",
     enabled,
   });
   await writeAudit({

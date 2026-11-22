@@ -316,6 +316,7 @@ export function OwnersShell({
         : "/";
 
   const featureOn = (key: string) => !enabledFeatures || enabledFeatures.includes(key);
+  const L = (key: string) => t(societyLabels, key);
   const holdsAdmin = isSuperAdmin || isAdmin;
   const activeAdmin = isSuperAdmin || role === "admin";
   const canGate = role === "security";
@@ -329,7 +330,7 @@ export function OwnersShell({
 
   const ownerNav: NavItem[] = [];
   if (!isSuperAdmin && !deskOnly && (flatNumber || holdsHomeRole || role === "owner" || role === "co_owner" || role === "tenant")) {
-    ownerNav.push({ href: "/", label: "My flat", short: "Home", match: (p) => p === "/", icon: "flat" });
+    ownerNav.push({ href: "/", label: L("nav_my_flat"), short: "Home", match: (p) => p === "/", icon: "flat" });
   }
   if (
     seeCommunity &&
@@ -337,7 +338,7 @@ export function OwnersShell({
   ) {
     ownerNav.push({
       href: "/feed",
-      label: "Updates",
+      label: L("nav_updates"),
       match: (p) => p.startsWith("/feed"),
       icon: "feed",
     });
@@ -345,7 +346,7 @@ export function OwnersShell({
   if (seeCommunity && featureOn("forms")) {
     ownerNav.push({
       href: "/forms",
-      label: "Enquiries",
+      label: L("nav_enquiries"),
       match: (p) => p.startsWith("/forms") || p.startsWith("/f/"),
       icon: "form",
     });
@@ -353,7 +354,7 @@ export function OwnersShell({
   if (seeCommunity && featureOn("neighbours")) {
     ownerNav.push({
       href: "/members",
-      label: "Neighbours",
+      label: L("nav_neighbours"),
       match: (p) => p.startsWith("/members"),
       icon: "people",
     });
@@ -361,7 +362,7 @@ export function OwnersShell({
   if (seeCommunity && featureOn("requests")) {
     ownerNav.push({
       href: "/requests",
-      label: "My requests",
+      label: L("nav_my_requests"),
       short: "Requests",
       match: (p) => p === "/requests",
       icon: "mail",
@@ -370,7 +371,7 @@ export function OwnersShell({
   if (featureOn("inbox")) {
     ownerNav.push({
       href: "/inbox",
-      label: "Inbox",
+      label: L("nav_inbox"),
       match: (p) => p.startsWith("/inbox") || p.startsWith("/notifications") || p.startsWith("/messages"),
       icon: "mail",
     });
@@ -378,7 +379,7 @@ export function OwnersShell({
   if (seeCommunity && featureOn("building")) {
     ownerNav.push({
       href: "/community",
-      label: "Building",
+      label: L("nav_building"),
       match: (p) => p.startsWith("/community") || p.startsWith("/plans") || p.startsWith("/model"),
       icon: "floors",
     });
@@ -386,7 +387,7 @@ export function OwnersShell({
   if ((seeCommunity || canGate) && featureOn("visitor_passes")) {
     ownerNav.push({
       href: "/visitors",
-      label: canGate ? "Visitor check" : "Visitor passes",
+      label: canGate ? L("nav_visitor_check") : L("nav_visitor_passes"),
       short: "Visitors",
       match: (p) => p.startsWith("/visitors") || p.startsWith("/pass"),
       icon: "people",
@@ -395,7 +396,7 @@ export function OwnersShell({
   if (seeCommunity && featureOn("parking")) {
     ownerNav.push({
       href: "/parking",
-      label: "Parking",
+      label: L("nav_parking"),
       match: (p) => p.startsWith("/parking"),
       icon: "flat",
     });
@@ -403,7 +404,7 @@ export function OwnersShell({
   if (seeCommunity && featureOn("amenities")) {
     ownerNav.push({
       href: "/amenities",
-      label: "Amenities",
+      label: L("nav_amenities"),
       match: (p) => p.startsWith("/amenities"),
       icon: "floors",
     });
@@ -411,13 +412,13 @@ export function OwnersShell({
   if (seeCommunity && featureOn("documents")) {
     ownerNav.push({
       href: "/documents",
-      label: "Home records",
+      label: L("nav_home_records"),
       match: (p) => p.startsWith("/documents"),
       icon: "form",
     });
     ownerNav.push({
       href: "/nocs",
-      label: "NOC requests",
+      label: L("nav_noc_requests"),
       match: (p) => p.startsWith("/nocs"),
       icon: "form",
     });
@@ -425,7 +426,7 @@ export function OwnersShell({
   if (seeCommunity && featureOn("billing")) {
     ownerNav.push({
       href: "/billing",
-      label: "Dues",
+      label: L("nav_dues"),
       match: (p) => p.startsWith("/billing"),
       icon: "form",
     });
@@ -433,7 +434,7 @@ export function OwnersShell({
   if (seeCommunity && featureOn("workforce")) {
     ownerNav.push({
       href: "/workforce",
-      label: "Helpers",
+      label: L("nav_helpers"),
       match: (p) => p.startsWith("/workforce"),
       icon: "people",
     });
@@ -441,7 +442,7 @@ export function OwnersShell({
   if (seeCommunity && featureOn("circulars")) {
     ownerNav.push({
       href: "/circulars",
-      label: "Circulars",
+      label: L("nav_circulars"),
       match: (p) => p.startsWith("/circulars"),
       icon: "bell",
     });
@@ -449,7 +450,7 @@ export function OwnersShell({
   if (seeCommunity && featureOn("ops")) {
     ownerNav.push({
       href: "/ops",
-      label: "Building ops",
+      label: L("nav_building_ops"),
       match: (p) => p.startsWith("/ops"),
       icon: "floors",
     });
@@ -457,7 +458,7 @@ export function OwnersShell({
   if (canGate && !isSuperAdmin && featureOn("gate")) {
     ownerNav.push({
       href: "/gate",
-      label: "Gate",
+      label: L("nav_gate"),
       match: (p) => p.startsWith("/gate"),
       icon: "admin",
     });
@@ -465,7 +466,7 @@ export function OwnersShell({
   if (canGate && !isSuperAdmin && featureOn("security_ops")) {
     ownerNav.push({
       href: "/account/security-ops",
-      label: "Security ops",
+      label: L("nav_security_ops"),
       match: (p) => p.startsWith("/account/security-ops"),
       icon: "admin",
     });
@@ -473,7 +474,7 @@ export function OwnersShell({
   if (canStaff && featureOn("maintenance") && role === "staff") {
     ownerNav.push({
       href: "/work",
-      label: "My work",
+      label: L("nav_my_work"),
       short: "Work",
       match: (p) => p.startsWith("/work"),
       icon: "flat",
@@ -482,7 +483,7 @@ export function OwnersShell({
   if (canCommittee && !isSuperAdmin && featureOn("committee")) {
     ownerNav.push({
       href: "/committee",
-      label: "Committee",
+      label: L("nav_committee"),
       match: (p) => p.startsWith("/committee"),
       icon: "admin",
     });
@@ -493,8 +494,8 @@ export function OwnersShell({
   if (isSuperAdmin || isAdmin) {
     adminNav.push({
       href: "/account/roles",
-      label: t(societyLabels, "roles"),
-      short: t(societyLabels, "roles"),
+      label: L("roles"),
+      short: L("roles"),
       match: (p) => p.startsWith("/account/roles"),
       icon: "people",
     });
@@ -503,14 +504,14 @@ export function OwnersShell({
     adminNav.push(
       {
         href: "/account",
-        label: "New members",
+        label: L("manage_new_members"),
         short: "Join",
         match: (p) => p === "/account",
         icon: "admin",
       },
       {
         href: "/account/owners",
-        label: "Flats",
+        label: L("manage_flats"),
         short: "Flats",
         match: (p) => p.startsWith("/account/owners"),
         icon: "flat",
@@ -521,15 +522,15 @@ export function OwnersShell({
     adminNav.push(
       {
         href: "/account/requests",
-        label: "Society requests",
+        label: L("manage_society_requests"),
         short: "Reqs",
         match: (p) => p.startsWith("/account/requests"),
         icon: "bell",
       },
       {
         href: "/account/forms",
-        label: "Manage enquiries",
-        short: "Manage",
+        label: L("manage_enquiries"),
+        short: L("nav_manage"),
         match: (p) => p.startsWith("/account/forms"),
         icon: "form",
       },
@@ -538,7 +539,7 @@ export function OwnersShell({
   if (isSuperAdmin || isAdmin || canEditBuilder) {
     adminNav.push({
       href: "/account/builder",
-      label: "Building details",
+      label: L("manage_building_details"),
       short: "Build",
       match: (p) => p.startsWith("/account/builder"),
       icon: "model",
@@ -547,7 +548,7 @@ export function OwnersShell({
   if ((holdsAdmin || role === "facility" || canRunJobs) && featureOn("maintenance")) {
     adminNav.push({
       href: "/account/jobs",
-      label: "Jobs",
+      label: L("manage_jobs"),
       short: "Jobs",
       match: (p) => p.startsWith("/account/jobs"),
       icon: "flat",
@@ -556,7 +557,7 @@ export function OwnersShell({
   if (holdsAdmin) {
     adminNav.push({
       href: "/account/categories",
-      label: "Categories",
+      label: L("manage_categories"),
       short: "Types",
       match: (p) => p.startsWith("/account/categories"),
       icon: "form",
@@ -565,28 +566,28 @@ export function OwnersShell({
       adminNav.push(
         {
           href: "/account/features",
-          label: "Features",
+          label: L("manage_features"),
           short: "Apps",
           match: (p) => p.startsWith("/account/features"),
           icon: "model",
         },
         {
           href: "/account/permissions",
-          label: "Permissions",
+          label: L("manage_permissions"),
           short: "Access",
           match: (p) => p.startsWith("/account/permissions"),
           icon: "admin",
         },
         {
           href: "/account/labels",
-          label: t(societyLabels, "labels"),
-          short: t(societyLabels, "labels"),
+          label: L("labels"),
+          short: L("labels"),
           match: (p) => p.startsWith("/account/labels"),
           icon: "form",
         },
         {
           href: "/account/audit",
-          label: "Activity record",
+          label: L("manage_activity"),
           short: "Log",
           match: (p) => p.startsWith("/account/audit"),
           icon: "bell",
@@ -596,7 +597,7 @@ export function OwnersShell({
     adminNav.push(
       {
         href: "/account/reports",
-        label: "Reports",
+        label: L("manage_reports"),
         short: "Stats",
         match: (p) => p.startsWith("/account/reports"),
         icon: "feed",
@@ -605,7 +606,7 @@ export function OwnersShell({
         ? [
             {
               href: "/account/billing",
-              label: "Dues and billing",
+              label: L("manage_dues_billing"),
               short: "Dues",
               match: (p: string) => p.startsWith("/account/billing"),
               icon: "form" as const,
@@ -614,7 +615,7 @@ export function OwnersShell({
         : []),
       {
         href: "/account/documents",
-        label: "Review home records",
+        label: L("manage_review_records"),
         short: "Docs",
         match: (p) => p.startsWith("/account/documents"),
         icon: "form",
@@ -623,7 +624,7 @@ export function OwnersShell({
         ? [
             {
               href: "/account/nocs",
-              label: "Review NOCs",
+              label: L("manage_review_nocs"),
               short: "NOC",
               match: (p: string) => p.startsWith("/account/nocs"),
               icon: "form" as const,
@@ -634,7 +635,7 @@ export function OwnersShell({
         ? [
             {
               href: "/account/workforce",
-              label: "Society helpers",
+              label: L("manage_society_helpers"),
               short: "Help",
               match: (p: string) => p.startsWith("/account/workforce"),
               icon: "people" as const,
@@ -645,7 +646,7 @@ export function OwnersShell({
         ? [
             {
               href: "/account/parking",
-              label: "Society parking",
+              label: L("manage_society_parking"),
               short: "Park",
               match: (p: string) => p.startsWith("/account/parking"),
               icon: "flat" as const,
@@ -656,7 +657,7 @@ export function OwnersShell({
         ? [
             {
               href: "/account/ops",
-              label: "Society ops",
+              label: L("manage_society_ops"),
               short: "Ops",
               match: (p: string) => p.startsWith("/account/ops"),
               icon: "floors" as const,
@@ -667,7 +668,7 @@ export function OwnersShell({
         ? [
             {
               href: "/account/assets",
-              label: "Assets and AMC",
+              label: L("manage_assets"),
               short: "AMC",
               match: (p: string) => p.startsWith("/account/assets"),
               icon: "model" as const,
@@ -678,7 +679,7 @@ export function OwnersShell({
         ? [
             {
               href: "/account/circulars",
-              label: "Society circulars",
+              label: L("manage_society_circulars"),
               short: "Circ",
               match: (p: string) => p.startsWith("/account/circulars"),
               icon: "bell" as const,
@@ -689,7 +690,7 @@ export function OwnersShell({
         ? [
             {
               href: "/account/security-ops",
-              label: "Security desk",
+              label: L("manage_security_desk"),
               short: "Sec",
               match: (p: string) => p.startsWith("/account/security-ops"),
               icon: "admin" as const,
@@ -713,7 +714,7 @@ export function OwnersShell({
       ? [
           {
             href: ownersHome,
-            label: "Updates",
+            label: L("nav_updates"),
             match: (p: string) => p === ownersHome || p.startsWith("/feed"),
             icon: "feed" as const,
           },
@@ -727,7 +728,7 @@ export function OwnersShell({
             ? [
                 {
                   href: "/account/jobs",
-                  label: "Jobs",
+                  label: L("manage_jobs"),
                   match: (p: string) => p.startsWith("/account/jobs"),
                   icon: "flat" as const,
                 },
@@ -739,7 +740,7 @@ export function OwnersShell({
             ? [
                 {
                   href: adminHref,
-                  label: "Manage",
+                  label: L("nav_manage"),
                   match: (p: string) => p.startsWith("/account"),
                   icon: "admin" as const,
                 },
@@ -758,7 +759,7 @@ export function OwnersShell({
             ? [
                 {
                   href: adminHref,
-                  label: "Manage",
+                  label: L("nav_manage"),
                   match: (p: string) => p.startsWith("/account"),
                   icon: "admin" as const,
                 },
@@ -827,7 +828,7 @@ export function OwnersShell({
                 RV Uddiipta
               </strong>
               <span className="text-[0.68rem] font-medium tracking-[0.14em] text-[#94a3b8] uppercase">
-                Community
+                {L("brand_community")}
               </span>
             </span>
           </Link>
@@ -865,21 +866,21 @@ export function OwnersShell({
         <nav className="scroll-on-dark relative flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1">
           {(
             [
-              ["Community", ["/feed", "/forms", "/committee"]],
-              ["Home", ["/", "/members", "/requests", "/documents"]],
-              ["Communication", ["/inbox"]],
-              ["Building", ["/community"]],
-              ["Visitors", ["/visitors", "/gate"]],
-              ["Parking", ["/parking"]],
-              ["Services", ["/amenities", "/work"]],
+              ["nav_section_community", ["/feed", "/forms", "/committee", "/circulars"]],
+              ["nav_section_home", ["/", "/members", "/requests", "/documents", "/nocs", "/billing"]],
+              ["nav_section_communication", ["/inbox"]],
+              ["nav_section_building", ["/community", "/ops"]],
+              ["nav_section_visitors", ["/visitors", "/gate", "/workforce", "/account/security-ops"]],
+              ["nav_section_parking", ["/parking"]],
+              ["nav_section_services", ["/amenities", "/work"]],
             ] as const
-          ).map(([label, hrefs]) => {
+          ).map(([sectionKey, hrefs]) => {
             const items = ownerNav.filter((item) => (hrefs as readonly string[]).includes(item.href));
             if (!items.length) return null;
             return (
-              <div key={label} className="flex flex-col gap-0.5">
+              <div key={sectionKey} className="flex flex-col gap-0.5">
                 <p className="px-3 pb-1 text-[0.65rem] font-semibold tracking-[0.16em] text-[#64748b] uppercase">
-                  {label}
+                  {L(sectionKey)}
                 </p>
                 {items.map(sideLink)}
               </div>
@@ -888,7 +889,7 @@ export function OwnersShell({
           {adminNav.length ? (
             <div className="flex flex-col gap-0.5">
               <p className="px-3 pb-1 text-[0.65rem] font-semibold tracking-[0.16em] text-[#64748b] uppercase">
-                Manage
+                {L("nav_section_manage")}
               </p>
               {adminNav.map(sideLink)}
             </div>

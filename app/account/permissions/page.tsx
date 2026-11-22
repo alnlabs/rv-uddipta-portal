@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { savePermission } from "@/app/actions/community-os";
 import { fallbackDeskAccess } from "@/lib/deskAccess";
 import { FEATURE_CATALOG } from "@/lib/features";
+import { loadSocietyLabels, t } from "@/lib/labels";
 import { ROLE_GROUPS, ROLE_GUIDE, type RoleValue } from "@/lib/roleLabels";
 import { isSuperAdmin } from "@/lib/admin";
 import { getAuthState } from "@/lib/session";
@@ -31,12 +32,15 @@ export default async function PermissionsPage({
   const role: RoleValue = isRole(params.role) ? params.role : "owner";
   const guide = ROLE_GUIDE.find((item) => item.value === role);
   const admin = createAdminClient();
-  const { data } = await admin.from("role_permissions").select("role, feature_key, access").eq("role", role);
+  const [{ data }, societyLabels] = await Promise.all([
+    admin.from("role_permissions").select("role, feature_key, access").eq("role", role),
+    loadSocietyLabels(),
+  ]);
   const current = new Map((data ?? []).map((row) => [String(row.feature_key), String(row.access)]));
 
   return (
     <section>
-      <h1 className="text-3xl font-semibold text-[#0f172a]">Permissions</h1>
+      <h1 className="text-3xl font-semibold text-[#0f172a]">{t(societyLabels, "manage_permissions")}</h1>
       <p className="mt-2 max-w-3xl text-[#475569]">
         Pick a role, then set each feature. No access hides it. Can look opens it without changes. Can change lets them update it. A feature turned off under Features stays closed for everyone.
       </p>
@@ -83,7 +87,9 @@ export default async function PermissionsPage({
               return (
                 <li key={feature.key} className="slab flex flex-col gap-3 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
                   <div className="min-w-0">
-                    <p className="font-semibold text-[#0f172a]">{feature.label}</p>
+                    <p className="font-semibold text-[#0f172a]">
+                      {t(societyLabels, `feature_${feature.key}`)}
+                    </p>
                     <p className="mt-1 text-sm text-[#475569]">{feature.summary}</p>
                   </div>
                   <form action={savePermission} className="flex flex-wrap gap-2 lg:shrink-0">

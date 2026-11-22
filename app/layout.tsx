@@ -95,9 +95,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       : activeKeys;
     unreadNotifications = count ?? 0;
 
-    if (isAdmin || superAdmin) {
-      societyLabels = await loadSocietyLabels();
-    }
+    // Site-wide wordings apply to every signed-in shell, not only Manage.
+    societyLabels = await loadSocietyLabels();
 
     if (isAdmin) {
       const admin = createAdminClient();
